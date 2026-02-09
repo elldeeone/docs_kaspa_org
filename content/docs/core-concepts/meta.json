@@ -1,0 +1,4 @@
+{
+  "title": "Core Concepts",
+  "pages": ["blockdag", "ghostdag", "transactions", "pruning", "spv"]
+}

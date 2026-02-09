@@ -1,0 +1,83 @@
+---
+title: BlockDAG Architecture
+description: Understanding Kaspa's BlockDAG structure, how it differs from traditional blockchains, and why it enables high-throughput parallel block creation.
+---
+
+## From Blockchain to BlockDAG
+
+Traditional blockchains enforce a strict linear sequence of blocks. When two miners find a block at roughly the same time, only one can be included in the canonical chain; the other becomes an orphan and its work is discarded. This fundamental constraint limits how fast blocks can be produced: if the block rate is too high relative to network propagation time, orphan rates spike and security degrades.
+
+Kaspa replaces this linear chain with a **BlockDAG** (Directed Acyclic Graph). In a BlockDAG, each block can reference **multiple parent blocks** rather than a single parent. This means that blocks created in parallel by different miners are all incorporated into the ledger. There are no orphans.
+
+<Callout>
+In Kaspa's BlockDAG, every honestly mined block contributes to both security and throughput. No proof-of-work is wasted on orphaned blocks.
+</Callout>
+
+## How the DAG Structure Works
+
+Every Kaspa block header contains a list of **parent hashes** rather than a single `prevBlockHash`. When a miner constructs a new block, it references all the current tips of the DAG — that is, all known blocks that are not yet referenced by any other block.
+
+This produces a graph with the following properties:
+
+- **Directed**: Edges point from child blocks to their parents (backward in time).
+- **Acyclic**: No block can be its own ancestor; the graph has no cycles.
+- **Convergent**: Even if miners produce blocks concurrently, the DAG structure ensures all blocks are eventually seen and included by subsequent blocks.
+
+A simplified DAG might look like this:
+
+```
+        ┌──── B2 ────┐
+        │             │
+  B0 ── B1 ── B3 ──── B5 ── B6
+        │             │
+        └──── B4 ────┘
+```
+
+In this example, `B5` references `B2`, `B3`, and `B4` as parents. All three blocks are included in the DAG despite having been created in parallel.
+
+## Block Rate and Throughput
+
+Kaspa currently operates at **10 blocks per second (10 BPS)**. This is possible because the BlockDAG architecture decouples the block rate from the orphan rate. In a traditional blockchain, pushing the block rate to 10 BPS would result in catastrophic orphan rates and compromise security. In a BlockDAG, parallel blocks are simply merged into the graph.
+
+The relationship between block rate, network delay, and security is governed by the GHOSTDAG protocol's `k` parameter, which sets an upper bound on the number of parallel blocks expected within one network propagation delay. As long as honest miners produce fewer than `k` parallel blocks during propagation, the protocol can distinguish honest blocks from adversarial ones with high confidence.
+
+<Callout type="info">
+The 10 BPS block rate means Kaspa achieves a first-confirmation latency of approximately 100 milliseconds, with full probabilistic finality in roughly 10 seconds.
+</Callout>
+
+## Parallel Block Creation
+
+Because all blocks are included, miners do not need to "race" in the same way they do on a traditional blockchain. Two miners who find valid blocks within milliseconds of each other both have their blocks accepted. This has several consequences:
+
+- **Fairness**: Small miners receive rewards proportional to their hash rate more consistently, since their blocks are never orphaned by larger miners who propagate blocks faster.
+- **Throughput**: The total transaction throughput is the aggregate of all blocks, not limited to a single block per interval.
+- **Security**: The total proof-of-work securing the network includes every mined block, not just those on the longest chain.
+
+## Ordering: A Post-Hoc Process
+
+A key insight of the BlockDAG design is that **block ordering does not need to happen at creation time**. Miners simply add blocks to the DAG. The [GHOSTDAG protocol](/docs/core-concepts/ghostdag) then determines a canonical ordering of all blocks after the fact.
+
+This separation of concerns — block production versus block ordering — is what allows the system to scale the block rate without sacrificing consensus security. Ordering is computed locally by each node using the same deterministic algorithm, so all nodes agree on the same canonical sequence of transactions.
+
+## DAG Width and Network Conditions
+
+The "width" of the DAG at any point in time reflects the degree of concurrency in block production. Under normal network conditions with 10 BPS, the DAG typically has a width proportional to the product of the block rate and the network propagation delay. If the network delay is around 2 seconds and the block rate is 10 BPS, roughly 20 blocks might exist in parallel at any moment.
+
+The GHOSTDAG protocol is designed to handle this width gracefully. It classifies blocks into blue (honest majority) and red (potentially adversarial) sets, and constructs a linear ordering from the DAG that respects the causal relationships encoded by parent references.
+
+## Advantages Over Traditional Blockchains
+
+| Property | Traditional Blockchain | Kaspa BlockDAG |
+|---|---|---|
+| Block references | Single parent | Multiple parents |
+| Parallel blocks | Orphaned (wasted) | All included |
+| Block rate | Limited by propagation | 10 BPS (and beyond) |
+| Miner fairness | Favors well-connected miners | Proportional to hash rate |
+| PoW utilization | Partial (orphans wasted) | Full (all blocks count) |
+| First confirmation | Minutes | ~100ms |
+
+## Further Reading
+
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — How Kaspa determines block ordering within the DAG.
+- [Transactions](/docs/core-concepts/transactions) — How transactions are structured and processed in the BlockDAG.
+- [Pruning & Data Management](/docs/core-concepts/pruning) — How Kaspa manages data growth at high block rates.

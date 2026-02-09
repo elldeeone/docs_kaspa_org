@@ -1,0 +1,4 @@
+{
+  "title": "Wallets & Tools",
+  "pages": ["web-wallet", "cli-wallet", "hardware-wallets", "kasvault"]
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Docs",
+  "root": true,
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "getting-started",
+    "---Learn---",
+    "core-concepts",
+    "---Build---",
+    "developer-guide",
+    "---Network---",
+    "mining",
+    "wallets-and-tools",
+    "---Reference---",
+    "reference"
+  ]
+}

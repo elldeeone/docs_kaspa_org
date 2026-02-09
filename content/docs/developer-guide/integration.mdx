@@ -1,0 +1,586 @@
+---
+title: Exchange & Service Integration
+description: Technical guide for exchanges, payment processors, and services integrating Kaspa deposits, withdrawals, and address management.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This guide provides detailed technical guidance for exchanges, custodial services, and payment processors integrating Kaspa (KAS). It covers deposit detection, withdrawal processing, confirmation requirements, address formats, and the key differences between Kaspa's UTXO model and the account model used by many other networks.
+
+## Overview
+
+Kaspa is a proof-of-work cryptocurrency built on a blockDAG (Directed Acyclic Graph) structure using the GHOSTDAG protocol. Key characteristics relevant to integration:
+
+| Property | Value |
+|----------|-------|
+| Block time | ~1 second (1 BPS) |
+| Consensus | Proof of Work (kHeavyHash) |
+| Transaction model | UTXO-based |
+| Address format | Bech32 with `kaspa:` prefix |
+| Smallest unit | Sompi (1 KAS = 10^8 sompi) |
+| Confirmation metric | Blue score / DAA score depth |
+| Recommended confirmations | 10+ for standard, 100+ for high-value |
+| Max supply | 28.7 billion KAS |
+
+## Running a Node
+
+For exchange integration, you must run your own Kaspa node. Do not rely on public nodes for production custodial operations.
+
+### Node Setup
+
+Install and run [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa):
+
+```bash
+# Clone the repository
+git clone https://github.com/kaspanet/rusty-kaspa.git
+cd rusty-kaspa
+
+# Build the node
+cargo build --release --bin kaspad
+
+# Run the node (mainnet)
+./target/release/kaspad --utxoindex
+```
+
+<Callout type="warn">
+The `--utxoindex` flag is required for exchange integration. Without it, UTXO queries by address (`getUtxosByAddresses`, `getBalanceByAddress`) will not work. The UTXO index requires additional disk space and slightly increases sync time.
+</Callout>
+
+The node exposes two interfaces:
+
+- **wRPC (WebSocket)** on port **16110** — Recommended for most integrations
+- **gRPC** on port **16111** — Alternative for high-performance backends
+
+### Node Requirements
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| CPU | 4 cores | 8+ cores |
+| RAM | 8 GB | 16+ GB |
+| Storage | 100 GB SSD | 200+ GB NVMe SSD |
+| Network | 50 Mbps | 100+ Mbps |
+
+Initial sync from genesis takes several hours depending on hardware and network conditions.
+
+## Address Format
+
+Kaspa uses a Bech32-encoded address format with a human-readable prefix that identifies the network.
+
+### Address Structure
+
+```
+kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev
+└────┘ └──────────────────────────────────────────────────────────────┘
+prefix                        encoded data
+```
+
+| Network | Prefix | Example |
+|---------|--------|---------|
+| Mainnet | `kaspa:` | `kaspa:qr35enn...` |
+| Testnet | `kaspatest:` | `kaspatest:qr35enn...` |
+| Simnet | `kaspasim:` | `kaspasim:qr35enn...` |
+| Devnet | `kaspadev:` | `kaspadev:qr35enn...` |
+
+### Address Types
+
+The character immediately following the prefix indicates the address type:
+
+| Prefix Character | Type | Description |
+|-----------------|------|-------------|
+| `q` | P2PK (Pay-to-Public-Key) | Standard Schnorr public key address |
+| `p` | P2SH (Pay-to-Script-Hash) | Script hash address |
+
+The vast majority of Kaspa addresses are P2PK (Schnorr) addresses.
+
+### Address Validation
+
+Always validate addresses before processing deposits or withdrawals:
+
+```typescript
+import { Address } from 'kaspa-wasm';
+
+function validateKaspaAddress(addressStr: string): boolean {
+  try {
+    const address = new Address(addressStr);
+    // Check that the address is for the correct network
+    if (address.prefix !== "kaspa") {
+      return false; // Not a mainnet address
+    }
+    return true;
+  } catch {
+    return false; // Invalid address format
+  }
+}
+```
+
+<Callout type="info">
+Kaspa addresses are case-insensitive for the Bech32 portion (after the prefix), but by convention they are represented in lowercase. Always store and compare addresses in lowercase.
+</Callout>
+
+## Deposit Detection
+
+### Strategy: Dedicated Deposit Addresses
+
+The recommended approach is to generate a unique deposit address for each user. This simplifies deposit attribution and avoids the need to parse transaction details.
+
+```typescript
+import { Mnemonic, XPrv } from 'kaspa-wasm';
+
+class DepositAddressGenerator {
+  private masterKey: XPrv;
+  private currentIndex: number;
+
+  constructor(seedPhrase: string, startIndex: number = 0) {
+    const mnemonic = new Mnemonic(seedPhrase);
+    const seed = mnemonic.toSeed("");
+    this.masterKey = new XPrv(seed);
+    this.currentIndex = startIndex;
+  }
+
+  generateDepositAddress(): { address: string; index: number } {
+    const index = this.currentIndex++;
+    const childKey = this.masterKey
+      .derivePath(`m/44'/111111'/0'/0/${index}`);
+    const address = childKey
+      .toPrivateKey()
+      .toPublicKey()
+      .toAddress("mainnet")
+      .toString();
+
+    return { address, index };
+  }
+
+  getPrivateKeyForIndex(index: number): any {
+    return this.masterKey
+      .derivePath(`m/44'/111111'/0'/0/${index}`)
+      .toPrivateKey();
+  }
+}
+```
+
+### Watching for Deposits via RPC Subscriptions
+
+Use `notifyUtxosChanged` to receive real-time notifications when deposits arrive at your watched addresses:
+
+```typescript
+import { RpcClient, Encoding } from 'kaspa-wasm';
+
+const rpc = new RpcClient({
+  url: "ws://your-node:16110",
+  encoding: Encoding.Borsh,
+});
+await rpc.connect();
+
+// Watch all deposit addresses
+const depositAddresses: string[] = [
+  "kaspa:deposit-address-user-1",
+  "kaspa:deposit-address-user-2",
+  // ... all active deposit addresses
+];
+
+await rpc.subscribeUtxosChanged(depositAddresses);
+
+rpc.addEventListener("utxos-changed", (event) => {
+  for (const entry of event.data.added) {
+    const address = entry.address;
+    const amountSompi = BigInt(entry.utxoEntry.amount);
+    const txId = entry.outpoint.transactionId;
+    const daaScore = BigInt(entry.utxoEntry.blockDaaScore);
+    const isCoinbase = entry.utxoEntry.isCoinbase;
+
+    // Record the pending deposit
+    recordPendingDeposit({
+      userId: lookupUserByAddress(address),
+      address,
+      amountSompi,
+      txId,
+      daaScore,
+      isCoinbase,
+      confirmed: false,
+    });
+  }
+});
+```
+
+### Confirming Deposits
+
+After detecting a deposit, monitor the DAA score to determine when the deposit has sufficient confirmations:
+
+```typescript
+// Subscribe to DAA score changes
+await rpc.subscribeVirtualDaaScoreChanged();
+
+rpc.addEventListener("virtual-daa-score-changed", (event) => {
+  const currentDaaScore = BigInt(event.data.virtualDaaScore);
+
+  for (const deposit of getPendingDeposits()) {
+    const confirmations = currentDaaScore - deposit.daaScore;
+
+    if (confirmations >= REQUIRED_CONFIRMATIONS && !deposit.confirmed) {
+      deposit.confirmed = true;
+      creditUserBalance(deposit.userId, deposit.amountSompi);
+      console.log(
+        `Deposit confirmed: ${deposit.amountSompi} sompi for user ${deposit.userId} ` +
+        `(${confirmations} confirmations)`
+      );
+    }
+  }
+});
+```
+
+<Callout type="warn">
+**Coinbase transactions** (mining rewards) have a mandatory maturity period before they can be spent. If your exchange accepts mining deposits, be aware that coinbase UTXOs are subject to this additional constraint beyond your standard confirmation requirement. Check the `isCoinbase` field on UTXO entries.
+</Callout>
+
+## Confirmation Requirements
+
+Kaspa uses the DAA (Difficulty Adjustment Algorithm) score and blue score as confirmation metrics, rather than traditional "block confirmations."
+
+### Recommended Confirmation Depths
+
+| Transaction Type | Recommended Confirmations | Approximate Time |
+|-----------------|--------------------------|-------------------|
+| Small deposits (< 100 KAS) | 10 | ~10 seconds |
+| Standard deposits | 10-50 | 10-50 seconds |
+| Large deposits (> 10,000 KAS) | 100+ | ~100 seconds |
+| Very large deposits | 200+ | ~200 seconds |
+
+### How Confirmations Work in a DAG
+
+In Kaspa's blockDAG:
+
+1. A transaction is included in a block.
+2. That block receives a **DAA score** when it is added to the DAG.
+3. As new blocks are added, the **virtual DAA score** increases.
+4. The **confirmation depth** is the difference between the current virtual DAA score and the transaction's block DAA score.
+
+```
+Confirmation depth = Current Virtual DAA Score - Transaction Block DAA Score
+```
+
+Unlike linear blockchains, Kaspa's DAG rarely experiences deep reorganizations. The GHOSTDAG protocol provides strong consistency guarantees, making even 10 confirmations highly reliable for most use cases.
+
+```typescript
+const REQUIRED_CONFIRMATIONS = 10n; // Adjust based on deposit amount
+
+async function isDepositConfirmed(
+  rpc: RpcClient,
+  depositDaaScore: bigint
+): Promise<boolean> {
+  const dagInfo = await rpc.getBlockDagInfo();
+  const currentDaaScore = BigInt(dagInfo.virtualDaaScore);
+  return (currentDaaScore - depositDaaScore) >= REQUIRED_CONFIRMATIONS;
+}
+```
+
+## Withdrawal Processing
+
+### UTXO Management
+
+Unlike account-based systems (Ethereum, etc.), Kaspa uses the UTXO model. This has significant implications for withdrawal processing:
+
+1. **No global balance** — Your "hot wallet balance" is the sum of all UTXOs controlled by your hot wallet addresses.
+2. **Exact inputs required** — Each transaction must specify exact UTXOs to consume. You cannot simply debit an account.
+3. **Change outputs** — If a UTXO is larger than the withdrawal amount, you must create a change output back to yourself.
+4. **UTXO fragmentation** — Many small UTXOs can require compound transactions to consolidate before sending.
+
+### Withdrawal Implementation
+
+```typescript
+import {
+  RpcClient,
+  UtxoProcessor,
+  UtxoContext,
+  PrivateKey,
+  Encoding,
+  createTransactions,
+  kaspaToSompi,
+} from 'kaspa-wasm';
+
+class WithdrawalProcessor {
+  private rpc: RpcClient;
+  private processor: UtxoProcessor;
+  private context: UtxoContext;
+  private hotWalletKeys: PrivateKey[];
+  private hotWalletAddresses: string[];
+
+  async initialize() {
+    this.rpc = new RpcClient({
+      url: "ws://your-node:16110",
+      encoding: Encoding.Borsh,
+    });
+    await this.rpc.connect();
+
+    this.processor = new UtxoProcessor({
+      rpc: this.rpc,
+      networkId: "mainnet",
+    });
+    this.context = new UtxoContext({ processor: this.processor });
+    await this.processor.start();
+
+    // Track hot wallet addresses
+    await this.context.trackAddresses(this.hotWalletAddresses);
+
+    // Wait for UTXO sync
+    await this.waitForSync();
+  }
+
+  async processWithdrawal(
+    recipientAddress: string,
+    amountSompi: bigint
+  ): Promise<string[]> {
+    // Validate the recipient address
+    if (!validateKaspaAddress(recipientAddress)) {
+      throw new Error("Invalid recipient address");
+    }
+
+    // Create the transaction(s)
+    const { transactions, summary } = await createTransactions({
+      entries: this.context,
+      outputs: [
+        {
+          address: recipientAddress,
+          amount: amountSompi,
+        },
+      ],
+      changeAddress: this.hotWalletAddresses[0],
+      priorityFee: 0n,
+    });
+
+    // Sign and submit all transactions in the chain
+    const txIds: string[] = [];
+    for (const tx of transactions) {
+      tx.sign(this.hotWalletKeys);
+      const txId = await tx.submit(this.rpc);
+      txIds.push(txId);
+    }
+
+    return txIds;
+  }
+
+  async getHotWalletBalance(): Promise<bigint> {
+    const balance = this.context.balance;
+    return balance?.mature ?? 0n;
+  }
+
+  private async waitForSync(): Promise<void> {
+    return new Promise((resolve) => {
+      this.processor.addEventListener("balance", () => {
+        resolve();
+      });
+    });
+  }
+}
+```
+
+### Batch Withdrawals
+
+For efficiency, batch multiple withdrawals into a single transaction when possible:
+
+```typescript
+async function batchWithdrawals(
+  context: UtxoContext,
+  withdrawals: Array<{ address: string; amountSompi: bigint }>,
+  changeAddress: string,
+  keys: PrivateKey[],
+  rpc: RpcClient
+): Promise<string[]> {
+  const outputs = withdrawals.map(w => ({
+    address: w.address,
+    amount: w.amountSompi,
+  }));
+
+  const { transactions } = await createTransactions({
+    entries: context,
+    outputs,
+    changeAddress,
+    priorityFee: 0n,
+  });
+
+  const txIds: string[] = [];
+  for (const tx of transactions) {
+    tx.sign(keys);
+    const txId = await tx.submit(rpc);
+    txIds.push(txId);
+  }
+
+  return txIds;
+}
+```
+
+<Callout type="info">
+Batching withdrawals reduces fees and UTXO fragmentation. However, each transaction has a mass limit, so very large batches may still require multiple transactions. The `createTransactions` function handles this automatically.
+</Callout>
+
+## UTXO Model vs Account Model
+
+If you are accustomed to integrating account-based chains (Ethereum, Solana, etc.), the UTXO model requires a different mental model. Here is a comparison:
+
+| Aspect | UTXO Model (Kaspa) | Account Model (Ethereum) |
+|--------|-------------------|-------------------------|
+| Balance tracking | Sum of all UTXOs for an address | Single balance value per address |
+| Sending funds | Select UTXOs as inputs, create outputs | Debit sender, credit receiver |
+| Change handling | Explicit change output required | Automatic (balance updated) |
+| Parallel transactions | Multiple UTXOs can be spent independently | Nonce-based sequential ordering |
+| Double-spend detection | Each UTXO can only be spent once | Nonce prevents replay |
+| Privacy | Each transaction can use fresh change addresses | Single address reuse is common |
+
+### Key Differences for Integration
+
+**Balance queries** — In the UTXO model, querying a balance requires summing all UTXOs for an address. Use `getBalanceByAddress` for a quick total, or `getUtxosByAddresses` for detailed UTXO information.
+
+**Concurrent withdrawals** — Unlike account-based systems where transactions must be ordered by nonce, UTXO-based systems allow concurrent transactions as long as they spend different UTXOs. However, you must ensure that two withdrawal transactions do not attempt to spend the same UTXO.
+
+```typescript
+// IMPORTANT: Serialize withdrawal processing or implement UTXO locking
+// to prevent double-spend attempts
+class UtxoLock {
+  private lockedUtxos: Set<string> = new Set();
+
+  lock(txId: string, index: number): boolean {
+    const key = `${txId}:${index}`;
+    if (this.lockedUtxos.has(key)) {
+      return false; // Already locked
+    }
+    this.lockedUtxos.add(key);
+    return true;
+  }
+
+  unlock(txId: string, index: number): void {
+    this.lockedUtxos.delete(`${txId}:${index}`);
+  }
+}
+```
+
+**Transaction finality** — In Kaspa's DAG, transactions reach practical finality very quickly (10+ confirmations in ~10 seconds). There are no "pending" states like Ethereum's mempool — once a transaction is included in a DAG block, it is almost certainly going to be accepted.
+
+**No nonce management** — Since Kaspa uses UTXOs, there is no nonce to manage. Each transaction references specific UTXOs, and the node validates that those UTXOs have not been spent.
+
+## Hot/Cold Wallet Architecture
+
+For exchanges, a standard hot/cold wallet architecture is recommended:
+
+```
+┌──────────────┐     ┌───────────────┐     ┌──────────────────┐
+│  Deposit     │────▶│  Hot Wallet   │────▶│  Cold Wallet     │
+│  Addresses   │     │  (online)     │     │  (offline/HSM)   │
+│  (per-user)  │     │               │     │                  │
+└──────────────┘     └───────┬───────┘     └──────────────────┘
+                             │
+                     ┌───────▼───────┐
+                     │  Withdrawals  │
+                     │  (to users)   │
+                     └───────────────┘
+```
+
+1. **Deposit addresses** — Generate unique addresses per user from an HD wallet. Deposits flow into these addresses.
+2. **Hot wallet** — Periodically sweep deposit address funds into a hot wallet that holds enough liquidity for withdrawals.
+3. **Cold wallet** — Move excess funds to cold storage (offline signing, hardware wallets, or multi-sig).
+
+### Sweeping Deposits to Hot Wallet
+
+```typescript
+async function sweepDeposits(
+  depositKeys: PrivateKey[],
+  depositAddresses: string[],
+  hotWalletAddress: string,
+  rpc: RpcClient
+): Promise<void> {
+  const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+
+  await context.trackAddresses(depositAddresses);
+  // Wait for sync
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  const balance = context.balance?.mature ?? 0n;
+  if (balance === 0n) {
+    console.log("No funds to sweep");
+    return;
+  }
+
+  const { transactions } = await createTransactions({
+    entries: context,
+    outputs: [
+      {
+        address: hotWalletAddress,
+        amount: balance - 10000n, // Leave room for fees
+      },
+    ],
+    changeAddress: hotWalletAddress,
+  });
+
+  for (const tx of transactions) {
+    tx.sign(depositKeys);
+    const txId = await tx.submit(rpc);
+    console.log(`Sweep transaction: ${txId}`);
+  }
+
+  await processor.stop();
+}
+```
+
+## Monitoring and Health Checks
+
+Implement monitoring to ensure your integration is running correctly:
+
+```typescript
+async function healthCheck(rpc: RpcClient): Promise<{
+  connected: boolean;
+  synced: boolean;
+  blockCount: number;
+  daaScore: number;
+}> {
+  try {
+    const info = await rpc.getBlockDagInfo();
+    const serverInfo = await rpc.getInfo();
+
+    return {
+      connected: true,
+      synced: serverInfo.isSynced,
+      blockCount: Number(info.blockCount),
+      daaScore: Number(info.virtualDaaScore),
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      synced: false,
+      blockCount: 0,
+      daaScore: 0,
+    };
+  }
+}
+
+// Run health check periodically
+setInterval(async () => {
+  const status = await healthCheck(rpc);
+  if (!status.connected) {
+    console.error("ALERT: Node connection lost!");
+  }
+  if (!status.synced) {
+    console.warn("WARNING: Node is not synced");
+  }
+}, 30000); // Every 30 seconds
+```
+
+<Callout type="warn">
+Always verify that your node reports `isSynced: true` before processing deposits or withdrawals. A node that is still syncing may provide incomplete or outdated UTXO data, which could lead to missed deposits or failed withdrawals.
+</Callout>
+
+## Checklist for Going Live
+
+Before launching your Kaspa integration in production, verify the following:
+
+- [ ] Running your own rusty-kaspa node with `--utxoindex` enabled
+- [ ] Node is fully synced (`isSynced: true`)
+- [ ] Deposit address generation uses HD wallet derivation with secure seed storage
+- [ ] UTXO change subscriptions are active for all deposit addresses
+- [ ] Confirmation depth meets your risk tolerance (10+ minimum)
+- [ ] Coinbase UTXO maturity is handled correctly
+- [ ] Withdrawal processing includes address validation
+- [ ] UTXO locking prevents double-spend attempts in concurrent withdrawals
+- [ ] Hot/cold wallet separation is implemented
+- [ ] Monitoring and alerting is configured for node health and connection status
+- [ ] Backup and recovery procedures are documented and tested
+- [ ] All amounts are handled in sompi (bigint) to avoid floating-point precision issues

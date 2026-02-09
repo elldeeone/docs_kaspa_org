@@ -1,0 +1,141 @@
+---
+title: Installation
+description: How to install and build the Kaspa full node (rusty-kaspa) from source, including all prerequisites and configuration.
+---
+
+The Kaspa full node implementation is called **rusty-kaspa**, written entirely in Rust for performance and safety. It is the reference node software for the Kaspa network and includes the consensus engine, peer-to-peer networking, RPC server, UTXO indexing, and mining infrastructure.
+
+The source code is maintained at [github.com/kaspanet/rusty-kaspa](https://github.com/kaspanet/rusty-kaspa).
+
+## Prerequisites
+
+Before building rusty-kaspa, ensure you have the following installed on your system.
+
+### Rust Toolchain
+
+rusty-kaspa requires a recent stable Rust toolchain. Install it via [rustup](https://rustup.rs/):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+After installation, verify the toolchain is available:
+
+```bash
+rustc --version
+cargo --version
+```
+
+<Callout type="info">
+rusty-kaspa generally targets the latest stable Rust release. If you encounter build errors, try updating your toolchain with `rustup update stable`.
+</Callout>
+
+### Git
+
+You need Git to clone the repository:
+
+```bash
+# macOS (via Homebrew)
+brew install git
+
+# Ubuntu / Debian
+sudo apt-get install git
+
+# Fedora
+sudo dnf install git
+```
+
+### System Dependencies
+
+Depending on your operating system, you may need additional system libraries:
+
+```bash
+# Ubuntu / Debian
+sudo apt-get install -y build-essential libssl-dev pkg-config protobuf-compiler libprotobuf-dev
+
+# Fedora
+sudo dnf install -y gcc openssl-devel pkgconfig protobuf-compiler protobuf-devel
+
+# macOS (via Homebrew)
+brew install protobuf
+```
+
+<Callout type="warn">
+The `protobuf-compiler` (protoc) package is required for building the gRPC components used by the Kaspa RPC layer. The build will fail without it.
+</Callout>
+
+## Building from Source
+
+Clone the repository and build in release mode:
+
+```bash
+git clone https://github.com/kaspanet/rusty-kaspa.git
+cd rusty-kaspa
+cargo build --release
+```
+
+The build process compiles all workspace crates including the main node binary (`kaspad`), the wallet CLI, and associated tools. This may take several minutes depending on your hardware.
+
+Once complete, the compiled binaries are located in:
+
+```
+target/release/kaspad
+target/release/kaspa-wallet
+```
+
+## Running the Node
+
+Start the Kaspa node connected to mainnet:
+
+```bash
+./target/release/kaspad --utxoindex
+```
+
+The `--utxoindex` flag enables the UTXO index, which is required for wallet functionality and for serving certain RPC queries.
+
+### Common Configuration Flags
+
+| Flag | Description |
+| --- | --- |
+| `--utxoindex` | Enable the UTXO index (required for wallet RPC) |
+| `--rpclisten 0.0.0.0:16110` | Set the RPC listen address and port |
+| `--nologfiles` | Disable writing log files to disk |
+| `--ram-scale=0.5` | Scale memory usage (useful for memory-constrained systems) |
+| `--testnet` | Connect to the Kaspa testnet instead of mainnet |
+| `--loglevel=info` | Set the logging level (`trace`, `debug`, `info`, `warn`, `error`) |
+
+### Data Directory
+
+By default, rusty-kaspa stores blockchain data and configuration in:
+
+- **Linux:** `~/.kaspad/kaspa-mainnet/`
+- **macOS:** `~/Library/Application Support/kaspad/kaspa-mainnet/`
+- **Windows:** `%APPDATA%\kaspad\kaspa-mainnet\`
+
+You can override this with the `--appdir` flag:
+
+```bash
+./target/release/kaspad --utxoindex --appdir /path/to/custom/datadir
+```
+
+## Verifying the Installation
+
+Once the node starts, you should see log output indicating it is connecting to peers and beginning to sync:
+
+```
+[INFO] Kaspad starting...
+[INFO] Listening on 0.0.0.0:16111
+[INFO] RPC listening on 127.0.0.1:16110
+[INFO] Connected to N peers
+[INFO] Syncing headers: 1.2% (block 150000 of 12500000)
+```
+
+A full sync from genesis takes time depending on your hardware and network speed. The node will first sync all block headers (relatively fast), then download and validate all block bodies and UTXO state.
+
+<Callout type="info">
+For the quickest sync, ensure your system has an SSD and at least 8 GB of RAM. You can reduce memory usage with `--ram-scale=0.3` if needed, at the cost of slower sync speed.
+</Callout>
+
+## Next Steps
+
+Once your node is running and syncing, proceed to the [Quick Start](/docs/getting-started/quick-start) guide to learn how to interact with it via RPC.

@@ -1,0 +1,192 @@
+---
+title: "Network Parameters"
+description: "Complete reference of Kaspa network parameters including block timing, consensus rules, emission schedule, and network configuration."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Network Parameters
+
+This page provides a comprehensive reference of all configurable and fixed parameters that define the Kaspa network's behavior. Parameters are listed for mainnet unless otherwise noted.
+
+---
+
+## Block Timing and Production
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Block rate | **10 BPS** (blocks per second) | Target rate of block production across the network |
+| Block time target | **100 ms** | Target interval between consecutive blocks |
+| Timestamp deviation tolerance | 132 seconds | Maximum allowed deviation of a block's timestamp from the network's past median time |
+
+<Callout type="info">
+Kaspa's 10 BPS rate makes it one of the fastest proof-of-work blockchains. At this rate, the network produces approximately 864,000 blocks per day. The high block rate is enabled by the GHOSTDAG protocol, which resolves conflicts between concurrent blocks without orphaning them.
+</Callout>
+
+---
+
+## Block Constraints
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Maximum block mass | **500,000** | Maximum total transaction mass allowed in a single block |
+| Maximum block parents | **10** | Maximum number of direct (level-0) parent blocks |
+| Merge set size limit | **Bounded by GHOSTDAG K** | Maximum number of blocks in a block's merge set |
+| GHOSTDAG K | **18** | Upper bound on the anticone size for blocks to be considered "blue" |
+| Mergeset size limit | **180** | Maximum number of blocks allowed in a block's merge set |
+
+### Transaction Mass Limits
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Maximum transaction mass | **100,000** | Maximum mass for a single transaction |
+| Mass per transaction byte | **1** | Mass contribution per byte of serialized transaction data |
+| Mass per script public key byte | **10** | Mass contribution per byte of script public key data |
+| Mass per sig op | **1,000** | Mass contribution per signature operation |
+
+---
+
+## Difficulty Adjustment Algorithm (DAA)
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| DAA window size | **2,641 blocks** | Number of blocks in the DAA sampling window |
+| DAA target time per block | **100 ms** | Target block interval the DAA adjusts toward |
+| Minimum difficulty | Network-defined | Floor difficulty to prevent the chain from stalling |
+| DAA score | Monotonically increasing | Counts blocks on the selected parent chain; used as a logical clock |
+
+The DAA continuously adjusts the mining difficulty to maintain the target block rate. It samples the timestamps and difficulty of blocks within the DAA window and computes the new target based on the observed rate versus the expected rate.
+
+<Callout type="info">
+The DAA score serves as Kaspa's logical clock. It is analogous to Bitcoin's block height but increments along the selected parent chain of the DAG. Many protocol rules (lock times, coinbase maturity, finality) reference DAA score rather than wall-clock time.
+</Callout>
+
+---
+
+## Consensus and Finality
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Coinbase maturity | **100 blue score** | Number of blue score increments before coinbase outputs become spendable |
+| Finality depth | **86,400 blue score** (~2.4 hours) | Depth after which blocks are considered final and cannot be reorganized |
+| Pruning depth | **185,798 blue score** | Depth after which block data may be pruned from non-archival nodes |
+| Merge depth | **3,600 blue score** | Depth at which the merge set of a block is considered settled |
+
+### Finality
+
+Kaspa's finality window is set at **86,400 blue score**, which corresponds to approximately **2.4 hours** at the current 10 BPS rate. Once a block's blue score is more than 86,400 behind the virtual selected parent's blue score, it is considered final:
+
+- The block cannot be removed from the selected chain by any reorganization.
+- All transactions accepted in that block are irreversibly confirmed.
+- The finality point serves as a checkpoint that new nodes can trust during initial sync.
+
+<Callout type="warn">
+While practical irreversibility is achieved much sooner (within seconds for typical transactions), the 86,400 blue score finality window provides a mathematically guaranteed security bound against all possible attacks.
+</Callout>
+
+### Pruning
+
+Pruning allows nodes to discard old block body data while retaining headers. This keeps storage requirements bounded:
+
+- **Pruned nodes** store only block headers and UTXO state beyond the pruning depth.
+- **Archival nodes** retain complete block data including all transaction bodies.
+- The pruning point advances as the chain grows, keeping the required data window constant.
+
+---
+
+## Monetary Policy and Emission
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Maximum supply | **28.7 billion KAS** | Hard cap on total KAS that will ever be minted |
+| Base unit | **sompi** | 1 KAS = 100,000,000 sompi |
+| Initial block reward | **500 KAS** per block (pre-10 BPS) | Initial reward before the BPS increase |
+| Emission schedule | **Chromatic** | Named after the 12 semitones in a musical chromatic scale |
+| Halving interval | **~1 year** (by chromatic phases) | Reward halves approximately once per year |
+| Monthly reduction factor | **(1/2)^(1/12)** ~= 0.9439 | Reward reduces by this factor each month |
+
+### Chromatic Emission Schedule
+
+Kaspa's emission schedule is called **chromatic** because it divides each halving cycle into 12 equal phases (like the 12 semitones in a musical octave). Instead of an abrupt 50% halving, the block reward decreases smoothly:
+
+| Phase | Reduction from start of cycle | Approximate reward factor |
+|-------|-------------------------------|--------------------------|
+| Month 1 | (1/2)^(1/12) | 0.9439x |
+| Month 2 | (1/2)^(2/12) | 0.8909x |
+| Month 3 | (1/2)^(3/12) | 0.8409x |
+| Month 4 | (1/2)^(4/12) | 0.7937x |
+| Month 5 | (1/2)^(5/12) | 0.7492x |
+| Month 6 | (1/2)^(6/12) | 0.7071x |
+| Month 7 | (1/2)^(7/12) | 0.6674x |
+| Month 8 | (1/2)^(8/12) | 0.6300x |
+| Month 9 | (1/2)^(9/12) | 0.5946x |
+| Month 10 | (1/2)^(10/12) | 0.5612x |
+| Month 11 | (1/2)^(11/12) | 0.5297x |
+| Month 12 | (1/2)^(12/12) | 0.5000x |
+
+After 12 months, the reward is exactly half of where it started, and a new cycle begins. This produces a smooth, predictable decline in emission rather than the sharp halving events seen in Bitcoin.
+
+<Callout type="info">
+The chromatic schedule means miners never experience a sudden 50% revenue drop. Instead, the reward decreases by approximately 5.6% each month, providing a smoother economic transition.
+</Callout>
+
+---
+
+## Network Ports and Configuration
+
+| Parameter | Mainnet | Testnet-10 | Testnet-11 | Simnet | Devnet |
+|-----------|---------|------------|------------|--------|--------|
+| Default P2P port | **16111** | 16211 | 16311 | 16511 | 16611 |
+| Default gRPC port | **16110** | 16210 | 16310 | 16510 | 16610 |
+| Default wRPC (Borsh) port | **17110** | 17210 | 17310 | 17510 | 17610 |
+| Default wRPC (JSON) port | **18110** | 18210 | 18310 | 18510 | 18610 |
+| Address prefix | `kaspa:` | `kaspatest:` | `kaspatest:` | `kaspasim:` | `kaspadev:` |
+
+### Network Types
+
+| Network | BPS | Purpose | Description |
+|---------|-----|---------|-------------|
+| **Mainnet** | 10 | Production | The live Kaspa network with real value |
+| **Testnet-10** | 10 | Testing | Public test network mirroring mainnet BPS for realistic testing |
+| **Testnet-11** | 10 | Testing | Secondary public test network for parallel testing |
+| **Simnet** | 1 | Development | Simulated network for local development with instant mining |
+| **Devnet** | 1 | Development | Developer network for testing protocol changes |
+
+<Callout type="info">
+For development purposes, **simnet** is recommended as it allows instant block generation and does not require connecting to external peers. Use testnet-10 or testnet-11 when you need a realistic multi-node environment.
+</Callout>
+
+---
+
+## Mining Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Mining algorithm | **kHeavyHash** | Optical-mining-friendly proof-of-work algorithm |
+| Hash output | 256 bits | Output size of the kHeavyHash function |
+| Matrix size | 64x64 | Dimensions of the heavy hash matrix |
+| Nonce size | 64 bits | Size of the nonce field in the block header |
+
+### kHeavyHash Algorithm
+
+The kHeavyHash proof-of-work algorithm consists of:
+
+1. **Pre-hash**: Compute a standard hash of the block header (Blake3).
+2. **Matrix multiplication**: Multiply the pre-hash result by a 64x64 matrix (derived from the DAG state) in GF(2^4).
+3. **XOR**: XOR the matrix multiplication result with the original pre-hash.
+4. **Post-hash**: Compute a final hash (Blake3) of the combined result.
+
+This construction is designed to be efficient for optical computing hardware while maintaining ASIC resistance for traditional silicon implementations.
+
+---
+
+## P2P Protocol Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Maximum message size | **10 MB** | Maximum size of a single P2P message |
+| Handshake timeout | **30 seconds** | Time allowed to complete the P2P handshake |
+| Maximum outbound connections | **8** | Default maximum outbound peer connections |
+| Maximum inbound connections | **128** | Default maximum inbound peer connections |
+| IBD batch size | **99** | Number of blocks requested per batch during Initial Block Download |
+| Ping interval | **120 seconds** | Interval between keepalive ping messages |

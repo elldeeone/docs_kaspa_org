@@ -1,0 +1,464 @@
+---
+title: Building Applications
+description: Architecture patterns, best practices, and practical guidance for building applications on the Kaspa network.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Kaspa's high throughput, fast confirmation times, and UTXO-based architecture provide a powerful foundation for building decentralized applications. This guide covers the key architectural decisions, common patterns, and best practices you need to know when building on Kaspa.
+
+## Architecture Patterns
+
+There are two primary approaches to building applications that interact with the Kaspa network.
+
+### Direct Node Connection
+
+Connect your application backend directly to a Kaspa node via wRPC or gRPC. This gives you full access to all RPC methods, subscriptions, and raw blockchain data.
+
+```
+┌─────────────┐       ┌───────────────┐       ┌──────────────┐
+│  Your App   │──────▶│  Kaspa Node   │──────▶│  Kaspa       │
+│  (Backend)  │ wRPC  │  (rusty-kaspa)│       │  Network     │
+└─────────────┘       └───────────────┘       └──────────────┘
+```
+
+**When to use:**
+- Payment processors and exchange integrations
+- Block explorers and analytics platforms
+- Mining pools and infrastructure services
+- Any backend that needs full blockchain access
+
+**Implementation:**
+
+```typescript
+import { RpcClient, Encoding } from 'kaspa-wasm';
+
+const rpc = new RpcClient({
+  url: "ws://your-node:16110",
+  encoding: Encoding.Borsh,
+});
+
+await rpc.connect();
+const info = await rpc.getBlockDagInfo();
+```
+
+### WASM SDK (Client-Side)
+
+Use the [WASM SDK](/docs/developer-guide/wasm-sdk) to build browser-based wallets, payment interfaces, and lightweight clients that connect to public nodes or your own infrastructure.
+
+```
+┌─────────────┐       ┌───────────────┐       ┌──────────────┐
+│  Browser    │──────▶│  Public Node  │──────▶│  Kaspa       │
+│  (WASM SDK) │  wss  │  (or your own)│       │  Network     │
+└─────────────┘       └───────────────┘       └──────────────┘
+```
+
+**When to use:**
+- Web wallets and browser extensions
+- DApp frontends
+- Point-of-sale interfaces
+- Any client-side application
+
+### Hybrid Architecture
+
+For production applications, a hybrid architecture is often ideal: a backend service maintains a persistent connection to your own node, processes blockchain data, and exposes a simplified API to your frontend.
+
+```
+┌─────────────┐       ┌───────────────┐       ┌──────────────┐
+│  Frontend   │──────▶│  Your Backend │──────▶│  Kaspa Node  │
+│  (Browser)  │ REST  │  (API Server) │ wRPC  │  (your own)  │
+└─────────────┘       └───────────────┘       └──────────────┘
+```
+
+This approach lets you:
+- Cache and index blockchain data for fast queries
+- Implement custom business logic server-side
+- Control rate limiting and access
+- Avoid exposing raw node access to end users
+
+## Working with the UTXO Model
+
+Kaspa uses an Unspent Transaction Output (UTXO) model, similar to Bitcoin. Understanding UTXOs is critical for building correct applications.
+
+### UTXO Basics
+
+In the UTXO model, there are no "accounts" with balances. Instead, the blockchain tracks individual unspent outputs that can be consumed by future transactions.
+
+```
+Transaction A creates:
+  Output 0: 5 KAS → Address X
+  Output 1: 3 KAS → Address Y
+
+Transaction B spends Output 0 from Transaction A:
+  Input:  TX_A:0 (5 KAS from Address X)
+  Output 0: 2 KAS → Address Z  (payment)
+  Output 1: 3 KAS → Address X  (change)
+```
+
+Key rules:
+- Each UTXO can only be spent once.
+- A transaction must consume entire UTXOs — you cannot partially spend a UTXO.
+- Change is sent back to the sender as a new UTXO.
+- A wallet's "balance" is the sum of all UTXOs it controls.
+
+### Handling UTXO Selection
+
+When building a transaction, you must select which UTXOs to use as inputs. The WASM SDK handles this automatically via the `createTransactions` function, but understanding the process is important:
+
+```typescript
+import { createTransactions, kaspaToSompi } from 'kaspa-wasm';
+
+// The SDK selects UTXOs automatically from the UtxoContext
+const { transactions, summary } = await createTransactions({
+  entries: utxoContext,  // Your tracked UTXOs
+  outputs: [
+    {
+      address: "kaspa:recipient-address",
+      amount: kaspaToSompi(10), // 10 KAS
+    },
+  ],
+  changeAddress: "kaspa:your-change-address",
+  priorityFee: 0n,
+});
+
+console.log("Input amount:", summary.inputAmount);
+console.log("Output amount:", summary.outputAmount);
+console.log("Fee:", summary.fees);
+console.log("Transactions in chain:", transactions.length);
+```
+
+<Callout type="info">
+Kaspa transactions have a mass limit (analogous to Bitcoin's weight limit). If you need to consume many small UTXOs (e.g., from mining), the SDK automatically creates a chain of compound transactions that consolidate UTXOs before the final transfer.
+</Callout>
+
+### UTXO Consolidation
+
+Wallets that receive many small payments (such as mining payouts) can accumulate thousands of small UTXOs. Periodically consolidating these into fewer, larger UTXOs improves transaction efficiency:
+
+```typescript
+// Compound (consolidation) transactions are created automatically
+// by createTransactions when needed. You can also trigger
+// consolidation explicitly by sending funds to yourself:
+
+const { transactions } = await createTransactions({
+  entries: utxoContext,
+  outputs: [
+    {
+      address: myAddress,
+      amount: totalBalance - estimatedFee,
+    },
+  ],
+  changeAddress: myAddress,
+});
+
+for (const tx of transactions) {
+  tx.sign([privateKey]);
+  await tx.submit(rpc);
+}
+```
+
+## Listening for Transactions
+
+Real-time transaction detection is essential for payment processors, wallets, and notification services. Kaspa provides several subscription mechanisms.
+
+### UTXO Change Notifications
+
+The most reliable way to detect incoming and outgoing transactions is through UTXO change subscriptions:
+
+```typescript
+// Subscribe to UTXO changes for your addresses
+await rpc.subscribeUtxosChanged([
+  "kaspa:your-deposit-address-1",
+  "kaspa:your-deposit-address-2",
+]);
+
+rpc.addEventListener("utxos-changed", (event) => {
+  const { added, removed } = event.data;
+
+  // Incoming funds (new UTXOs)
+  for (const entry of added) {
+    const amountKas = Number(entry.utxoEntry.amount) / 1e8;
+    console.log(`Received ${amountKas} KAS`);
+    console.log(`  Address: ${entry.address}`);
+    console.log(`  TX: ${entry.outpoint.transactionId}`);
+    console.log(`  DAA Score: ${entry.utxoEntry.blockDaaScore}`);
+    console.log(`  Is Coinbase: ${entry.utxoEntry.isCoinbase}`);
+  }
+
+  // Outgoing funds (consumed UTXOs)
+  for (const entry of removed) {
+    console.log(`Spent UTXO: ${entry.outpoint.transactionId}:${entry.outpoint.index}`);
+  }
+});
+```
+
+### Block Notifications
+
+Monitor all blocks added to the DAG. Useful for block explorers and analytics:
+
+```typescript
+await rpc.subscribeBlockAdded();
+
+rpc.addEventListener("block-added", (event) => {
+  const block = event.data.block;
+  const header = block.header;
+
+  console.log(`Block: ${block.verboseData.hash}`);
+  console.log(`  Blue score: ${header.blueScore}`);
+  console.log(`  DAA score: ${header.daaScore}`);
+  console.log(`  Timestamp: ${new Date(Number(header.timestamp))}`);
+  console.log(`  Transactions: ${block.transactions.length}`);
+  console.log(`  Is chain block: ${block.verboseData.isChainBlock}`);
+});
+```
+
+### Virtual Chain Changes
+
+Track changes to the selected parent chain (the "heaviest" path through the DAG). This is important for understanding which blocks and transactions are confirmed:
+
+```typescript
+await rpc.subscribeVirtualSelectedParentChainChanged({
+  includeAcceptedTransactionIds: true,
+});
+
+rpc.addEventListener("virtual-selected-parent-chain-changed", (event) => {
+  const { addedChainBlockHashes, removedChainBlockHashes, acceptedTransactionIds } = event.data;
+
+  console.log("Blocks added to chain:", addedChainBlockHashes);
+  console.log("Blocks removed from chain:", removedChainBlockHashes);
+
+  if (acceptedTransactionIds) {
+    for (const accepted of acceptedTransactionIds) {
+      console.log(`Block ${accepted.acceptingBlockHash} accepted transactions:`,
+        accepted.acceptedTransactionIds);
+    }
+  }
+});
+```
+
+## Building a Payment Processor
+
+Here is a complete pattern for building a payment processor on Kaspa.
+
+### Architecture
+
+1. **Generate unique deposit addresses** for each payment request using HD wallet derivation.
+2. **Watch deposit addresses** via UTXO change subscriptions.
+3. **Track confirmation depth** by comparing the deposit's DAA score against the current virtual DAA score.
+4. **Credit the payment** once sufficient confirmations are reached.
+
+### Implementation
+
+```typescript
+import {
+  RpcClient,
+  Resolver,
+  Encoding,
+  Mnemonic,
+  XPrv,
+} from 'kaspa-wasm';
+
+class PaymentProcessor {
+  private rpc: RpcClient;
+  private masterKey: XPrv;
+  private addressIndex: number = 0;
+  private pendingPayments: Map<string, PaymentRequest> = new Map();
+
+  constructor(seedPhrase: string) {
+    this.rpc = new RpcClient({
+      url: "ws://your-node:16110",
+      encoding: Encoding.Borsh,
+    });
+
+    const mnemonic = new Mnemonic(seedPhrase);
+    const seed = mnemonic.toSeed("");
+    this.masterKey = new XPrv(seed);
+  }
+
+  async start() {
+    await this.rpc.connect();
+
+    // Listen for UTXO changes
+    this.rpc.addEventListener("utxos-changed", (event) => {
+      this.handleUtxoChanges(event.data);
+    });
+
+    // Listen for DAA score changes to track confirmations
+    await this.rpc.subscribeVirtualDaaScoreChanged();
+    this.rpc.addEventListener("virtual-daa-score-changed", (event) => {
+      this.checkConfirmations(event.data.virtualDaaScore);
+    });
+  }
+
+  // Generate a unique deposit address for a payment
+  createPaymentRequest(amountKas: number, orderId: string): string {
+    const index = this.addressIndex++;
+    const childKey = this.masterKey
+      .derivePath(`m/44'/111111'/0'/0/${index}`);
+    const address = childKey
+      .toPrivateKey()
+      .toPublicKey()
+      .toAddress("mainnet")
+      .toString();
+
+    this.pendingPayments.set(address, {
+      orderId,
+      expectedAmount: BigInt(Math.round(amountKas * 1e8)),
+      receivedAmount: 0n,
+      daaScoreAtDeposit: 0n,
+      confirmed: false,
+    });
+
+    // Watch this address for deposits
+    this.rpc.subscribeUtxosChanged([address]);
+
+    return address;
+  }
+
+  private handleUtxoChanges(data: any) {
+    for (const entry of data.added) {
+      const address = entry.address;
+      const payment = this.pendingPayments.get(address);
+      if (payment) {
+        payment.receivedAmount += BigInt(entry.utxoEntry.amount);
+        payment.daaScoreAtDeposit = BigInt(entry.utxoEntry.blockDaaScore);
+        console.log(`Payment received for order ${payment.orderId}: ${payment.receivedAmount} sompi`);
+      }
+    }
+  }
+
+  private checkConfirmations(currentDaaScore: bigint) {
+    for (const [address, payment] of this.pendingPayments) {
+      if (payment.daaScoreAtDeposit > 0n && !payment.confirmed) {
+        const confirmations = currentDaaScore - payment.daaScoreAtDeposit;
+        if (confirmations >= 10n && payment.receivedAmount >= payment.expectedAmount) {
+          payment.confirmed = true;
+          console.log(`Order ${payment.orderId} confirmed with ${confirmations} confirmations`);
+          // Credit the payment in your system
+        }
+      }
+    }
+  }
+}
+
+interface PaymentRequest {
+  orderId: string;
+  expectedAmount: bigint;
+  receivedAmount: bigint;
+  daaScoreAtDeposit: bigint;
+  confirmed: boolean;
+}
+```
+
+<Callout type="warn">
+This is a simplified example. A production payment processor must also handle edge cases such as partial payments, overpayments, UTXO consolidation, and persistent storage of payment state across restarts.
+</Callout>
+
+## Best Practices
+
+### Confirmation Depth
+
+In Kaspa's blockDAG, "confirmations" are measured differently than in a traditional blockchain. Instead of counting blocks on top of a transaction's block, confirmation depth is measured using the **blue score** or **DAA score** difference.
+
+- **10+ blue score confirmations** — Recommended for most payments. With Kaspa's 1 BPS (block per second), this takes roughly 10 seconds.
+- **100+ confirmations** — Recommended for high-value transactions.
+- **Coinbase maturity** — Coinbase (mining reward) transactions require a maturity period before they can be spent. This is enforced at the protocol level.
+
+```typescript
+// Calculate confirmation depth
+const currentDaaScore = (await rpc.getBlockDagInfo()).virtualDaaScore;
+const txDaaScore = utxoEntry.blockDaaScore;
+const confirmations = BigInt(currentDaaScore) - BigInt(txDaaScore);
+
+if (confirmations >= 10n) {
+  console.log("Transaction is sufficiently confirmed");
+}
+```
+
+### Handling Reorgs in a DAG
+
+Kaspa's DAG structure means that blocks are rarely fully orphaned (unlike in a linear blockchain). However, the **virtual selected parent chain** can change, which affects which transactions are considered accepted.
+
+Key principles:
+
+1. **Use `subscribeVirtualSelectedParentChainChanged`** to detect chain reorganizations. The event provides both `addedChainBlockHashes` and `removedChainBlockHashes`.
+2. **A block removed from the selected chain is not necessarily invalid** — it may still be a valid blue block in the DAG, and its transactions may be accepted by a different chain block.
+3. **Wait for sufficient confirmation depth** before considering a transaction final. The deeper a transaction is (in terms of blue score), the less likely the chain will reorganize past it.
+4. **Monitor `acceptedTransactionIds`** in chain change events to know exactly which transactions are currently accepted.
+
+```typescript
+await rpc.subscribeVirtualSelectedParentChainChanged({
+  includeAcceptedTransactionIds: true,
+});
+
+rpc.addEventListener("virtual-selected-parent-chain-changed", (event) => {
+  const { removedChainBlockHashes, acceptedTransactionIds } = event.data;
+
+  if (removedChainBlockHashes.length > 0) {
+    console.warn("Chain reorganization detected!");
+    console.warn("Removed blocks:", removedChainBlockHashes.length);
+    // Re-evaluate any pending transactions that were in removed blocks
+  }
+
+  // Track which transactions are currently accepted
+  if (acceptedTransactionIds) {
+    for (const accepted of acceptedTransactionIds) {
+      for (const txId of accepted.acceptedTransactionIds) {
+        // Mark this transaction as accepted in your database
+      }
+    }
+  }
+});
+```
+
+### Transaction Fees
+
+Kaspa uses a fee market based on transaction mass. Transaction mass is determined by the size of the transaction in bytes and the computational cost of its scripts.
+
+- **Minimum fee** — Transactions must include a fee proportional to their mass. Very small fees (or zero fees) may cause transactions to be delayed or rejected during periods of high network activity.
+- **Priority fee** — You can include an additional priority fee to incentivize faster inclusion.
+- **Fee estimation** — The WASM SDK's `createTransactions` function calculates the required fee automatically.
+
+```typescript
+const { transactions, summary } = await createTransactions({
+  entries: utxoContext,
+  outputs: [{ address: recipient, amount }],
+  changeAddress: myAddress,
+  priorityFee: kaspaToSompi(0.001), // Optional priority fee
+});
+
+console.log("Total fees:", summary.fees, "sompi");
+```
+
+### Connection Resilience
+
+Build applications that handle connection interruptions gracefully:
+
+```typescript
+const rpc = new RpcClient({
+  resolver: new Resolver(),
+  encoding: Encoding.Borsh,
+  networkId: "mainnet",
+});
+
+// The RpcClient supports automatic reconnection
+rpc.addEventListener("connect", () => {
+  console.log("Connected to node");
+  // Re-subscribe to notifications after reconnection
+});
+
+rpc.addEventListener("disconnect", () => {
+  console.warn("Disconnected from node, attempting reconnection...");
+});
+
+await rpc.connect();
+```
+
+### Security Considerations
+
+- **Run your own node** for production applications. Public nodes should only be used for development and testing.
+- **Validate all addresses** before sending funds. Use the `Address` class to parse and validate.
+- **Never expose private keys** to client-side code in a web application unless building a client-side wallet.
+- **Implement rate limiting** on any public-facing API that proxies RPC calls.
+- **Use HTTPS/WSS** for all connections in production to prevent man-in-the-middle attacks.
+- **Monitor for unusual patterns** — large transaction volumes, rapid balance changes, or unexpected UTXO consumption could indicate compromise.

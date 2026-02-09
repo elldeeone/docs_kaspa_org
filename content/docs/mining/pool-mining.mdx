@@ -1,0 +1,178 @@
+---
+title: "Pool Mining"
+description: "Guide to mining Kaspa through mining pools, including pool selection, stratum configuration, miner software setup, and monitoring your earnings."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+Pool mining allows you to combine your hashrate with other miners to find blocks more consistently. Instead of waiting days or weeks to find a block solo, a pool distributes rewards proportionally based on the work (shares) each miner contributes. This provides a steadier income stream, especially for miners with modest hashrate.
+
+Kaspa's 10 blocks-per-second throughput means pools find blocks extremely frequently, resulting in near-continuous payouts for active pool miners.
+
+## How Pool Mining Works
+
+1. **You connect** your mining software to a pool's stratum server.
+2. **The pool assigns work**: The pool sends you block templates (or partial work units) to mine against.
+3. **You submit shares**: Your miner submits proof-of-work solutions that meet a lower difficulty threshold set by the pool (shares). These shares prove you are contributing hashrate.
+4. **The pool finds blocks**: When the pool collectively finds a valid block (meeting the network difficulty), the block reward is distributed among all contributing miners proportional to their submitted shares.
+5. **You receive payouts**: The pool sends KAS to your wallet address according to its payout schedule and method (PPS, PPLNS, etc.).
+
+## Popular Mining Pools
+
+The Kaspa mining ecosystem includes several well-established pools. Below are some commonly used options:
+
+| Pool | Stratum URL | Fee | Payout Method |
+|---|---|---|---|
+| ACC Pool | `stratum+tcp://kas.acc-pool.pw:16112` | ~1% | PPLNS |
+| Woolypooly | `stratum+tcp://kas.woolypooly.com:3112` | ~1% | PPLNS |
+| HeroMiners | `stratum+tcp://kas.herominers.com:1206` | ~1% | PROP |
+| K1Pool | `stratum+tcp://kas.k1pool.com:7777` | ~1% | PPLNS |
+
+<Callout type="warn">
+Pool availability, fees, and URLs can change. Always verify the current stratum address and fee structure on the pool's official website before configuring your miner. The table above is provided as a general reference and may not reflect the latest information.
+</Callout>
+
+## Payout Methods Explained
+
+Different pools use different reward distribution schemes:
+
+- **PPLNS (Pay Per Last N Shares)**: Rewards are based on the shares you submitted in a recent window. This discourages pool hopping and rewards loyal miners. Payouts can vary between rounds.
+- **PPS (Pay Per Share)**: You receive a fixed payment for each valid share submitted, regardless of whether the pool finds a block. This provides the most stable income but pools charge higher fees to cover variance risk.
+- **PROP (Proportional)**: Block rewards are split proportionally among all miners who contributed shares during the round in which the block was found.
+
+## Configuring Mining Software
+
+### BzMiner
+
+BzMiner is a popular multi-algorithm GPU miner with strong kHeavyHash support.
+
+```bash
+bzminer -a kaspa \
+  -w kaspa:qr...your_wallet_address \
+  -p stratum+tcp://kas.acc-pool.pw:16112
+```
+
+For multiple GPUs, BzMiner automatically detects and uses all available GPUs. To select specific devices:
+
+```bash
+bzminer -a kaspa \
+  -w kaspa:qr...your_wallet_address \
+  -p stratum+tcp://kas.acc-pool.pw:16112 \
+  --devices 0 1 2
+```
+
+### lolMiner
+
+lolMiner supports Kaspa's kHeavyHash algorithm on both AMD and NVIDIA GPUs.
+
+```bash
+lolMiner --algo KASPA \
+  --pool stratum+tcp://kas.woolypooly.com:3112 \
+  --user kaspa:qr...your_wallet_address
+```
+
+To set a worker name (useful for tracking multiple rigs):
+
+```bash
+lolMiner --algo KASPA \
+  --pool stratum+tcp://kas.woolypooly.com:3112 \
+  --user kaspa:qr...your_wallet_address.rig01
+```
+
+### Team Red Miner (AMD GPUs)
+
+Team Red Miner is optimized for AMD GPUs and provides competitive kHeavyHash hashrates.
+
+```bash
+teamredminer -a kas \
+  -o stratum+tcp://kas.herominers.com:1206 \
+  -u kaspa:qr...your_wallet_address.rig01 -p x
+```
+
+<Callout type="info">
+The `-p x` parameter is a placeholder password required by stratum protocol syntax. Most Kaspa pools do not use password authentication -- the wallet address in the `-u` field is sufficient to identify your account.
+</Callout>
+
+### IceRiver ASIC Miners
+
+IceRiver ASICs typically have a built-in web interface for pool configuration. Access the miner's web UI (usually at its local IP address on port 80 or 443) and enter:
+
+- **Pool URL**: `stratum+tcp://kas.acc-pool.pw:16112`
+- **Worker/Wallet**: `kaspa:qr...your_wallet_address`
+- **Password**: `x` (or leave blank)
+
+Most ASIC miners support configuring up to three pool addresses for failover.
+
+## Setting Up Worker Names
+
+Worker names help you identify individual mining rigs on the pool dashboard. The convention is to append the worker name to your wallet address with a period separator:
+
+```
+kaspa:qr...your_wallet_address.worker_name
+```
+
+Examples:
+- `kaspa:qr...abc123.gpu-rig-01`
+- `kaspa:qr...abc123.office-asic`
+
+This allows you to monitor per-rig hashrate and status on the pool's web dashboard.
+
+## Monitoring Your Earnings
+
+### Pool Dashboard
+
+Most pools provide a web dashboard where you can look up your address and see:
+
+- **Current hashrate** (reported vs. effective)
+- **Shares submitted** (accepted, rejected, stale)
+- **Pending balance** (unpaid KAS)
+- **Payment history** (past payouts with transaction IDs)
+- **Workers** (individual rig status if using worker names)
+
+Simply visit the pool's website and enter your Kaspa wallet address in the search or dashboard field.
+
+### Miner Console Output
+
+Your mining software will continuously report status information:
+
+```
+[INFO] GPU #0 RTX 3080: 580.2 MH/s, T: 65°C, P: 245W
+[INFO] GPU #1 RTX 3070: 420.5 MH/s, T: 62°C, P: 185W
+[INFO] Total: 1000.7 MH/s | Shares: 1245 accepted, 3 rejected (0.2%)
+[INFO] Pool latency: 35ms | Uptime: 4h 22m
+```
+
+Key metrics to watch:
+
+- **Rejected/stale shares**: Should be below 1--2%. High rates indicate latency issues or outdated mining software.
+- **GPU temperature**: Keep below 80C for longevity. Adjust fan curves or reduce power limits as needed.
+- **Hashrate stability**: Large fluctuations may indicate thermal throttling or driver issues.
+
+<Callout type="warn">
+If your rejected share rate exceeds 3--5%, investigate the cause. Common culprits include high network latency to the pool, an overclocked GPU producing errors, or running outdated miner software that does not handle Kaspa's rapid block rate efficiently.
+</Callout>
+
+## Pool Mining vs. Solo Mining
+
+| Factor | Pool Mining | Solo Mining |
+|---|---|---|
+| Income consistency | Steady, proportional payouts | Highly variable (feast or famine) |
+| Fees | 0.5--2% pool fee | No fees (but you pay for node hosting) |
+| Setup complexity | Easier (no full node required) | Harder (must run and maintain kaspad) |
+| Minimum hashrate | Any amount is viable | Needs significant hashrate to find blocks regularly |
+| Block rewards | Shared proportionally | Full block reward when you find a block |
+| Privacy | Pool knows your hashrate and address | Only the network sees your blocks |
+
+<Callout type="info">
+For most miners, especially those with a single GPU or a small number of GPUs, pool mining is the recommended approach. The consistent income and lower operational complexity outweigh the small pool fee. Solo mining becomes more attractive if you operate a large mining farm with enough hashrate to find multiple blocks per day.
+</Callout>
+
+## Tips for Pool Mining
+
+- **Choose a nearby pool server**: Many pools offer regional stratum endpoints (US, EU, Asia). Select the one closest to you for lower latency and fewer stale shares.
+- **Use a dedicated Kaspa address**: Create a separate address for mining payouts to keep your mining income distinct from other transactions.
+- **Monitor pool health**: If a pool has frequent downtime or delayed payouts, consider switching. The Kaspa mining community on Discord and forums is a good source for pool reputation feedback.
+- **Set up failover pools**: Configure your miner with a backup pool address so mining continues if your primary pool goes down.
+- **Keep your miner updated**: Mining software developers regularly release optimizations that can increase your hashrate by several percent at no additional cost.

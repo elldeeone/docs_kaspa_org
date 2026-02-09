@@ -1,0 +1,118 @@
+---
+title: "kHeavyHash Algorithm"
+description: "Technical overview of Kaspa's proof-of-work algorithm kHeavyHash, combining matrix multiplication with SHA-3 for optical mining compatibility and efficient difficulty adjustment at 10 blocks per second."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+kHeavyHash is Kaspa's proof-of-work (PoW) consensus algorithm, purpose-built to secure a high-throughput blockDAG running at 10 blocks per second (BPS). It was designed with a forward-looking goal: to be efficiently implementable on photonic (optical) hardware, potentially enabling dramatic improvements in mining energy efficiency in the future.
+
+The algorithm combines a heavy matrix multiplication step with the SHA-3 (Keccak-256) hash function, creating a compute profile that is distinct from the pure hash-chaining approaches used by SHA-256d (Bitcoin) or Ethash (former Ethereum PoW).
+
+## How kHeavyHash Works
+
+The kHeavyHash function operates in three stages:
+
+### Step 1: Initial Hash
+
+The block header is first hashed using **SHA-3 (Keccak-256)**, producing a 256-bit digest. This serves as the input vector for the next stage.
+
+```
+hash_0 = Keccak256(block_header || nonce)
+```
+
+### Step 2: Matrix Multiplication
+
+The 256-bit hash output is treated as a vector and multiplied by a **64x64 matrix** over a 4-bit (nibble) finite field. Each element of the matrix is a 4-bit value (0--15), and the 256-bit hash is split into 64 nibbles to form the input vector.
+
+```
+vector_out = Matrix * vector_in (mod 2^4)
+```
+
+This matrix multiplication is the "heavy" part of kHeavyHash. It introduces a large number of multiply-and-accumulate (MAC) operations that dominate the computational cost. The matrix is fixed for a given epoch and is publicly known, so all miners perform the same computation.
+
+### Step 3: Final Hash
+
+The output of the matrix multiplication is XORed with the original hash, and the result is hashed again with Keccak-256 to produce the final PoW hash:
+
+```
+result = Keccak256(hash_0 XOR vector_out)
+```
+
+The final result is compared against the block's target difficulty. If `result < target`, the block is valid.
+
+<Callout type="info">
+The three-stage design (hash, matrix multiply, hash) ensures that the algorithm cannot be shortcut. Both the hashing and the linear algebra steps must be performed in full for every nonce attempt.
+</Callout>
+
+## Matrix Generation
+
+The 64x64 matrix used in kHeavyHash is generated deterministically from the state of the DAG. Specifically:
+
+- The matrix is derived from a seed that depends on a **MUHASH** commitment to the UTXO set at a specific DAG checkpoint.
+- The matrix changes periodically (on the order of every epoch), and all nodes independently compute the same matrix from the consensus state.
+- Each matrix element is a 4-bit value, making the full matrix 64 x 64 x 4 bits = 2,048 bytes (2 KB) in size.
+
+Because the matrix is small enough to fit in on-chip memory or registers, it does not impose significant memory-hardness requirements. This is a deliberate design choice that distinguishes kHeavyHash from memory-hard algorithms like Ethash or RandomX.
+
+## Optical Mining Research
+
+One of the most distinctive aspects of kHeavyHash is that the matrix multiplication step was designed with **photonic (optical) computing** in mind.
+
+Matrix-vector multiplication maps naturally onto photonic hardware architectures, where light signals passing through optical components (such as Mach-Zehnder interferometers or microring resonators) can perform linear algebra operations at the speed of light with very low energy consumption.
+
+Key points about the optical mining angle:
+
+- **Energy efficiency**: Optical matrix multiplication can theoretically be performed with orders-of-magnitude less energy per operation compared to electronic transistors, since photons do not generate resistive heat.
+- **Research stage**: As of now, optical mining hardware for kHeavyHash remains a research pursuit. No production optical miners are available, but the algorithm was intentionally designed to be compatible with this future hardware class.
+- **Why it matters**: If optical mining becomes practical, it could dramatically reduce the environmental footprint of proof-of-work mining while maintaining strong security guarantees.
+
+<Callout type="warn">
+Optical mining hardware for kHeavyHash is still in the research and development phase. Current mining is performed on conventional GPUs and ASICs. Claims about commercially available optical miners should be treated with skepticism.
+</Callout>
+
+## Difficulty Adjustment in a DAG Context
+
+Kaspa's difficulty adjustment mechanism differs fundamentally from blockchain-based systems like Bitcoin because Kaspa operates as a **blockDAG** with multiple blocks produced in parallel.
+
+### Per-Block Difficulty
+
+Every block in the Kaspa DAG carries its own difficulty target. The difficulty adjustment algorithm (DAA) recalculates the target for each new block based on:
+
+1. **Timestamps of recent DAG blocks**: The algorithm examines a window of recent blocks across the DAG to estimate the current network hashrate.
+2. **Blue score progression**: The DAG's blue score (a monotonically increasing metric analogous to block height) is used to measure the rate of block production.
+3. **Target block rate**: The DAA aims to maintain the target rate of **10 blocks per second** across the entire network.
+
+### How It Differs from Bitcoin
+
+| Aspect | Bitcoin | Kaspa |
+|---|---|---|
+| Block rate | 1 block per ~10 minutes | 10 blocks per second |
+| Adjustment frequency | Every 2,016 blocks (~2 weeks) | Every block |
+| Parallel blocks | None (strict chain) | Multiple blocks per DAG level |
+| Difficulty granularity | Coarse, step-wise | Fine-grained, continuous |
+
+Because Kaspa adjusts difficulty on every single block, the network responds rapidly to changes in hashrate. A sudden influx or departure of mining power is absorbed within seconds rather than weeks, keeping the block production rate stable.
+
+### Block Difficulty at 10 BPS
+
+At 10 blocks per second, the expected time between any two consecutive blocks from the network's perspective is **100 milliseconds**. This extremely high throughput means:
+
+- **Individual block difficulty is lower** than in slow blockchains, since each block only needs to represent roughly 1/10th of a second of network hashrate.
+- **Total work per second is equivalent** to what would be a single high-difficulty block in a slower system -- the security budget is distributed across many blocks.
+- **Orphan/DAA management**: The DAG structure means that blocks produced simultaneously by different miners are not "orphaned" but are instead merged into the DAG. The difficulty must account for network propagation delays to ensure that the DAG does not grow faster than nodes can process it.
+
+<Callout type="info">
+The combination of per-block difficulty adjustment and DAG-based parallel block inclusion means that Kaspa miners experience a much smoother and more predictable reward distribution compared to traditional blockchains, even when solo mining.
+</Callout>
+
+## Summary
+
+kHeavyHash is a carefully engineered proof-of-work function that balances several goals:
+
+- **Security**: The combination of Keccak-256 hashing and matrix multiplication makes the algorithm resistant to algebraic shortcuts.
+- **Future-proofing**: The matrix multiplication core is designed to be efficiently implementable on optical hardware.
+- **DAG compatibility**: Fine-grained, per-block difficulty adjustment keeps the 10 BPS target stable under varying hashrate conditions.
+- **Simplicity**: The algorithm avoids memory-hardness, keeping implementation straightforward across diverse hardware platforms.

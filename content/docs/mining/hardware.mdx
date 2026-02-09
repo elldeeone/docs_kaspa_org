@@ -1,0 +1,166 @@
+---
+title: "Mining Hardware"
+description: "Overview of Kaspa mining hardware including GPU and ASIC options, hashrate benchmarks, power consumption, and the industry transition from GPU to ASIC dominance."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+Kaspa's kHeavyHash proof-of-work algorithm can be mined with both GPUs and purpose-built ASICs. The mining hardware landscape for Kaspa has evolved rapidly since the network's launch, transitioning from GPU-only mining to an increasingly ASIC-dominated ecosystem. This page covers current hardware options, expected performance, and considerations for choosing mining equipment.
+
+## GPU Mining
+
+GPU mining was the original method for mining Kaspa and remains accessible to hobbyist miners. Both AMD and NVIDIA GPUs can mine kHeavyHash effectively.
+
+### NVIDIA GPUs
+
+NVIDIA GPUs generally offer strong kHeavyHash performance, particularly the RTX 30-series and RTX 40-series cards.
+
+| GPU | Approximate Hashrate | Power Consumption | Efficiency (MH/J) |
+|---|---|---|---|
+| RTX 4090 | 850--1,000 MH/s | 300--350W | ~2.8 |
+| RTX 4080 | 600--700 MH/s | 250--300W | ~2.3 |
+| RTX 4070 Ti | 500--580 MH/s | 200--250W | ~2.4 |
+| RTX 3090 | 650--750 MH/s | 300--350W | ~2.1 |
+| RTX 3080 | 550--620 MH/s | 250--300W | ~2.1 |
+| RTX 3070 | 400--450 MH/s | 180--220W | ~2.1 |
+| RTX 3060 Ti | 350--400 MH/s | 150--180W | ~2.1 |
+
+### AMD GPUs
+
+AMD GPUs are also capable kHeavyHash miners, though historically NVIDIA has had a slight performance-per-watt advantage on this algorithm.
+
+| GPU | Approximate Hashrate | Power Consumption | Efficiency (MH/J) |
+|---|---|---|---|
+| RX 7900 XTX | 700--800 MH/s | 300--350W | ~2.2 |
+| RX 7900 XT | 550--650 MH/s | 250--300W | ~2.2 |
+| RX 6950 XT | 550--620 MH/s | 250--300W | ~2.1 |
+| RX 6800 XT | 450--520 MH/s | 200--250W | ~2.1 |
+| RX 6700 XT | 320--370 MH/s | 150--180W | ~2.1 |
+| RX 6600 XT | 250--290 MH/s | 100--130W | ~2.2 |
+
+<Callout type="info">
+Hashrates vary depending on driver version, mining software, overclock settings, and silicon quality. The values above represent typical ranges seen in community benchmarks. Your results may differ.
+</Callout>
+
+### GPU Overclocking Tips
+
+To maximize kHeavyHash performance on GPUs:
+
+- **Core clock matters most**: Unlike memory-heavy algorithms (such as Ethash), kHeavyHash is more sensitive to core clock speed than memory speed. Prioritize core overclocks.
+- **Reduce memory clock**: You can often lower memory clocks to save power with minimal hashrate impact.
+- **Power limit tuning**: Start at the default power limit and reduce gradually. Many GPUs lose only 5--10% hashrate with a 20--30% power reduction, significantly improving efficiency.
+- **Thermal management**: Keep GPU temperatures below 80C. Use custom fan curves and ensure adequate airflow in your mining rig.
+
+```bash
+# Example NVIDIA overclock using nvidia-smi (Linux)
+nvidia-smi -i 0 -pl 250          # Set power limit to 250W
+nvidia-smi -i 0 -lgc 1500        # Lock core clock to 1500 MHz
+```
+
+## ASIC Mining
+
+Application-Specific Integrated Circuits (ASICs) designed for kHeavyHash have become the dominant force in Kaspa mining. These devices offer dramatically higher hashrate and efficiency compared to GPUs.
+
+### Major ASIC Manufacturers
+
+- **IceRiver**: One of the first companies to release kHeavyHash ASICs, with models ranging from small home units to large rack-mounted machines.
+- **Bitmain**: Entered the Kaspa ASIC market with the Antminer KS series, bringing their established manufacturing scale and distribution network.
+
+### ASIC Comparison Table
+
+| Miner | Hashrate | Power Consumption | Efficiency (GH/J) | Form Factor |
+|---|---|---|---|---|
+| Bitmain Antminer KS5 Pro | ~21 TH/s | ~3,150W | ~6.7 | Rack-mounted |
+| Bitmain Antminer KS5 | ~15 TH/s | ~2,250W | ~6.7 | Rack-mounted |
+| Bitmain Antminer KS3 | ~8.3 TH/s | ~3,188W | ~2.6 | Rack-mounted |
+| IceRiver KS5M | ~15 TH/s | ~3,400W | ~4.4 | Rack-mounted |
+| IceRiver KS5L | ~12 TH/s | ~3,400W | ~3.5 | Rack-mounted |
+| IceRiver KS3M | ~6 TH/s | ~3,400W | ~1.8 | Rack-mounted |
+| IceRiver KS3 | ~8 TH/s | ~3,200W | ~2.5 | Rack-mounted |
+| IceRiver KS2 | ~2 TH/s | ~1,200W | ~1.7 | Desktop |
+| IceRiver KS1 | ~1 TH/s | ~600W | ~1.7 | Compact |
+| IceRiver KS0 Pro | ~200 GH/s | ~100W | ~2.0 | Mini |
+| IceRiver KS0 | ~100 GH/s | ~65W | ~1.5 | Mini |
+
+<Callout type="warn">
+ASIC pricing and availability fluctuate significantly based on KAS price and network difficulty. Always calculate profitability at current difficulty and KAS price before purchasing. A machine that is profitable today may not be profitable if difficulty rises or KAS price falls.
+</Callout>
+
+### ASIC Setup Basics
+
+Most Kaspa ASICs ship with a web-based management interface:
+
+1. **Connect the miner** to your local network via Ethernet.
+2. **Find the miner's IP** using your router's DHCP client list or a network scanner.
+3. **Access the web UI** by navigating to the miner's IP in a browser.
+4. **Configure pool settings**: Enter your pool's stratum URL, your Kaspa wallet address, and a worker name.
+5. **Monitor**: The web UI displays hashrate, temperature, fan speed, and pool connection status.
+
+```
+Pool URL:    stratum+tcp://kas.acc-pool.pw:16112
+Worker:      kaspa:qr...your_wallet_address.asic01
+Password:    x
+```
+
+## GPU to ASIC Transition
+
+The Kaspa mining ecosystem has undergone a significant transition from GPU mining to ASIC dominance:
+
+### Timeline
+
+- **2022--2023**: Kaspa mining was predominantly GPU-based. The network hashrate was in the low TH/s range, and GPU miners were profitable.
+- **Late 2023**: IceRiver released the first kHeavyHash ASICs (KS0, KS1, KS2, KS3 series). Network hashrate began climbing rapidly.
+- **2024**: Bitmain entered the market with the Antminer KS3 and later the KS5 series. Network hashrate surged into the hundreds of TH/s and beyond.
+- **2025 onward**: ASIC hashrate dominates the network. GPU mining profitability has decreased significantly due to the massive difficulty increase driven by ASICs.
+
+### Impact on GPU Miners
+
+The introduction of ASICs has had several effects on GPU miners:
+
+- **Reduced profitability**: GPUs produce hashrates measured in MH/s, while ASICs produce TH/s (a million-fold difference). This means GPUs earn a much smaller share of the total block rewards.
+- **Higher difficulty**: As ASICs push network hashrate up, the difficulty adjustment increases proportionally, requiring more work per block for all miners.
+- **Niche viability**: GPU mining may still be worthwhile for miners with low or zero electricity costs, those who already own GPUs for other purposes (gaming, rendering), or those mining as a hobby rather than for profit.
+
+<Callout type="info">
+Despite ASIC dominance, kHeavyHash remains GPU-mineable. Unlike some algorithms where ASICs make GPU mining completely impractical, the economics simply shift. GPU miners should carefully calculate electricity costs versus expected rewards before committing to mining Kaspa.
+</Callout>
+
+## Choosing Hardware
+
+### Decision Factors
+
+| Factor | GPU | ASIC |
+|---|---|---|
+| Upfront cost | Moderate ($300--$2,000 per card) | High ($500--$15,000+ per unit) |
+| Resale value | High (GPUs have general-purpose uses) | Low (only useful for kHeavyHash) |
+| Efficiency | Lower (1--3 MH/J) | Higher (1.5--6.7 GH/J) |
+| Noise | Moderate (manageable at home) | High (rack units require dedicated space) |
+| Flexibility | Can switch to other algorithms | Locked to kHeavyHash |
+| Setup complexity | Moderate (driver tuning, OC) | Simple (plug, configure pool, run) |
+| Profitability at scale | Low in ASIC-dominated era | Higher when KAS price supports it |
+
+### Recommendations
+
+- **Hobbyist/experimenter**: Consider a small ASIC like the IceRiver KS0 or KS0 Pro. They are quiet enough for home use, affordable, and provide a meaningful hashrate. Alternatively, mine with GPUs you already own.
+- **Serious miner**: Evaluate the latest generation ASICs from Bitmain or IceRiver. Calculate ROI based on current network difficulty, KAS price, and your electricity rate.
+- **GPU farm operator**: If you have an existing GPU farm, Kaspa can be mined alongside or as an alternative to other GPU-mineable coins. Use profitability calculators to determine if kHeavyHash is the most profitable algorithm for your hardware at any given time.
+
+## Power and Cooling Considerations
+
+Mining hardware generates significant heat and draws substantial power:
+
+- **Electrical capacity**: Ensure your electrical infrastructure can handle the load. A single rack-mounted ASIC can draw 3,000W+ continuously. Multiple units require dedicated circuits or industrial power.
+- **Cooling**: ASICs with fans are extremely loud (70--80 dB) and produce concentrated heat. Plan for adequate ventilation or dedicated mining rooms. Immersion cooling is an option for large-scale operations.
+- **Electricity cost**: This is typically the largest ongoing expense. Calculate your cost per kWh and compare against expected mining revenue. Many miners target electricity costs below $0.06/kWh for profitability.
+
+```
+Daily revenue = (your_hashrate / network_hashrate) * daily_block_rewards * KAS_price
+Daily cost = power_consumption_kW * 24 * electricity_rate_per_kWh
+Daily profit = Daily revenue - Daily cost
+```
+
+<Callout type="warn">
+Always run profitability calculations with conservative estimates. Network hashrate tends to increase over time, and cryptocurrency prices are volatile. What is profitable today may not be profitable in a month.
+</Callout>
