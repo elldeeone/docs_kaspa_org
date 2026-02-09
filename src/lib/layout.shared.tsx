@@ -11,7 +11,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <svg
-          className="h-6"
+          className="h-7 sm:h-8"
           viewBox="26 27 248 76"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"

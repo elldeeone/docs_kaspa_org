@@ -15,13 +15,6 @@ export const metadata: Metadata = {
   description:
     'Documentation for Kaspa — the fastest proof-of-work cryptocurrency powered by the GHOSTDAG protocol.',
   metadataBase: new URL('https://docs.kaspa.org'),
-  icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: '/favicon-192x192.png',
-  },
 };
 
 export default function Layout({ children }: LayoutProps<'/'>) {
