@@ -10,23 +10,21 @@ GHOSTDAG (Greedy Heaviest-Observed Sub-Tree Directed Acyclic Graph) is the conse
 GHOSTDAG extends the principles of Nakamoto consensus (the longest-chain rule used by Bitcoin) into the DAG domain. Instead of selecting the longest chain and discarding orphan blocks, GHOSTDAG includes **all** blocks and uses a deterministic algorithm to order them.
 
 <Callout>
-GHOSTDAG is a generalization of Nakamoto consensus. A blockchain is a special case of a BlockDAG where the width is always 1.
+GHOSTDAG is a generalization of Nakamoto consensus. A blockchain is a special case of a BlockDAG where each block has at most one parent.
 </Callout>
 
 ## From GHOST to GHOSTDAG
 
-GHOSTDAG builds on the earlier GHOST (Greedy Heaviest-Observed Sub-Tree) protocol, which was proposed as a modification to Bitcoin's consensus. GHOST selects the heaviest subtree rather than the longest chain, which improves security under high block rates. However, GHOST still produces a chain — off-chain blocks are used for weight calculations but not included in the ledger.
-
-GHOSTDAG goes further: it includes all blocks in the ledger and constructs a total ordering over them. This means every block's transactions are processed, and every miner's work contributes to both security and throughput.
+GHOSTDAG builds on concepts from the earlier GHOST (Greedy Heaviest-Observed Sub-Tree) protocol and extends them with the PHANTOM paper's approach. The key innovation is that GHOSTDAG includes all blocks in the ledger and constructs a total ordering over them by classifying blocks into blue and red sets based on k-cluster constraints. This means every block's transactions are processed, and every miner's work contributes to both security and throughput.
 
 ## Blue and Red Sets
 
-The core mechanism of GHOSTDAG is the partitioning of blocks into two sets:
+The core mechanism of GHOSTDAG is the partitioning of blocks into two sets based on k-cluster validation:
 
-- **Blue set**: Blocks that are considered to have been mined honestly and in good faith. These blocks are well-connected to the rest of the DAG and are consistent with the expected rate of parallel block production.
-- **Red set**: Blocks that may have been produced by an adversary attempting to disrupt consensus, or blocks that are poorly connected to the DAG. Red blocks are still included in the ledger, but they are ordered after blue blocks and their transactions are given lower priority.
+- **Blue set** (`mergeset_blues`): Blocks that satisfy the k-cluster constraint. Specifically, a block can be added to the blue set if: (1) its blue anticone size does not exceed `k`, and (2) adding it doesn't cause any existing blue block's blue anticone to exceed `k`.
+- **Red set** (`mergeset_reds`): Blocks that violate the k-cluster constraint. These blocks are still included in the ledger and their transactions are processed, but they don't contribute to the blue score or blue work calculations. Additionally, red block coinbase rewards (subsidy and fees) are not paid to the red block's miner — instead, they are collected by the merging block's miner.
 
-The classification works as follows: for any block `B`, GHOSTDAG examines how many blocks were created in parallel with `B` (that is, blocks that neither reference `B` as an ancestor nor are referenced by `B`). If this number is within the expected range (governed by the parameter `k`), the block is classified as blue. If it has too many parallel blocks that are not in the blue set, it is classified as red.
+The classification algorithm iterates through the mergeset in topological order and checks each candidate block against the k-cluster constraints. If a block would violate these constraints, it's classified as red; otherwise, it's added to the blue set.
 
 ```
 Blue blocks:  ● ── ● ── ● ── ● ── ● ── ●
@@ -38,71 +36,73 @@ In this simplified diagram, blue blocks (●) form the main structure, while red
 
 ## The k Parameter
 
-The parameter `k` is central to GHOSTDAG's security and performance characteristics. It represents the **maximum number of parallel blocks** that the protocol expects honest miners to produce within one network propagation delay.
+The parameter `k` is central to GHOSTDAG's security and performance characteristics. It represents the **maximum blue anticone size** that the protocol tolerates for blue blocks. The anticone of a block consists of all blocks that are neither ancestors nor descendants of that block.
 
-- **Higher k**: Tolerates more parallelism, allowing a higher block rate for a given network delay. However, it also gives an attacker more room to inject blocks, so a larger fraction of the network's hash power is needed for security.
-- **Lower k**: Provides tighter security guarantees but limits the block rate, since the protocol is less tolerant of parallel blocks.
+The value of `k` is calculated using the formula from section 4.2 of the PHANTOM paper (equation 1), which ensures that anticones larger than `k` occur with probability less than `δ` (delta). The calculation uses:
 
-The value of `k` is derived from the block rate and the expected upper bound on network propagation delay. For Kaspa's current 10 BPS rate, `k` is set to accommodate the observed network conditions while maintaining a security threshold well above 50% honest hash power.
+- `x = 2Dλ` where `D` is the network delay bound (5 seconds) and `λ` is the block rate
+- `δ = 0.01` (1% probability threshold for large anticones)
+
+For Kaspa's 10 BPS configuration, `k = 124`.
+
+- **Higher k**: Tolerates more parallelism, allowing a higher block rate for a given network delay, but requires larger storage and computation for GHOSTDAG calculations.
+- **Lower k**: Provides tighter bounds on block anticones but limits the sustainable block rate.
 
 <Callout type="info">
-The k parameter creates a precise tradeoff: it determines how much parallelism the network can sustain while still guaranteeing that an attacker with less than 50% of the hash power cannot rewrite history.
+The k parameter creates a precise tradeoff: it determines how much parallelism the network can sustain while keeping the probability of anticones exceeding k below 1%.
 </Callout>
 
 ## Constructing the Total Order
 
 GHOSTDAG produces a **total (linear) ordering** of all blocks in the DAG through the following process:
 
-1. **Select the chain**: GHOSTDAG identifies a selected parent chain through the DAG, analogous to the "longest chain" in Bitcoin. This chain is built by greedily following the parent with the heaviest blue subtree at each step.
+1. **Select the parent with highest blue work**: From the candidate parents, select the one with the highest cumulative blue work (the sum of proof-of-work from all blue blocks in its past).
 
-2. **Order blue blocks first**: For each block on the selected chain, GHOSTDAG collects all blue blocks in its "merging set" (blocks that are reachable from this chain block but not from the previous one) and orders them.
+2. **Compute the mergeset**: Identify all blocks in the anticone of the selected parent that are reachable from the new block's other parents.
 
-3. **Append red blocks**: Red blocks in the merging set are placed after the blue blocks.
+3. **Color blocks blue or red**: Process the mergeset in topological order by blue work, applying the k-cluster validation to determine which blocks are blue and which are red.
 
-4. **Resolve conflicts**: If two transactions in different blocks conflict (for example, double-spend attempts), the transaction in the block that appears earlier in the ordering takes precedence. The conflicting transaction in the later block is rejected.
+4. **Calculate blue score and blue work**: The blue score equals the selected parent's blue score plus the number of blue blocks in the mergeset. Blue work is the selected parent's blue work plus the sum of proof-of-work from mergeset blues.
+
+5. **Order blocks for transaction processing**: Blocks are processed in consensus order — starting with the selected parent, then the remaining mergeset blocks (both blue and red) interleaved in ascending blue work order (with hash as tiebreaker).
+
+6. **Resolve conflicts**: If two transactions in different blocks conflict (for example, double-spend attempts), the transaction in the block that appears earlier in the ordering takes precedence. The conflicting transaction in the later block is rejected.
 
 This process is entirely deterministic: given the same DAG, every node running GHOSTDAG will compute the same ordering.
 
 ## Confirmations and Finality
 
-In a traditional blockchain, a transaction is considered "confirmed" after a certain number of blocks are built on top of it (e.g., 6 confirmations in Bitcoin). In Kaspa's GHOSTDAG, confirmations work similarly but are measured in terms of the blue score.
+In Kaspa's GHOSTDAG, confirmation depth is measured using **blue score** — the cumulative count of blue blocks in a block's past. As more blocks are added to the DAG and the blue score increases, the probability of reorganization decreases.
 
-The **blue score** of a block is the number of blue blocks in its past (its ancestors). As more blocks are added to the DAG and the blue score of a transaction's block increases, the probability of that transaction being reversed decreases exponentially.
+At 10 BPS, blue score accumulates rapidly at approximately 10 blocks per second, providing fast confirmations. However, it's important to distinguish between **confirmations** (relative confidence based on blue score depth) and **finality** (absolute irreversibility).
 
-At 10 BPS, confirmations accumulate rapidly:
+**Finality** in Kaspa is defined by the `finality_depth` parameter, which provides 12 hours of depth. At 10 BPS, this equals 432,000 blocks (10 blocks/second × 43,200 seconds). Blocks beyond this depth are considered final.
 
-| Time elapsed | Approximate blue score increase | Security level |
-|---|---|---|
-| 1 second | ~10 | Low |
-| 5 seconds | ~50 | Moderate |
-| 10 seconds | ~100 | High |
-| 60 seconds | ~600 | Very high |
+**Pruning** is a separate mechanism with its own depth, defined as the maximum of either 30 hours of depth or a lower bound derived from finality depth, merge depth, mergeset size limit, and `k`. In practice, the pruning depth is significantly larger than the finality depth, providing a safety margin before historical data is removed.
 
-<Callout>
-Full probabilistic finality — equivalent to Bitcoin's 6-confirmation security — is achieved in roughly 10 seconds at 10 BPS, compared to approximately 60 minutes for Bitcoin.
-</Callout>
+For practical transaction acceptance, users can rely on much shorter confirmation depths (tens to hundreds of blocks) depending on their security requirements, similar to how Bitcoin users don't always wait for full finality.
 
 ## Relationship to Nakamoto Consensus
 
-GHOSTDAG preserves the key security properties of Nakamoto consensus:
+GHOSTDAG preserves key security properties similar to Nakamoto consensus:
 
-- **Liveness**: As long as honest miners control a majority of the hash power, new transactions will continue to be confirmed.
-- **Safety**: Once a transaction has sufficient confirmations, it cannot be reversed without controlling a majority of the hash power.
-- **Incentive compatibility**: Honest mining (following the protocol) is the optimal strategy for rational miners.
+- **Liveness**: As long as the network assumptions hold (honest mining following the protocol, bounded network delay), new transactions will continue to be confirmed.
+- **Safety**: Once a transaction has sufficient blue score depth, the probability of reorganization becomes negligible.
+- **Deterministic ordering**: All nodes compute the same transaction order given the same DAG structure.
 
-The critical difference is that GHOSTDAG achieves these properties while processing all blocks rather than just one chain. This allows the block rate to be increased without degrading security, as long as `k` is set appropriately for the network conditions.
+The critical difference is that GHOSTDAG achieves these properties while processing all blocks rather than just one chain. This allows the block rate to be increased without degrading security, as long as `k` is set appropriately for the network conditions based on the PHANTOM paper's security analysis.
 
 ## GHOSTDAG in Practice
 
-When a Kaspa node receives a new block, it performs the following steps:
+When a Kaspa node receives a new block, the header processor performs the following steps:
 
-1. Validates the block header and proof-of-work.
-2. Adds the block to the local DAG.
-3. Recomputes the GHOSTDAG ordering for affected portions of the DAG.
-4. Updates the UTXO set based on the new ordering.
-5. Propagates the block to peers.
+1. **Pre-GHOSTDAG validation**: Validates proof-of-work, parent relationships, and basic header properties.
+2. **GHOSTDAG computation**: Calculates the GHOSTDAG data (selected parent, blue/red classification, blue score, blue work) for the new block.
+3. **Post-GHOSTDAG validation**: Validates that the block's claimed blue score matches the computed value and performs additional consensus checks.
+4. **Body processing**: If the header is valid, processes the block body including transactions and updates the UTXO set.
+5. **Propagation**: Propagates the valid block to peers.
 
-Because GHOSTDAG ordering is computed incrementally, adding a new block does not require reprocessing the entire DAG. The algorithm efficiently updates the blue/red classification and the selected parent chain.
+The GHOSTDAG algorithm efficiently computes results incrementally by reusing stored data from parent blocks, avoiding the need to reprocess the entire DAG for each new block.
 
 ## Further Reading
 
