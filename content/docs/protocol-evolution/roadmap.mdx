@@ -43,11 +43,20 @@ Each block rate increase requires recalculating consensus parameters, evaluating
 
 ### Smart Contract Layer
 
-Kaspa's scripting capabilities are currently limited to basic transaction scripts. The reactivation of opcodes (KIP-10) and the development of more expressive scripting are steps toward a broader smart contract capability:
+Kaspa's scripting capabilities are currently limited to basic transaction scripts. The addition of transaction introspection opcodes (KIP-10) and the development of more expressive scripting are steps toward a broader smart contract capability:
 
-- **Opcode reactivation (KIP-10).** Re-enabling disabled opcodes to support conditional logic, arithmetic, and hash-locked contracts.
+- **Transaction introspection (KIP-10).** Adding opcodes that allow scripts to inspect transaction properties, enabling covenants and conditional spending logic.
 - **Transient mass (KIP-13).** Refining the mass model to more accurately price computational resources, which is a prerequisite for efficient smart contract execution.
 - **Contract execution environment.** Research into what form a smart contract layer should take — whether it is a native scripting extension, an embedded VM, or a layered architecture.
+
+Two active prototypes are exploring programmability on Kaspa:
+
+- **Silverscript** ([github.com/kaspanet/silverscript](https://github.com/kaspanet/silverscript)) — A smart contract compiler targeting Kaspa's script engine. Currently available on testnet-12 only.
+- **vProgs** ([github.com/kaspanet/vprogs](https://github.com/kaspanet/vprogs)) — A verifiable computation prototype that explores how to execute and verify programs on top of Kaspa's UTXO model.
+
+<Callout type="info">
+Silverscript and vProgs are experimental prototypes, not production-ready systems. They represent active exploration of different approaches to Kaspa programmability. Follow their repositories for development updates.
+</Callout>
 
 The design philosophy for Kaspa smart contracts prioritizes simplicity and security over feature completeness. The goal is to enable programmability without introducing the complexity and attack surface of a full EVM-style execution environment.
 

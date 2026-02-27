@@ -106,6 +106,10 @@ Kaspa's DAG structure makes deep reorgs extremely unlikely, but shallow reorgs c
 - **Address validation**: Always validate the `kaspa:` prefix and Bech32 checksum on withdrawal addresses.
 - **Rate limiting**: Implement withdrawal rate limits and manual review for large amounts.
 
+## Community Indexers
+
+For exchanges that need historical transaction queries or advanced filtering beyond what the node's built-in RPC provides, [simply-kaspa-indexer](https://github.com/supertypo/simply-kaspa-indexer) is a standalone indexer that connects to a Kaspa node and indexes blocks and transactions into a database. This can simplify deposit reconciliation and transaction history queries at scale.
+
 ## Further Reading
 
 - [HD Derivation](/docs/wallets/hd-derivation) — Address generation using BIP-44 derivation.

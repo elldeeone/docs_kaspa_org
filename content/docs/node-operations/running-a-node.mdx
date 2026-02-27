@@ -95,6 +95,15 @@ kaspad stores its blockchain data, logs, and configuration in a platform-specifi
 
 You can override this location with the `--appdir` flag. The data directory contains the block database, UTXO set, peer information, and log files.
 
+## Peer Discovery
+
+Kaspa nodes discover peers through DNS seeders that maintain lists of active nodes on the network. The DNS seeder implementations are open source:
+
+- [dnsseeder](https://github.com/kaspanet/dnsseeder) — The original Go-based DNS seeder for Kaspa's P2P network.
+- [rusty-dnsseeder](https://github.com/elldeeone/rusty-dnsseeder) — A Rust rewrite of the DNS seeder (under testing).
+
+If your node cannot find peers, ensure that DNS resolution is working and that your firewall allows outbound connections on the P2P port (16111 for mainnet).
+
 ## Further Reading
 
 - [Configuration](/docs/node-operations/configuration) — Detailed reference for all kaspad CLI flags and tuning options.
