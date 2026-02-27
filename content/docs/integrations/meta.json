@@ -3,6 +3,7 @@
   "pages": [
     "exchange-integration",
     "payment-processing",
-    "block-explorers"
+    "block-explorers",
+    "third-party-protocols"
   ]
 }

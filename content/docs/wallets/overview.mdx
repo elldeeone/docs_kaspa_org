@@ -1,19 +1,77 @@
 ---
 title: "Wallet Overview"
-description: "Overview of the Kaspa wallet ecosystem — choosing the right wallet for your needs."
+description: "Overview of the Kaspa wallet ecosystem — architecture tiers, wallet types, and choosing the right wallet for your needs."
 ---
 
 ## Overview
 
-The Kaspa ecosystem offers several wallet options, each suited to different use cases. All Kaspa wallets use the same HD derivation standard (BIP-32/39/44), which means your 24-word seed phrase is portable — you can recover your funds in any compatible wallet.
+The Kaspa ecosystem offers several wallet options, each suited to different use cases. All Kaspa wallets use the same HD derivation standard (BIP-32/39/44), which means your 24-word seed phrase is portable -- you can recover your funds in any compatible wallet.
 
-This page helps you choose the right wallet for your needs and understand the trade-offs between security, convenience, and functionality.
+This page helps you understand the wallet architecture, choose the right wallet for your needs, and understand the trade-offs between security, convenience, and functionality.
+
+## Wallet Architecture
+
+The Kaspa wallet stack is organized into four tiers, from low-level primitives up to complete wallet applications. Each tier builds on the one below it.
+
+### Tier 1: Wallet Primitives
+
+The foundation of the wallet stack is a set of cryptographic and encoding primitives. These are standalone building blocks that handle the core operations any wallet needs.
+
+| Primitive | Purpose |
+|---|---|
+| **Mnemonics** | BIP-39 seed phrase generation and recovery. Supports 12-word and 24-word phrases with optional passphrases. Converts human-readable word sequences into deterministic seeds for key derivation. |
+| **Keys** | secp256k1 elliptic curve key operations. Generates private/public keypairs, handles key serialization, and provides the signing primitives used for Schnorr signatures. Built on a customized `kaspa-bip32` crate. |
+| **Derivation** | BIP-32 hierarchical deterministic key derivation following the BIP-44 path `m/44'/111111'/account'/change/index`. Generates unlimited receive and change addresses from a single seed. |
+| **Addresses** | Kaspa address encoding and validation. Addresses consist of a network prefix (`kaspa:` for mainnet, `kaspatest:` for testnet), a bech32-encoded public key, and a checksum. |
+
+These primitives are available as standalone Rust crates (`kaspa-bip32`, `kaspa-addresses`, `kaspa-consensus-core`) and through the WASM SDK for JavaScript/TypeScript environments.
+
+### Tier 2: Wallet SDK
+
+The [Wallet SDK](/docs/wallets/wallet-sdk) provides infrastructure components for building wallet engines. It handles the complex aspects of interacting with Kaspa's UTXO model.
+
+| Component | Role |
+|---|---|
+| **UtxoProcessor** | Connects to a Kaspa node via wRPC and processes the stream of UTXO change notifications. Manages subscriptions and tracks UTXO additions and removals in real time. |
+| **UtxoContext** | Maintains the current UTXO state for a set of addresses. Provides the UTXO set that the transaction generator draws from when constructing transactions. |
+| **Generator** | Constructs transactions from available UTXOs. Handles input selection, output creation, fee calculation, change addresses, and automatic compound transactions when many small UTXOs need consolidation. |
+
+The SDK also provides event notifications (balance changes, UTXO discovery, transaction confirmations), pending transaction tracking, and account ID management.
+
+<Callout type="info">
+A key design principle of Kaspa's UTXO model: you send transactions but you receive UTXOs. Incoming payments arrive as individual UTXO notifications, not as consolidated transaction events. The SDK performs client-side aggregation to present a transaction-oriented view.
+</Callout>
+
+### Tier 3: Wallet API
+
+The [Wallet API](/docs/wallets/wallet-api) wraps the SDK into a complete wallet management interface. It adds wallet file management, account lifecycle, encrypted storage, and a procedural interface for all wallet operations.
+
+Key capabilities:
+
+- **Wallet files** -- Create, open, close, and manage encrypted wallet files across platforms (filesystem, browser storage, extension storage).
+- **Account management** -- Support for multiple account types (BIP-32, multisig, legacy, watch-only) running concurrently within a single wallet.
+- **Key lifecycle** -- Automatic BIP-39 mnemonic handling, key derivation, import/export, and secure memory erasure.
+- **Transaction operations** -- Send, estimate fees, and track transaction history with annotations.
+- **Interoperability** -- Wallet files created by any application using the Wallet API (Kaspa CLI Wallet, Kaspa NG) are cross-compatible.
+
+### Tier 4: Wallet Applications
+
+At the top of the stack are the wallet applications that users interact with directly. These are built on the Wallet API (or the SDK, in some cases) and provide graphical or command-line interfaces.
+
+| Application | Platform | Built On |
+|---|---|---|
+| [Web Wallet](https://wallet.kaspa.org) | Browser | WASM SDK |
+| [CLI Wallet](/docs/wallets/cli-wallet) | Terminal | Wallet API (Rust) |
+| Kaspa NG | Desktop / Browser | Wallet API (Rust + WASM) |
+| KasVault | Browser extension | WASM SDK |
+| [Ledger](/docs/wallets/hardware-wallets) | Hardware device | Hardware signing + companion app |
+| Tangem | NFC card + phone | Hardware signing + mobile app |
 
 ## Wallet Types
 
 ### Web Wallet
 
-The [Kaspa Web Wallet](https://wallet.kaspa.org) runs entirely in your browser. Your keys are generated and stored locally in browser storage — they never leave your device. The web wallet is the easiest way to get started with Kaspa and is suitable for everyday use.
+The [Kaspa Web Wallet](https://wallet.kaspa.org) runs entirely in your browser. Your keys are generated and stored locally in browser storage -- they never leave your device. The web wallet is the easiest way to get started with Kaspa and is suitable for everyday use.
 
 ### CLI Wallet
 
@@ -54,7 +112,7 @@ Use the **Web Wallet** or **KasVault** browser extension. Both provide a straigh
 Use a **hardware wallet** (Ledger or Tangem). Your private keys remain on the physical device and are never exposed to your computer. Even if your machine is compromised, an attacker cannot extract your keys.
 
 <Callout>
-For significant holdings, a hardware wallet is strongly recommended. Software wallets — even well-designed ones — are only as secure as the device they run on.
+For significant holdings, a hardware wallet is strongly recommended. Software wallets -- even well-designed ones -- are only as secure as the device they run on.
 </Callout>
 
 ### Developers and Server Environments
@@ -65,6 +123,14 @@ Use the **CLI Wallet**. It supports scripting, automation, and advanced features
 
 Use **KasVault**. It functions like MetaMask for the Kaspa ecosystem, providing a popup-based approval flow for web applications that request transaction signatures.
 
+### Custom Wallet Development
+
+For building your own wallet application, choose the appropriate tier:
+
+- **Wallet API** -- Use this when building a full wallet application with account management, storage, and encryption. This is the fastest path to a feature-complete wallet.
+- **Wallet SDK** -- Use this when you need custom UTXO handling, specialized transaction construction, or exchange-grade control over the wallet engine.
+- **Direct Node RPC** -- Use this when you need maximum control and are prepared to implement UTXO tracking, subscription management, and transaction construction from scratch.
+
 ## Seed Phrase Portability
 
 All standard Kaspa wallets derive keys using the same BIP-44 derivation path (`m/44'/111111'/0'/0/index`). This means:
@@ -74,7 +140,7 @@ All standard Kaspa wallets derive keys using the same BIP-44 derivation path (`m
 - You can freely move between wallets without losing access to your funds.
 
 <Callout type="info">
-Tangem cards are an exception — they use a multi-card backup system instead of a seed phrase. Tangem wallets cannot be recovered using a mnemonic in other wallet software.
+Tangem cards are an exception -- they use a multi-card backup system instead of a seed phrase. Tangem wallets cannot be recovered using a mnemonic in other wallet software.
 </Callout>
 
 ## Choosing a Wallet: Quick Guide
@@ -83,11 +149,13 @@ Tangem cards are an exception — they use a multi-card backup system instead of
 - **Holding more than you can afford to lose?** Get a [hardware wallet](/docs/wallets/hardware-wallets).
 - **Building applications or running infrastructure?** Use the [CLI Wallet](/docs/wallets/cli-wallet).
 - **Interacting with dApps?** Install KasVault.
+- **Building a custom wallet?** Start with the [Wallet API](/docs/wallets/wallet-api) or [Wallet SDK](/docs/wallets/wallet-sdk).
 
 ## Further Reading
 
-- [Web Wallet](/docs/wallets/web-wallet) — Browser-based wallet guide.
-- [CLI Wallet](/docs/wallets/cli-wallet) — Command-line wallet for advanced users.
-- [Hardware Wallets](/docs/wallets/hardware-wallets) — Ledger and Tangem setup.
-- [HD Derivation](/docs/wallets/hd-derivation) — How key derivation works under the hood.
-- [Wallet SDK](/docs/wallets/wallet-sdk) — Building custom wallets with the Rust/WASM framework.
+- [Web Wallet](/docs/wallets/web-wallet) -- Browser-based wallet guide.
+- [CLI Wallet](/docs/wallets/cli-wallet) -- Command-line wallet for advanced users.
+- [Hardware Wallets](/docs/wallets/hardware-wallets) -- Ledger and Tangem setup.
+- [HD Derivation](/docs/wallets/hd-derivation) -- How key derivation works under the hood.
+- [Wallet SDK](/docs/wallets/wallet-sdk) -- Building custom wallets with the Rust/WASM framework.
+- [Wallet API](/docs/wallets/wallet-api) -- Complete wallet management interface.

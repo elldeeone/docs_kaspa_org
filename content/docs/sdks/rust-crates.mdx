@@ -7,17 +7,45 @@ description: "Use Kaspa's Rust crate ecosystem for native applications — conse
 
 The [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) repository is a Cargo workspace containing dozens of interconnected crates that implement Kaspa's full node, wallet, RPC layer, and consensus engine. As an application developer, you can depend on individual crates to build native tools, services, and integrations without pulling in the entire node. Because these crates are the canonical implementation, the WASM and Python SDKs are both derived from them.
 
-## Key Crates
+## Crate Taxonomy
+
+The rusty-kaspa workspace can be divided into two broad categories:
+
+- **Client crates** are intended for application developers building wallets, tools, and integrations. These crates provide transaction construction, RPC communication, address handling, and wallet functionality. You can depend on them without pulling in the full node.
+- **Node crates** implement the internals of kaspad itself — consensus, mining, P2P networking, database storage, and server-side RPC. Application developers rarely need these directly, but they are available for building custom node variants or deep infrastructure.
+
+## Key Client Crates
 
 | Crate | Purpose |
 |---|---|
 | `kaspa-consensus-core` | Core types: `Transaction`, `Block`, `Header`, `Hash`, network config |
+| `kaspa-consensus-client` | Client-side consensus utilities for transaction construction and validation |
 | `kaspa-wallet-core` | HD wallet, key derivation, UTXO tracking, transaction creation |
+| `kaspa-wallet-keys` | Key management, keypair generation, and signing primitives |
+| `kaspa-wallet-pskt` | PSKT (Partially Signed Kaspa Transaction) support for multisig workflows |
 | `kaspa-rpc-core` | RPC message types, request/response structures, `RpcApi` trait |
 | `kaspa-wrpc-client` | wRPC (WebSocket RPC) client for connecting to nodes |
+| `kaspa-grpc-client` | gRPC client for connecting to nodes via gRPC |
 | `kaspa-txscript` | Script engine for locking/unlocking scripts |
 | `kaspa-addresses` | Bech32 address encoding, decoding, validation |
 | `kaspa-hashes` | Blake2b and other protocol hash functions |
+| `kaspa-bip32` | BIP-32 hierarchical deterministic key derivation |
+| `kaspa-math` | Numeric utilities used across the protocol (difficulty, target calculations) |
+| `kaspa-pow` | Proof-of-work validation and kHeavyHash primitives |
+| `kaspa-utils` | Shared utility types and helpers used across the workspace |
+| `kaspa-wasm-core` | Core types and utilities shared by WASM bindings |
+
+## Key Node Crates
+
+| Crate | Purpose |
+|---|---|
+| `kaspa-consensus` | Full consensus engine: GHOSTDAG, DAA, pruning, block validation |
+| `kaspa-mining` | Block template construction and mining manager |
+| `kaspa-p2p-lib` | Peer-to-peer networking layer (protocol messages, connection management) |
+| `kaspa-grpc-server` | gRPC server exposing the node's RPC interface |
+| `kaspa-wrpc-server` | wRPC server (WebSocket) exposing the node's RPC interface |
+| `kaspa-database` | RocksDB storage abstraction for consensus and UTXO data |
+| `kaspa-merkle` | Merkle tree construction and verification for block headers |
 
 <Callout type="info">
 Crate names and module boundaries may change between releases. Always check the workspace `Cargo.toml` in the rusty-kaspa repository for current crate names and versions.
@@ -119,6 +147,14 @@ client.start_notify(
 ## When to Use Rust vs WASM
 
 Choose **Rust crates** when building infrastructure (mining pools, indexers, custom nodes) or when you need maximum performance, full `tokio` async concurrency, and direct access to consensus internals. Choose the **WASM SDK** when targeting the browser or Node.js, or when developer velocity in TypeScript matters more than the modest WASM performance overhead.
+
+## API Documentation
+
+Auto-generated TypeDoc-style API documentation for the Kaspa Rust/WASM crates is available at [kaspa.aspectron.org/docs](https://kaspa.aspectron.org/docs/). This provides browsable type definitions, method signatures, and module documentation derived from the source code.
+
+## PSKT Multisig Example
+
+The `kaspa-wallet-pskt` crate implements Partially Signed Kaspa Transactions (PSKT), enabling multisig workflows where multiple parties independently sign a transaction before it is finalized and broadcast. A reference example demonstrating the PSKT multisig flow is available in the rusty-kaspa repository at [wallet/pskt/examples](https://github.com/kaspanet/rusty-kaspa/tree/master/wallet/pskt/examples).
 
 ## Further Reading
 

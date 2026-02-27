@@ -114,6 +114,42 @@ For a more thorough check, install `grpcurl` in the image and call the `GetInfo`
 
 Allocate at least 8 GB of memory (tune with `--ram-scale`) and 4 CPU cores minimum. Use SSD-backed volumes for the data directory; avoid network-attached storage where possible, as I/O latency impacts sync performance.
 
+## Community Docker Images
+
+The community maintains pre-built Docker images that can save you from building from source.
+
+### supertypo/rusty-kaspad
+
+[supertypo/rusty-kaspad](https://hub.docker.com/r/supertypo/rusty-kaspad) is a community-maintained Docker image published on Docker Hub. It tracks the latest rusty-kaspa releases and provides ready-to-run images for multiple architectures.
+
+To use it in your Docker Compose configuration, replace the image reference:
+
+```yaml
+services:
+  kaspad:
+    image: supertypo/rusty-kaspad:latest
+    container_name: kaspad
+    restart: unless-stopped
+    command:
+      - "--utxoindex"
+      - "--rpclisten=0.0.0.0:16110"
+      - "--appdir=/data"
+      - "--nologfiles"
+    ports:
+      - "16110:16110"
+      - "16111:16111"
+      - "17110:17110"
+      - "18110:18110"
+    volumes:
+      - kaspad-data:/data
+```
+
+The build scripts and Dockerfiles for this image are available at [github.com/supertypo/docker-rusty-kaspa](https://github.com/supertypo/docker-rusty-kaspa).
+
+<Callout type="warn">
+Community Docker images are not officially maintained by the Kaspa project. Review the Dockerfile and build scripts before using them in production. Pin to a specific image tag rather than `latest` for reproducible deployments.
+</Callout>
+
 ## Further Reading
 
 - [Running a Node](/docs/node-operations/running-a-node) — General node setup and sync process.

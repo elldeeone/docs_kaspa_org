@@ -1,26 +1,690 @@
 ---
 title: "Wallet SDK"
-description: "Building Kaspa wallets using the Rust and WASM wallet framework — key management, transaction construction, and UTXO handling."
+description: "Comprehensive reference for the Kaspa Wallet SDK — architecture, infrastructure components, event system, transaction generation, and integration patterns."
 ---
 
 ## Overview
 
-The Kaspa Wallet SDK is a framework for building wallet applications on top of the Kaspa network. It is implemented in Rust as part of the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) project and compiles to WebAssembly (WASM) for use in browser and Node.js environments. The SDK handles key management, UTXO tracking, transaction construction, signing, and network communication.
+The Kaspa Wallet SDK is a Rust-based framework for building wallet applications on the Kaspa network. It is implemented as part of the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) project and compiles to WebAssembly (WASM) for use in browser and Node.js environments. The SDK provides a set of primitives that handle UTXO tracking, transaction construction, signing, fee calculation, and network communication through an event-driven architecture.
+
+Rather than polling the network for changes, the SDK operates by registering addresses for monitoring and submitting transactions, then receiving transaction-related notification events and balance updates asynchronously. This event-based model is the foundation of both the wallet implementation and the underlying infrastructure.
+
+<Callout type="info">
+The same Rust code that powers the CLI wallet and web wallet is available as a library. You can build custom wallet applications using the same battle-tested components.
+</Callout>
 
 ## Architecture
 
-The wallet SDK is structured around several core components:
+The SDK is built around three core infrastructure components that work together:
 
-- **`kaspa-wallet-core`**: The central crate that orchestrates wallet operations including account management, UTXO tracking, and transaction flow.
+| Component | Role |
+|---|---|
+| **UtxoProcessor** | Singleton coordinator that bridges the RPC connection, address subscriptions, and UtxoContext instances |
+| **UtxoContext** | Per-account interface that tracks addresses, caches UTXOs, maintains balances, and emits events |
+| **Generator** | Transaction builder that selects UTXOs, calculates fees, handles compound transactions, and produces PendingTransaction objects |
+
+Supporting these are the **PendingTransaction** (wraps a transaction for signing and submission) and **GeneratorSummary** (provides aggregate statistics after transaction generation).
+
+The underlying Rust crates that power the SDK include:
+
+- **`kaspa-wallet-core`**: Central crate orchestrating wallet operations, account management, UTXO tracking, and transaction flow.
 - **`kaspa-bip32`**: BIP-32 hierarchical deterministic key derivation.
 - **`kaspa-addresses`**: Address encoding and decoding (Bech32 format with the `kaspa:` prefix).
 - **`kaspa-consensus-core`**: Transaction primitives, UTXO structures, and consensus types.
 - **`kaspa-txscript`**: Transaction script handling for signature verification and script construction.
 - **`kaspa-wrpc-client`**: wRPC client for communicating with a Kaspa node.
 
-<Callout type="info">
-The same Rust code that powers the CLI wallet and web wallet is available as a library. You can build custom wallet applications using the same battle-tested components.
+---
+
+## Infrastructure Components
+
+### UtxoProcessor
+
+The `UtxoProcessor` is the primary orchestration component of the Wallet SDK. It manages UTXO processing between multiple `UtxoContext` instances and acts as a bridge between the Kaspa node RPC connection, address subscriptions, and account contexts.
+
+There should be exactly one `UtxoProcessor` per RPC connection. It receives raw notifications from the node, routes them to the appropriate `UtxoContext` instances, and provides a unified event registration system for the application layer.
+
+#### Constructor
+
+```typescript
+const processor = new UtxoProcessor({
+  rpc: rpcClient,       // RpcClient instance
+  networkId: "mainnet"  // Network identifier (e.g., "mainnet", "testnet-11")
+});
+```
+
+The `IUtxoProcessorArgs` interface accepts:
+
+| Field | Type | Description |
+|---|---|---|
+| `rpc` | `RpcClient` | The RPC client to use for network communication |
+| `networkId` | `string` or `NetworkId` | Network identifier |
+
+#### Lifecycle
+
+The UtxoProcessor has an explicit start/stop lifecycle:
+
+```typescript
+// Start processing — begins listening for UTXO notifications
+await processor.start();
+
+// ... wallet operations ...
+
+// Stop processing — halts all notification handling
+await processor.stop();
+```
+
+Calling `start()` initiates UTXO and notification processing. The processor subscribes to the node for address-related events and begins routing them. Calling `stop()` halts all processing. When the processor is no longer needed, call `free()` to release resources.
+
+#### Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `rpc` | `RpcClient` | Read-only reference to the RPC client |
+| `networkId` | `string` | Read-only network identifier |
+| `isActive` | `boolean` | Whether the processor is currently running |
+
+#### Event Registration
+
+The UtxoProcessor is the central event hub. All wallet events (balance changes, transaction notifications, connection status) are received through its event listener:
+
+```typescript
+processor.addEventListener("balance", (event) => {
+  console.log("Balance changed:", event.data);
+});
+
+processor.addEventListener("pending", (event) => {
+  console.log("Pending transaction:", event.data);
+});
+```
+
+See the [Events System](#events-system) section for the full list of event types.
+
+#### Transaction Maturity Configuration
+
+The UtxoProcessor provides static methods to configure when transaction maturity events are emitted:
+
+```typescript
+// Set the number of DAA confirmations before a user transaction is considered mature
+UtxoProcessor.setUserTransactionMaturityDAA("mainnet", 10n);
+
+// Set the number of DAA confirmations for coinbase transaction maturity
+UtxoProcessor.setCoinbaseTransactionMaturityDAA("mainnet", 100n);
+```
+
+<Callout type="warn">
+Coinbase transactions have network-enforced minimum maturity thresholds that cannot be reduced below the protocol minimum (100 DAA score at 1 BPS, 1000 DAA score at 10 BPS). The configuration methods only control when the SDK emits maturity events, not the network consensus rules.
 </Callout>
+
+---
+
+### UtxoContext
+
+A `UtxoContext` represents a single wallet account. It monitors a set of addresses, aggregates all UTXO entries for those addresses, tracks balances in real time, and emits events whenever activity occurs. Each `UtxoContext` is associated with a `UtxoProcessor` and can optionally be assigned an account ID.
+
+#### Constructor
+
+```typescript
+const context = new UtxoContext({
+  processor: processor,  // Associated UtxoProcessor instance
+  id: accountId          // Optional: 32-byte hex string (see Account IDs)
+});
+```
+
+The `IUtxoContextArgs` interface accepts:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `processor` | `UtxoProcessor` | Yes | The associated UtxoProcessor |
+| `id` | `string` | No | Account identifier (64-character hex string). If omitted, a random ID is generated. |
+
+#### Address Tracking
+
+Register addresses to begin monitoring them for UTXO activity:
+
+```typescript
+// Track a set of addresses
+await context.trackAddresses([
+  "kaspa:qr0...",
+  "kaspa:qr1...",
+  "kaspa:qr2..."
+]);
+
+// Unregister specific addresses
+await context.unregisterAddresses(["kaspa:qr0..."]);
+
+// Clear all tracked addresses and UTXO entries
+await context.clear();
+```
+
+When `trackAddresses()` is called, the system:
+
+1. Registers the addresses for transaction notifications via `subscribeUtxosChanged()`.
+2. Enumerates all existing UTXOs for those addresses using `getUtxosByAddresses()`.
+3. Posts discovery events for all detected UTXOs.
+
+An optional DAA score parameter can be passed to `trackAddresses()` to scope the initial UTXO scan.
+
+#### Balance Tracking
+
+The `UtxoContext` maintains a real-time balance with three components:
+
+| Balance Component | Description |
+|---|---|
+| **mature** | Funds available for spending (confirmed UTXOs past the maturity threshold) |
+| **pending** | Funds that have been received but are not yet confirmed |
+| **outgoing** | Funds being sent that have not yet been accepted by the network |
+
+```typescript
+// Access current balance
+const balance = context.balance;
+console.log("Mature:", balance.mature);
+console.log("Pending:", balance.pending);
+console.log("Outgoing:", balance.outgoing);
+
+// String-formatted balance
+const strings = context.balanceStrings;
+```
+
+The full `IBalance` interface provides additional UTXO count fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `mature` | `bigint` | Total spendable amount in sompi |
+| `matureUtxoCount` | `number` | Number of spendable UTXOs |
+| `pending` | `bigint` | Total pending incoming amount in sompi |
+| `pendingUtxoCount` | `number` | Number of pending UTXOs |
+| `outgoing` | `bigint` | Total outgoing amount in sompi |
+| `stasisUtxoCount` | `number` | Number of coinbase UTXOs in stasis (not yet pending) |
+
+#### UTXO Access
+
+```typescript
+// Get the number of mature UTXOs
+const count = context.matureLength;
+
+// Retrieve a range of mature UTXOs (useful for display or manual selection)
+const utxos = context.getMatureRange(0, 10);
+
+// Get pending UTXO entries
+const pending = context.getPending();
+```
+
+#### Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `balance` | `Balance` | Current balance object |
+| `balanceStrings` | `BalanceStrings` | String-formatted balance |
+| `isActive` | `boolean` | Whether the context is actively tracking |
+| `matureLength` | `number` | Count of mature UTXO entries |
+
+#### Design Considerations
+
+<Callout type="warn">
+A `UtxoContext` is intended to represent a single account. Do not use it as a global UTXO manager for a large wallet with many users. For exchange implementations, create separate `UtxoContext` instances per user account to isolate activity and balances. For very large wallets, consider manual UTXO management via `RpcClient` directly.
+</Callout>
+
+---
+
+### Generator
+
+The `Generator` creates transactions from UTXO entries. It dynamically calculates transaction mass, accounts for custom fee rates, automatically creates change outputs, and handles compound (batch/sweep) transactions when the UTXO set exceeds the maximum mass allowed in a single transaction.
+
+The Generator functions as an iterator, producing `PendingTransaction` objects one at a time. After all transactions have been generated, a `GeneratorSummary` is available with aggregate statistics.
+
+#### Constructor
+
+```typescript
+const generator = new Generator({
+  entries: context,  // UtxoContext, IUtxoEntry[], or UtxoEntryReference[]
+  outputs: [
+    { address: "kaspa:qr0...", amount: kaspaToSompi(10.0) },
+    { address: "kaspa:qr1...", amount: kaspaToSompi(20.0) }
+  ],
+  changeAddress: "kaspa:qchange...",
+  priorityFee: 1000n  // Optional: priority fee in sompi
+});
+```
+
+The `IGeneratorSettingsObject` interface accepts:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `entries` | `IUtxoEntry[]`, `UtxoEntryReference[]`, or `UtxoContext` | Yes | UTXO source for the transaction |
+| `outputs` | `IPaymentOutput[]` or `PaymentOutput` | Yes | Destination addresses and amounts (do not include change) |
+| `changeAddress` | `string` or `Address` | Yes | Address for receiving change |
+| `priorityFee` | `bigint` or `IFees` | No | Priority fee in sompi. Set for outbound transactions; omit for compound transactions |
+| `feeRate` | `number` | No | Fee rate in sompi per gram of mass, applied to all generated transactions |
+| `priorityEntries` | `IUtxoEntry[]` or `UtxoEntryReference[]` | No | UTXOs consumed before standard entries (for custom input selection) |
+| `payload` | `string` or `Uint8Array` | No | Optional data payload included in the transaction |
+| `networkId` | `string` or `NetworkId` | No | Network identifier (required when `entries` is an array, not needed with UtxoContext) |
+| `minimumSignatures` | `number` | No | Minimum signature requirement (for multisig) |
+| `sigOpCount` | `number` | No | Signature operation count |
+
+#### Iterating Transactions
+
+The Generator produces transactions one at a time via `next()`. For simple transfers, there is typically one transaction. For large UTXO sets, the Generator automatically creates daisy-chained compound transactions:
+
+```typescript
+let pending;
+while (pending = await generator.next()) {
+  await pending.sign([privateKey]);
+  await pending.submit(rpc);
+}
+
+const summary = generator.summary();
+console.log(`Generated ${summary.transactions} transaction(s)`);
+console.log(`Total fees: ${summary.fees} sompi`);
+```
+
+#### Compound Transactions
+
+When a wallet holds many small UTXOs (common for mining payouts), a single transaction cannot consume them all due to the maximum transaction mass limit (approximately 84 inputs per transaction). The Generator automatically handles this by creating a chain of compound transactions:
+
+1. **Batch transactions**: Consolidate UTXOs into fewer, larger outputs. Each batch transaction sends its output to the change address.
+2. **Final transaction**: The last transaction in the chain sends the requested amount to the destination address(es).
+
+Each `PendingTransaction` has a `type` property that is either `"batch"` or `"final"` to indicate its role in the chain.
+
+<Callout>
+All compound transactions must be signed and submitted in sequence. Each subsequent transaction depends on the outputs of the previous one.
+</Callout>
+
+#### Fee Estimation
+
+Use `estimate()` to calculate fees and transaction count without generating actual transactions:
+
+```typescript
+const estimate = await generator.estimate();
+console.log(`Estimated fees: ${estimate.fees}`);
+console.log(`Number of transactions: ${estimate.transactions}`);
+```
+
+#### Fee Calculation
+
+Transaction fees in Kaspa are based on **transaction mass**, which is a function of the transaction's size in bytes and the computational cost of verifying its scripts:
+
+```
+fee = transaction_mass * fee_rate
+```
+
+The Generator computes transaction mass automatically. Priority fees can be added on top of the minimum relay fee to incentivize faster inclusion during periods of high mempool activity.
+
+---
+
+### PendingTransaction
+
+A `PendingTransaction` is a wrapper around a standard `Transaction` object that includes the additional metadata needed for signing and submission. It is produced by the `Generator` iterator.
+
+#### Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `id` | `string` | Transaction ID |
+| `type` | `string` | `"batch"` for compound consolidation transactions, `"final"` for the destination transaction |
+| `paymentAmount` | `bigint` | Destination amount (total outputs minus change) |
+| `changeAmount` | `bigint` | Amount returned to the sender as change |
+| `feeAmount` | `bigint` | Total fee (network fee plus priority fee) |
+| `mass` | `bigint` | Computed transaction mass |
+| `aggregateInputAmount` | `bigint` | Sum of all input values |
+| `aggregateOutputAmount` | `bigint` | Sum of all output values |
+| `minimumSignatures` | `number` | Required number of signatures |
+| `transaction` | `Transaction` | The underlying network transaction object |
+
+#### Signing
+
+Sign the transaction with one or more private keys. Keys can be provided as `PrivateKey` objects, `Uint8Array`, or hex strings:
+
+```typescript
+// Sign with a single key
+await pending.sign([privateKey]);
+
+// Sign a specific input (useful for multisig)
+await pending.signInput(0, privateKey);
+
+// Create a signature without applying it
+const signature = await pending.createInputSignature(0, privateKey);
+```
+
+The optional second parameter of `sign()` controls whether to verify that the transaction is fully signed after the operation.
+
+#### Submission
+
+Submit the signed transaction to the network:
+
+```typescript
+const txId = await pending.submit(rpc);
+console.log("Submitted transaction:", txId);
+```
+
+The `submit()` method returns the transaction ID as a string.
+
+#### Additional Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `addresses()` | `string[]` | Array of unique input addresses |
+| `getUtxoEntries()` | `UtxoEntryReference[]` | UTXOs consumed by this transaction |
+| `serializeToJSON()` | `string` | JSON with full precision |
+| `serializeToSafeJSON()` | `string` | JSON with bigint values as strings (prevents precision loss in JavaScript) |
+| `serializeToObject()` | `Object` | Plain JavaScript object |
+
+---
+
+### GeneratorSummary
+
+The `GeneratorSummary` provides cumulative information about the transaction generation process. It is available after iterating through all transactions from the Generator, or as the result of `estimate()`.
+
+#### Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `transactions` | `number` | Number of transactions generated |
+| `utxos` | `number` | Number of UTXOs consumed |
+| `fees` | `bigint` | Aggregate fees across all transactions |
+| `mass` | `bigint` | Total transaction mass |
+| `finalAmount` | `bigint` | Final transaction amount including all fees |
+| `finalTransactionId` | `string` | ID of the final (destination) transaction |
+| `networkType` | `NetworkType` | Network on which the transactions were generated |
+
+<Callout type="info">
+`GeneratorSummary` instances are not created directly. They are produced by `Generator.summary()` after iteration or by `Generator.estimate()` for pre-calculation. The `createTransactions()` convenience function also returns a `GeneratorSummary`.
+</Callout>
+
+---
+
+## Events System
+
+The Wallet SDK uses an event-driven architecture. All events are published through the `UtxoProcessor` and can be received by registering listeners with `addEventListener()`.
+
+### Event Registration
+
+```typescript
+// Listen for a specific event type
+processor.addEventListener("balance", (event) => {
+  console.log("Event data:", event.data);
+});
+
+// Remove a listener
+processor.removeEventListener("balance", callbackRef);
+```
+
+### Event Types
+
+The `UtxoProcessorEventType` enum defines all available events:
+
+| Event | Description |
+|---|---|
+| `"connect"` | RPC connection established with the node |
+| `"disconnect"` | RPC connection lost |
+| `"utxo-proc-start"` | UtxoProcessor has started |
+| `"utxo-proc-stop"` | UtxoProcessor has stopped |
+| `"utxo-proc-error"` | UtxoProcessor encountered an error |
+| `"utxo-index-not-enabled"` | The connected node does not have the UTXO index enabled |
+| `"sync-state"` | Node synchronization state change |
+| `"daa-score-change"` | DAA score has changed (new blocks accepted) |
+| `"pending"` | A transaction has been detected and mined into a block but is not yet mature |
+| `"maturity"` | A transaction has reached the minimum required confirmations |
+| `"discovery"` | UTXOs discovered during initial address scanning |
+| `"stasis"` | A coinbase transaction has been detected but is not yet pending |
+| `"reorg"` | A network reorganization has invalidated one or more UTXOs |
+| `"balance"` | An account balance has changed |
+| `"error"` | A general error has occurred |
+
+### Transaction Events
+
+Transaction events are emitted as transactions progress through their lifecycle. Each transaction event carries a `TransactionRecord` instance.
+
+#### Transaction Lifecycle States
+
+Transactions progress through the following states:
+
+| State | Description |
+|---|---|
+| **Discovery** | Emitted during wallet startup when enumerating existing UTXOs. These may represent previously seen UTXOs or new activity that arrived while the wallet was offline. |
+| **Stasis** | Reserved for coinbase transactions during initial detection. The balance should not be updated for stasis transactions — wait for them to transition to pending. |
+| **Pending** | The transaction has been detected on the network and mined into a block, but has not yet reached the maturity threshold. |
+| **Maturity** | The transaction has reached the minimum required number of confirmations and is now spendable. |
+| **Reorg** | A network reorganization has invalidated UTXOs associated with this transaction. The wallet should remove these UTXOs from its tracked set. |
+
+#### Transaction Data Variants
+
+The `data` field of a `TransactionRecord` is typed as `ITransactionData`, which varies depending on the kind of transaction:
+
+| Data Type | Description |
+|---|---|
+| `ITransactionDataIncoming` | Funds received from an external source |
+| `ITransactionDataOutgoing` | Standard outbound transaction |
+| `ITransactionDataBatch` | Compound UTXO consolidation transaction |
+| `ITransactionDataTransferIncoming` | Transfer received from another UtxoContext (inter-account) |
+| `ITransactionDataTransferOutgoing` | Transfer sent to another UtxoContext (inter-account) |
+| `ITransactionDataChange` | Change output from an outgoing transaction |
+| `ITransactionDataExternal` | UTXO removal caused by another wallet instance consuming the same key |
+| `ITransactionDataReorg` | UTXOs removed due to a chain reorganization |
+| `ITransactionDataStasis` | Coinbase transaction metadata during stasis state |
+
+#### TransactionRecord Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Transaction ID |
+| `binding` | `string` | ID of the associated UtxoContext or wallet account |
+| `blockDaaScore` | `bigint` | DAA score of the block containing this transaction |
+| `unixtimeMsec` | `bigint` (optional) | UNIX timestamp in milliseconds (may be undefined for live transactions) |
+| `value` | `bigint` | Transaction value in sompi |
+| `network` | `NetworkId` | Network on which the transaction occurred |
+| `data` | `ITransactionData` | Transaction data variant (see table above) |
+| `type` | `string` | Transaction data type identifier |
+| `note` | `string` (optional) | Human-readable transaction note |
+| `metadata` | `string` (optional) | JSON-serialized custom metadata |
+
+#### Handling Transaction Events
+
+```typescript
+processor.addEventListener("pending", (event) => {
+  const record = event.data;
+  console.log(`Pending tx ${record.id}, value: ${record.value} sompi`);
+  console.log(`Account: ${record.binding}`);
+  console.log(`Type: ${record.type}`);
+});
+
+processor.addEventListener("maturity", (event) => {
+  const record = event.data;
+  console.log(`Mature tx ${record.id} is now spendable`);
+});
+
+processor.addEventListener("reorg", (event) => {
+  const record = event.data;
+  console.log(`Reorg invalidated tx ${record.id}`);
+});
+
+processor.addEventListener("stasis", (event) => {
+  const record = event.data;
+  // Coinbase detected — do not update balance until it transitions to pending
+  console.log(`Coinbase tx ${record.id} in stasis`);
+});
+```
+
+### Discovery Events
+
+Discovery events occur when a `UtxoContext` registers new addresses for monitoring and performs the initial UTXO scan. The process works as follows:
+
+1. The system registers addresses for transaction notifications via `subscribeUtxosChanged()`.
+2. It enumerates existing UTXOs using `getUtxosByAddresses()`.
+3. All detected UTXOs are posted as discovery events.
+
+UTXOs detected during discovery may represent UTXOs previously seen by the wallet or UTXOs that arrived during the wallet's downtime.
+
+#### Handling Discovery Events
+
+When receiving a discovery event, the application should:
+
+1. Retrieve the transaction ID from the `TransactionRecord`.
+2. Cross-reference it against existing transaction history.
+3. If the transaction ID already exists in records, the UTXO has been seen before and can be ignored.
+4. If absent, treat it as new activity and update the wallet state accordingly.
+
+```typescript
+processor.addEventListener("discovery", (event) => {
+  const record = event.data;
+  if (knownTransactions.has(record.id)) {
+    // Already seen — skip
+    return;
+  }
+  // New UTXO discovered — update wallet state
+  knownTransactions.set(record.id, record);
+  console.log(`Discovered UTXO: ${record.id}, value: ${record.value}`);
+});
+```
+
+<Callout type="warn">
+When private keys are shared between multiple wallet instances, an offline wallet cannot track UTXOs consumed by the active wallet. This creates inconsistent transaction histories. Avoid sharing private keys between wallets. If you need comprehensive history for shared keys, use the Explorer API or DAG block aggregation.
+</Callout>
+
+### Balance Events
+
+A balance event (`IBalanceEvent`) is emitted by the wallet subsystem each time transaction-related activity causes a balance change. This includes incoming and outgoing transactions, confirmations, and state transitions (e.g., pending to mature).
+
+#### IBalanceEvent Structure
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Account ID (UtxoContext identifier) |
+| `balance` | `IBalance` (optional) | Current balance state |
+
+#### IBalance Structure
+
+| Field | Type | Description |
+|---|---|---|
+| `mature` | `bigint` | Total spendable amount in sompi |
+| `matureUtxoCount` | `number` | Number of spendable UTXOs |
+| `pending` | `bigint` | Total pending incoming amount in sompi |
+| `pendingUtxoCount` | `number` | Number of pending UTXOs |
+| `outgoing` | `bigint` | Total outgoing amount in sompi |
+| `stasisUtxoCount` | `number` | Number of coinbase UTXOs in stasis (not yet pending) |
+
+Stasis UTXOs follow a progression of **stasis -> pending -> mature**. They should be disregarded for transaction processing until they reach the pending stage, though the count can be displayed for informational purposes.
+
+```typescript
+processor.addEventListener("balance", (event) => {
+  const { id, balance } = event.data;
+  if (balance) {
+    console.log(`Account ${id}:`);
+    console.log(`  Mature:  ${balance.mature} sompi (${balance.matureUtxoCount} UTXOs)`);
+    console.log(`  Pending: ${balance.pending} sompi (${balance.pendingUtxoCount} UTXOs)`);
+    console.log(`  Outgoing: ${balance.outgoing} sompi`);
+  }
+});
+```
+
+### Connection Events
+
+```typescript
+processor.addEventListener("connect", (event) => {
+  console.log("Connected to Kaspa node");
+});
+
+processor.addEventListener("disconnect", (event) => {
+  console.log("Disconnected from Kaspa node");
+});
+
+processor.addEventListener("utxo-index-not-enabled", (event) => {
+  console.error("The connected node does not have the UTXO index enabled.");
+  console.error("Wallet functionality requires --utxoindex on the Kaspa node.");
+});
+```
+
+---
+
+## Account IDs
+
+Account IDs are used to distinguish different accounts in a multi-account wallet. When a `UtxoContext` is created with an ID, that ID is included in every event emitted by that context, allowing the application to route events to the correct account.
+
+### Format
+
+Account IDs must be a **64-character hex string representing a 32-byte hash**. This strict format is required by the internal Wallet SDK data structures.
+
+### Generating Account IDs
+
+The SDK provides helper functions for generating valid account IDs:
+
+```typescript
+import { sha256FromText, sha256FromBinary } from "kaspa-wasm";
+
+// Generate from a text string
+const accountId = sha256FromText("my-account-0");
+
+// Generate from binary data
+const accountId2 = sha256FromBinary(new Uint8Array([1, 2, 3, 4]));
+```
+
+Double-hash variants (`sha256dFromText`, `sha256dFromBinary`) are also available.
+
+### Usage
+
+```typescript
+const context = new UtxoContext({
+  processor: processor,
+  id: sha256FromText("account-0")
+});
+
+// The account ID appears in all events for this context
+processor.addEventListener("balance", (event) => {
+  const accountId = event.data.id;
+  // Route to the correct account handler
+  accounts.get(accountId)?.updateBalance(event.data.balance);
+});
+```
+
+If no ID is provided when creating a `UtxoContext`, a random identifier is generated automatically based on creation order.
+
+---
+
+## Timestamps and DAA Score
+
+Kaspa transactions do not carry native timestamps. Instead, each block has a **DAA (Difficulty Adjustment Algorithm) score** that serves as a monotonically increasing temporal reference. The DAA score can be converted into an approximate wall-clock time.
+
+### Converting DAA Scores to Timestamps
+
+The SDK provides the `RpcClient.getDaaScoreTimestampEstimate()` method:
+
+```typescript
+const daaScores = [12345678n, 12345700n];
+const timestamps = await rpc.getDaaScoreTimestampEstimate(daaScores);
+// Returns estimated UNIX timestamps for each DAA score
+```
+
+### Handling Timestamps for Different Transaction Types
+
+The `TransactionRecord` interface includes an optional `unixtimeMsec` property. The correct approach for timestamps depends on the transaction source:
+
+| Transaction Source | Approach |
+|---|---|
+| **Live transactions** (non-discovery) | `unixtimeMsec` is typically undefined. Capture the current client system time at the moment the event is received. |
+| **Discovery transactions** with `unixtimeMsec` set | Use the provided timestamp directly. |
+| **Discovery transactions** with `unixtimeMsec` undefined | Call `getDaaScoreTimestampEstimate()` using the transaction's `blockDaaScore`. |
+
+```typescript
+function getTransactionTimestamp(record, isDiscovery) {
+  if (!isDiscovery) {
+    // Live transaction — use current time
+    return Date.now();
+  }
+  if (record.unixtimeMsec !== undefined) {
+    // Discovery with timestamp — use it directly
+    return Number(record.unixtimeMsec);
+  }
+  // Discovery without timestamp — estimate from DAA score
+  return null; // Call getDaaScoreTimestampEstimate() separately
+}
+```
+
+<Callout type="info">
+The DAA score changes with every new block accepted by the network. The `daa-score-change` event is emitted by the UtxoProcessor each time this happens, which can be used to track network progress.
+</Callout>
+
+---
 
 ## Key Management
 
@@ -52,83 +716,227 @@ let receive_key = master
 
 Each derived key is a secp256k1 private key suitable for Schnorr signing.
 
-## UTXO Tracking and Selection
+---
 
-Kaspa is a UTXO-based system. The wallet must track which UTXOs belong to the wallet's addresses and select appropriate UTXOs when constructing transactions.
+## Complete Integration Example
 
-### UTXO Tracking
+The following example demonstrates the full flow of setting up the SDK infrastructure, tracking addresses, building and sending transactions, and handling events.
 
-The wallet subscribes to UTXO changes via the node's `notifyUtxosChanged` RPC method. When a transaction is confirmed that involves one of the wallet's addresses, the node sends a notification with the added and removed UTXO entries. The wallet maintains an in-memory UTXO set that stays in sync with the network state.
+### Step 1: Initialize RPC and UtxoProcessor
 
-### UTXO Selection
+```typescript
+import {
+  RpcClient,
+  UtxoProcessor,
+  UtxoContext,
+  Generator,
+  kaspaToSompi,
+  sha256FromText
+} from "kaspa-wasm";
 
-When constructing a transaction, the wallet must select a set of UTXOs whose total value covers the desired send amount plus fees. The selection algorithm considers:
-
-- **Sufficient value**: The selected UTXOs must cover the output amount plus the transaction fee.
-- **Input limit**: Each transaction can have at most **84 inputs** (limited by the maximum transaction mass). If many small UTXOs need to be consolidated, the wallet may need to create multiple chained transactions.
-- **Change output**: If the selected UTXOs exceed the required amount, a change output is created and sent back to a change address in the wallet.
-
-<Callout type="warn">
-Wallets that receive many small payments (e.g., mining payouts) can accumulate thousands of small UTXOs. Sending large amounts may require multiple compound transactions to consolidate UTXOs before the final send. The SDK handles this automatically.
-</Callout>
-
-## Transaction Construction and Signing
-
-Building a transaction involves several steps:
-
-1. **Create outputs**: Define the recipient address(es) and amounts.
-2. **Select inputs**: Choose UTXOs from the wallet's tracked set.
-3. **Calculate fee**: Compute the transaction mass and determine the required fee.
-4. **Build the unsigned transaction**: Assemble inputs, outputs, and metadata.
-5. **Sign**: Use the derived private keys to produce Schnorr signatures for each input.
-6. **Broadcast**: Submit the signed transaction to the node via wRPC.
-
-```rust
-// Simplified transaction construction flow
-let tx = wallet.create_transaction(
-    destination_address,
-    amount_in_sompi,
-    priority_fee,
-)?;
-
-wallet.sign_transaction(&tx)?;
-wallet.submit_transaction(&tx).await?;
-```
-
-## Fee Estimation
-
-Transaction fees in Kaspa are based on **transaction mass**, which is a function of the transaction's size in bytes and the computational cost of verifying its scripts. The fee calculation:
-
-```
-fee = transaction_mass * minimum_relay_fee_per_unit_of_mass
-```
-
-The SDK computes transaction mass automatically when constructing a transaction. Priority fees can be added on top of the minimum to incentivize faster inclusion during periods of high mempool activity.
-
-## Balance Calculation
-
-The wallet's balance is the sum of all tracked UTXO values belonging to the wallet's addresses. The SDK distinguishes between:
-
-- **Mature balance**: UTXOs that are confirmed and spendable.
-- **Pending balance**: UTXOs from transactions that are in the mempool but not yet confirmed.
-- **Immature balance**: Coinbase UTXOs that have not yet reached the maturity threshold (100 blue score).
-
-## WASM Bindings for Browser Wallets
-
-The wallet SDK compiles to WebAssembly, making it usable in browser environments. The WASM bindings expose the core wallet functionality through JavaScript/TypeScript interfaces:
-
-```javascript
-import { Wallet, RpcClient } from "kaspa-wasm";
-
-const rpc = new RpcClient("ws://127.0.0.1:17110");
+// Connect to a Kaspa node
+const rpc = new RpcClient({
+  url: "ws://127.0.0.1:17110",
+  resolver: null,
+  networkId: "mainnet"
+});
 await rpc.connect();
 
-const wallet = new Wallet(rpc);
-await wallet.createFromMnemonic(mnemonic);
-const balance = await wallet.getBalance();
+// Create the UtxoProcessor
+const processor = new UtxoProcessor({
+  rpc: rpc,
+  networkId: "mainnet"
+});
 ```
 
-The WASM build includes all cryptographic operations (key derivation, Schnorr signing, hashing) compiled from the same Rust source code, ensuring consistency between the Rust and browser implementations.
+### Step 2: Register Event Listeners
+
+```typescript
+// Balance updates
+processor.addEventListener("balance", (event) => {
+  const { id, balance } = event.data;
+  console.log(`[${id}] Balance: ${balance?.mature} sompi`);
+});
+
+// Transaction maturity
+processor.addEventListener("maturity", (event) => {
+  const record = event.data;
+  console.log(`Transaction ${record.id} is now mature (spendable)`);
+});
+
+// Pending transactions
+processor.addEventListener("pending", (event) => {
+  const record = event.data;
+  console.log(`Transaction ${record.id} is pending confirmation`);
+});
+
+// Discovery (startup scan)
+processor.addEventListener("discovery", (event) => {
+  const record = event.data;
+  console.log(`Discovered existing UTXO: ${record.id}`);
+});
+
+// Connection status
+processor.addEventListener("connect", () => console.log("Connected to node"));
+processor.addEventListener("disconnect", () => console.log("Disconnected"));
+```
+
+### Step 3: Start the Processor and Create Contexts
+
+```typescript
+// Start UTXO processing
+await processor.start();
+
+// Create a UtxoContext for one account
+const accountId = sha256FromText("my-wallet-account-0");
+const context = new UtxoContext({
+  processor: processor,
+  id: accountId
+});
+
+// Track wallet addresses
+await context.trackAddresses([
+  "kaspa:qr0abc...",  // receive addresses
+  "kaspa:qr1def...",
+  "kaspa:qc0ghi..."   // change addresses
+]);
+
+// At this point, discovery events fire for any existing UTXOs
+// and balance events reflect the current account state
+```
+
+### Step 4: Build and Send a Transaction
+
+```typescript
+// Create a Generator to build the transaction
+const generator = new Generator({
+  entries: context,  // Use the UtxoContext as the UTXO source
+  outputs: [{
+    address: "kaspa:qrecipient...",
+    amount: kaspaToSompi(50.0)
+  }],
+  changeAddress: "kaspa:qchange...",
+  priorityFee: 1000n
+});
+
+// Iterate through transactions (may produce multiple for large UTXO sets)
+let pending;
+while (pending = await generator.next()) {
+  console.log(`Transaction ${pending.id} (${pending.type}):`);
+  console.log(`  Inputs: ${pending.aggregateInputAmount} sompi`);
+  console.log(`  Fee: ${pending.feeAmount} sompi`);
+
+  // Sign with the wallet's private key(s)
+  await pending.sign([privateKey]);
+
+  // Submit to the network
+  const txId = await pending.submit(rpc);
+  console.log(`  Submitted: ${txId}`);
+}
+
+// Review the summary
+const summary = generator.summary();
+console.log(`Total transactions: ${summary.transactions}`);
+console.log(`Total fees: ${summary.fees} sompi`);
+console.log(`Final tx ID: ${summary.finalTransactionId}`);
+```
+
+### Step 5: Cleanup
+
+```typescript
+// When shutting down
+await context.clear();
+await processor.stop();
+processor.free();
+await rpc.disconnect();
+```
+
+---
+
+## Integration Patterns
+
+### Multi-Account Wallet
+
+For wallets that manage multiple accounts (e.g., HD wallet with multiple account indices), create a separate `UtxoContext` for each account and use the account ID to route events:
+
+```typescript
+const accounts = new Map();
+
+for (let i = 0; i < numAccounts; i++) {
+  const id = sha256FromText(`account-${i}`);
+  const ctx = new UtxoContext({ processor, id });
+  await ctx.trackAddresses(deriveAddresses(i));
+  accounts.set(id, { context: ctx, index: i });
+}
+
+processor.addEventListener("balance", (event) => {
+  const account = accounts.get(event.data.id);
+  if (account) {
+    updateUI(account.index, event.data.balance);
+  }
+});
+```
+
+### Exchange Wallet
+
+For exchanges with many user deposit addresses, create one `UtxoContext` per user account to isolate balances and event routing:
+
+```typescript
+function createUserAccount(userId, depositAddresses) {
+  const id = sha256FromText(`user-${userId}`);
+  const ctx = new UtxoContext({ processor, id });
+  ctx.trackAddresses(depositAddresses);
+
+  return { context: ctx, id, userId };
+}
+```
+
+<Callout type="warn">
+For exchanges with a very large number of users, monitor memory usage. Each `UtxoContext` maintains its own UTXO cache and address subscriptions. For extremely large-scale deployments, consider managing UTXOs directly through the `RpcClient` API.
+</Callout>
+
+### Fee Estimation Before Sending
+
+Use the Generator's `estimate()` method to show users the expected fee before committing:
+
+```typescript
+const generator = new Generator({
+  entries: context,
+  outputs: [{ address: destination, amount: sendAmount }],
+  changeAddress: changeAddr
+});
+
+const estimate = await generator.estimate();
+const feeDisplay = `Fee: ${estimate.fees} sompi (${estimate.transactions} transaction(s))`;
+
+// Show to user, then proceed if confirmed
+```
+
+### Handling Compound Transactions in the UI
+
+When many small UTXOs must be consolidated, the Generator may produce multiple transactions. Provide progress feedback to the user:
+
+```typescript
+let txCount = 0;
+let pending;
+while (pending = await generator.next()) {
+  txCount++;
+  if (pending.type === "batch") {
+    updateStatus(`Consolidating UTXOs (step ${txCount})...`);
+  } else {
+    updateStatus("Sending final transaction...");
+  }
+  await pending.sign([privateKey]);
+  await pending.submit(rpc);
+}
+updateStatus(`Complete. ${txCount} transaction(s) submitted.`);
+```
+
+---
+
+## WASM Bindings
+
+The wallet SDK compiles to WebAssembly, making it usable in browser and Node.js environments. The WASM bindings expose the core wallet functionality through JavaScript/TypeScript interfaces. All cryptographic operations (key derivation, Schnorr signing, hashing) are compiled from the same Rust source code, ensuring consistency between native and browser implementations.
 
 ## Integration with wRPC
 
@@ -136,34 +944,24 @@ The wallet SDK communicates with a Kaspa node using the **wRPC** (WebSocket RPC)
 
 | Method | Purpose |
 |---|---|
-| `notifyUtxosChanged` | Subscribe to UTXO changes for wallet addresses |
+| `subscribeUtxosChanged` | Subscribe to UTXO changes for wallet addresses |
+| `getUtxosByAddresses` | Retrieve the UTXO set for wallet addresses |
 | `submitTransaction` | Broadcast a signed transaction |
 | `getBalanceByAddress` | Query the balance of a specific address |
-| `getUtxosByAddresses` | Retrieve the UTXO set for wallet addresses |
 | `getServerInfo` | Get node information (network, version) |
+| `getDaaScoreTimestampEstimate` | Convert DAA scores to approximate timestamps |
 
 The wRPC client handles reconnection, subscription management, and message serialization automatically.
 
-## Example: Custom Wallet Architecture
-
-A minimal custom wallet built on the SDK would include:
-
-1. **Initialization**: Generate or import a mnemonic, derive the master key.
-2. **Address generation**: Derive receive and change addresses from the HD tree.
-3. **Node connection**: Connect to a Kaspa node via wRPC.
-4. **UTXO sync**: Subscribe to UTXO changes and build the initial UTXO set.
-5. **Balance display**: Sum tracked UTXOs to show the current balance.
-6. **Transaction sending**: Select UTXOs, construct and sign a transaction, broadcast it.
-7. **Event handling**: Process incoming UTXO notifications to update the balance in real time.
-
-<Callout>
-For a working reference implementation, study the `kaspa-cli-wallet` source code in the rusty-kaspa repository. It demonstrates the complete wallet lifecycle using the SDK components described above.
-</Callout>
-
 ## Further Reading
 
-- [HD Derivation](/docs/wallets/hd-derivation) — Details on the BIP-32/39/44 key derivation used by the SDK.
-- [Transactions](/docs/core-concepts/transactions) — Protocol-level transaction structure and validation.
-- [RPC API](/docs/rpc/overview) — Full wRPC method reference.
-- [WASM SDK](/docs/sdks/wasm-sdk) — Using the Kaspa WASM SDK in JavaScript applications.
-- [CLI Wallet](/docs/wallets/cli-wallet) — Reference implementation built on the wallet SDK.
+- [HD Derivation](/docs/wallets/hd-derivation) -- Details on the BIP-32/39/44 key derivation used by the SDK.
+- [Transactions](/docs/core-concepts/transactions) -- Protocol-level transaction structure and validation.
+- [RPC API](/docs/rpc/overview) -- Full wRPC method reference.
+- [WASM SDK](/docs/sdks/wasm-sdk) -- Using the Kaspa WASM SDK in JavaScript applications.
+- [CLI Wallet](/docs/wallets/cli-wallet) -- Reference implementation built on the wallet SDK.
+- [WASM API Reference (UtxoProcessor)](https://kaspa.aspectron.org/docs/classes/UtxoProcessor.html) -- TypeScript class documentation.
+- [WASM API Reference (UtxoContext)](https://kaspa.aspectron.org/docs/classes/UtxoContext.html) -- TypeScript class documentation.
+- [WASM API Reference (Generator)](https://kaspa.aspectron.org/docs/classes/Generator.html) -- TypeScript class documentation.
+- [WASM API Reference (PendingTransaction)](https://kaspa.aspectron.org/docs/classes/PendingTransaction.html) -- TypeScript class documentation.
+- [Rust API Reference (kaspa-wallet-core)](https://docs.rs/kaspa-wallet-core/latest/kaspa_wallet_core/) -- Rust crate documentation.

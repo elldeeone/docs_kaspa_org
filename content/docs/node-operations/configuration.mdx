@@ -21,11 +21,21 @@ kaspad is configured entirely through command-line flags. There is no configurat
 | Flag | Description |
 |---|---|
 | `--rpclisten` | Sets the gRPC listen address. Default: `127.0.0.1:16110`. Set to `0.0.0.0:16110` to accept remote connections. |
+| `--rpclisten-borsh` | Sets the wRPC Borsh listen address. Default: `0.0.0.0:17110` (mainnet), `0.0.0.0:17210` (testnet). |
+| `--rpclisten-json` | Sets the wRPC JSON listen address. Default: `0.0.0.0:18110` (mainnet), `0.0.0.0:18210` (testnet). |
+| `--rpcmaxclients` | Maximum number of simultaneous RPC client connections. Default: `128`. Increase for high-traffic nodes serving many wallets or applications. |
 | `--listen` | Sets the P2P listen address for incoming peer connections. Default: `0.0.0.0:16111`. |
 | `--connect` | Connect only to the specified peer(s). Disables automatic peer discovery. Useful for private network topologies. |
 | `--addpeer` | Add a persistent peer to connect to in addition to discovered peers. |
 | `--outpeers` | Target number of outbound peer connections. Default varies by network. |
 | `--maxinpeers` | Maximum number of inbound peer connections to accept. |
+| `--disable-upnp` | Disables UPnP port mapping. By default, kaspad attempts to use UPnP to automatically configure port forwarding on your router. Disable this on servers or in environments where UPnP is not available or not desired. |
+
+### Database Management
+
+| Flag | Description |
+|---|---|
+| `--reset-db` | Deletes the existing database and starts a fresh sync. Required when switching between networks or when the database is corrupted. Combine with `--yes` to skip the confirmation prompt in automated deployments. |
 
 ### Network Selection
 
@@ -88,11 +98,11 @@ If you change networks (e.g., from mainnet to testnet), kaspad automatically use
 
 kaspad exposes three RPC interfaces:
 
-| Interface | Default Port (Mainnet) | Flag |
-|---|---|---|
-| gRPC | 16110 | `--rpclisten` |
-| wRPC Borsh | 17110 | Set via wRPC configuration |
-| wRPC JSON | 18110 | Set via wRPC configuration |
+| Interface | Default Port (Mainnet) | Default Port (Testnet) | Flag |
+|---|---|---|---|
+| gRPC | 16110 | 16210 | `--rpclisten` |
+| wRPC Borsh | 17110 | 17210 | `--rpclisten-borsh` |
+| wRPC JSON | 18110 | 18210 | `--rpclisten-json` |
 
 By default, the gRPC interface listens on `127.0.0.1` (localhost only). To allow remote connections, bind to `0.0.0.0` and ensure appropriate firewall rules are in place.
 

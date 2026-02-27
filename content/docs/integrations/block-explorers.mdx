@@ -19,6 +19,15 @@ The official Kaspa block explorer at [explorer.kaspa.org](https://explorer.kaspa
 - Network statistics (hashrate, difficulty, block rate).
 - DAG visualization showing the structure of recent blocks.
 
+### Testnet Explorers
+
+Kaspa runs public testnet explorers for nodes on the test networks:
+
+- [explorer-tn10.kaspa.org](https://explorer-tn10.kaspa.org) — Testnet 10 explorer.
+- [explorer-tn11.kaspa.org](https://explorer-tn11.kaspa.org) — Testnet 11 explorer.
+
+These testnet explorers provide the same interface as the mainnet explorer but display testnet blocks, transactions, and addresses.
+
 ### kas.fyi
 
 [kas.fyi](https://kas.fyi) is a community-run explorer and analytics platform that offers:
@@ -100,6 +109,18 @@ The Kaspa project provides a REST API at [api.kaspa.org](https://api.kaspa.org) 
 - `GET /addresses/\{address\}/utxos` — Get UTXOs for an address.
 - `GET /addresses/\{address\}/balance` — Get the balance for an address.
 - `GET /info` — Network information (blue score, hashrate, etc.).
+
+### API Documentation
+
+Interactive API documentation (Swagger/OpenAPI) is available for each network:
+
+| Network | API Docs URL |
+|---|---|
+| Mainnet | [api.kaspa.org/docs](https://api.kaspa.org/docs) |
+| Testnet 10 | [api-tn10.kaspa.org/docs](https://api-tn10.kaspa.org/docs) |
+| Testnet 11 | [api-tn11.kaspa.org/docs](https://api-tn11.kaspa.org/docs) |
+
+The documentation pages list all available endpoints, parameters, and response schemas. You can execute test requests directly from the browser.
 
 <Callout>
 The REST API is rate-limited and intended for light use. For production block explorers or high-volume applications, run your own node and use the wRPC interface directly.

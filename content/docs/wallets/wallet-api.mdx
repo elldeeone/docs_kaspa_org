@@ -1,0 +1,298 @@
+---
+title: "Wallet API"
+description: "High-level wallet management interface for Kaspa — wallet creation, account management, storage, and encryption."
+---
+
+## Overview
+
+The Wallet API is a Rust implementation of complete wallet functionality built on top of the [Wallet SDK](/docs/wallets/wallet-sdk). While the Wallet SDK provides infrastructure primitives (UtxoProcessor, UtxoContext, Generator), the Wallet API wraps these into a procedural interface for wallet creation, account management, key import/export, and transaction operations.
+
+The API compiles to WebAssembly for use in browsers, browser extensions, and Node.js environments, in addition to running natively on Linux, macOS, and Windows.
+
+<Callout type="info">
+Wallets built on the Wallet API -- including the Kaspa CLI Wallet and Kaspa NG -- can interoperate and open each other's wallet files. This means a wallet file created in one application can be opened in any other application that uses the same API.
+</Callout>
+
+## Wallet API vs. Wallet SDK
+
+The Wallet SDK and Wallet API serve different roles in the wallet architecture:
+
+| Aspect | Wallet SDK | Wallet API |
+|---|---|---|
+| Abstraction level | Infrastructure primitives | Complete wallet interface |
+| Core components | UtxoProcessor, UtxoContext, Generator | Wallet, Account, Storage |
+| Key management | Manual key derivation via kaspa-bip32 | Automatic BIP-39/BIP-32 key lifecycle |
+| UTXO handling | Direct UTXO tracking and selection | Automatic per-account UTXO management |
+| Storage | None (application-managed) | Encrypted wallet files with platform-specific backends |
+| Account management | None | Multi-account with concurrent operations |
+| Use case | Custom wallet engines, exchanges | Wallet applications, browser extensions |
+
+Use the **Wallet SDK** when you need fine-grained control over UTXO handling and transaction construction (e.g., building an exchange integration or a custom payment processor). Use the **Wallet API** when you need a complete wallet with file storage, encryption, account management, and transaction history.
+
+## Core Features
+
+- **Multi-wallet file management** -- Create, open, and close multiple wallet files.
+- **BIP-39 mnemonic support** -- 12-word and 24-word seed phrases with optional passphrases.
+- **Multiple private keys** -- Import and manage multiple keys within a single wallet.
+- **Concurrent BIP-32 multi-account operations** -- Run multiple accounts simultaneously with independent UTXO tracking.
+- **Real-time transaction alerts** -- Receive notifications for incoming and outgoing transactions.
+- **Inter-account transfers** -- Move funds between accounts within the same wallet.
+- **File encryption and sensitive data erasure** -- Wallet files are encrypted at rest; sensitive data is wiped from memory after use.
+- **Transaction history with annotations** -- Store and retrieve transaction records with user-defined notes.
+
+## Wallet Lifecycle
+
+### Creating a Wallet
+
+A new wallet is created with a BIP-39 mnemonic and an encryption secret. The wallet file is stored using the platform-appropriate backend.
+
+```javascript
+import { Wallet, RpcClient } from "kaspa-wasm";
+
+const rpc = new RpcClient("ws://127.0.0.1:17110");
+await rpc.connect();
+
+const wallet = new Wallet(rpc);
+
+// Create a new wallet with a generated mnemonic
+await wallet.walletCreate("my_wallet", "wallet-encryption-password");
+```
+
+```rust
+use kaspa_wallet_core::prelude::*;
+
+// Create a wallet instance connected to an RPC client
+let wallet = Wallet::new(rpc_client);
+
+// Create a new wallet file
+wallet.wallet_create("my_wallet", "wallet-encryption-password").await?;
+```
+
+### Opening and Closing a Wallet
+
+```javascript
+// Open an existing wallet
+await wallet.walletOpen("my_wallet", "wallet-encryption-password");
+
+// Perform operations...
+
+// Close the wallet (flushes state, clears sensitive data from memory)
+await wallet.walletClose();
+```
+
+### Connecting to the Network
+
+Before performing network operations, the wallet must connect to a Kaspa node:
+
+```javascript
+await wallet.connect();
+
+// The wallet will automatically subscribe to UTXO changes
+// for all active accounts and begin tracking balances.
+```
+
+## Account Management
+
+The Wallet API supports multiple account types within a single wallet file. Each account operates independently with its own address set, UTXO tracking, and balance.
+
+### Account Types
+
+| Account Type | Description |
+|---|---|
+| **BIP-32 (Standard)** | Standard hierarchical deterministic account derived from the wallet mnemonic using the BIP-44 path `m/44'/111111'/account'/change/index`. This is the default account type. |
+| **MultiSig** | Multi-signature account requiring M-of-N key holders to authorize transactions. Used for shared custody and organizational wallets. |
+| **Legacy** | Compatibility account for wallets created with older Kaspa software that used non-standard derivation paths. |
+| **Watchonly** | Read-only account that tracks addresses and balances without holding private keys. Useful for monitoring wallets secured by hardware devices or air-gapped systems. |
+
+### Creating Accounts
+
+```javascript
+// Create a new BIP-32 account (the most common type)
+await wallet.accountCreate({
+  accountName: "savings",
+  accountType: "bip32",
+});
+
+// Create a multisig account
+await wallet.accountCreate({
+  accountName: "treasury",
+  accountType: "multisig",
+  minimumSignatures: 2,
+  publicKeys: [pubKey1, pubKey2, pubKey3],
+});
+```
+
+### Account Operations
+
+```javascript
+// List all accounts in the wallet
+const accounts = await wallet.accountList();
+
+// Get balance for the active account
+const balance = await wallet.accountGetBalance();
+
+// Generate a new receive address for the active account
+const address = await wallet.accountCreateAddress();
+```
+
+## Transaction Operations
+
+The Wallet API handles UTXO selection, transaction construction, signing, and broadcasting through a single interface.
+
+### Sending a Transaction
+
+```javascript
+// Send KAS to an address
+const txId = await wallet.transactionSend({
+  destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+  amount: 1_000_000_00n, // Amount in sompi (1 KAS = 100,000,000 sompi)
+  priorityFee: 0n,
+});
+```
+
+### Fee Estimation
+
+Before sending, you can estimate the transaction fee:
+
+```javascript
+const estimate = await wallet.transactionEstimate({
+  destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+  amount: 1_000_000_00n,
+});
+
+console.log("Estimated fee:", estimate.fees);
+console.log("Number of compound transactions:", estimate.transactions);
+```
+
+<Callout type="warn">
+If your wallet holds many small UTXOs (common with mining payouts), a single send operation may require multiple compound transactions to consolidate UTXOs before the final transfer. The Wallet API handles this automatically, but fee estimation will reflect the total cost of all required transactions.
+</Callout>
+
+## Storage Backends
+
+The Wallet API uses platform-appropriate storage backends to persist wallet files:
+
+| Platform | Storage Backend | Details |
+|---|---|---|
+| Native (Linux, macOS, Windows) | Filesystem | Standard file I/O via Rust `std::fs` |
+| Node.js | Filesystem | Node's `fs` module |
+| Browsers | localStorage / IndexedDB | Encrypted wallet data in browser storage |
+| Browser extensions | chrome.storage.local | Extension-specific storage API |
+
+Wallet files are encrypted using the password provided at creation time. The encryption protects private keys, mnemonics, and account metadata at rest. When a wallet is closed, sensitive data is erased from memory.
+
+<Callout>
+The storage backend is selected automatically based on the runtime environment. You do not need to configure it manually.
+</Callout>
+
+## Event System
+
+The Wallet API emits events for wallet state changes. These are useful for updating user interfaces in real time.
+
+```javascript
+wallet.addEventListener("balance", (event) => {
+  console.log("Balance updated:", event.data);
+});
+
+wallet.addEventListener("utxo-change", (event) => {
+  console.log("UTXO set changed:", event.data);
+});
+
+wallet.addEventListener("transaction", (event) => {
+  console.log("Transaction detected:", event.data);
+});
+```
+
+Key events include:
+
+- **balance** -- Fired when the account balance changes (incoming or outgoing transaction confirmed).
+- **utxo-change** -- Fired when UTXOs are added or removed from the tracked set.
+- **transaction** -- Fired for each transaction affecting the wallet, including incoming, outgoing, and inter-account transfers.
+- **connect/disconnect** -- Fired when the connection to the Kaspa node is established or lost.
+
+## Direct Node RPC
+
+In some cases, you may want to bypass the Wallet API and interact directly with a Kaspa node via RPC. This is the lowest level of integration and requires you to manage UTXO tracking, subscription lifecycle, and transaction construction yourself.
+
+<Callout type="info">
+The Wallet SDK and Wallet API are built on top of direct node RPC. Using RPC directly gives you maximum control but requires significantly more implementation effort.
+</Callout>
+
+### When to Use Direct RPC
+
+- You need custom UTXO management logic (e.g., coin selection algorithms for exchanges).
+- You are building a service that monitors addresses without maintaining wallet state.
+- You need access to RPC methods not exposed by the Wallet API.
+
+### Key RPC Methods
+
+The two primary RPC methods for UTXO-based wallet operations are:
+
+- **`getUtxosByAddresses()`** -- Retrieves the current UTXO set for a list of addresses.
+- **`subscribeUtxosChanged()`** -- Subscribes to real-time notifications when UTXOs change for specified addresses.
+
+### Subscription Ordering
+
+When using direct RPC, the order of operations matters:
+
+```javascript
+import { RpcClient } from "kaspa-wasm";
+
+const rpc = new RpcClient("ws://127.0.0.1:17110");
+await rpc.connect();
+
+// Step 1: Subscribe FIRST to avoid missing notifications
+await rpc.subscribeUtxosChanged(addresses);
+
+// Step 2: Then fetch current UTXO set
+const utxos = await rpc.getUtxosByAddresses(addresses);
+
+// Step 3: Handle events as they arrive
+rpc.addEventListener("utxos-changed", (event) => {
+  // Process added and removed UTXOs
+  const { added, removed } = event.data;
+});
+```
+
+<Callout type="warn">
+Always subscribe for notifications before calling `getUtxosByAddresses()`. This sequence ensures you do not miss any UTXO changes that occur between fetching the initial set and establishing the subscription. If the RPC client disconnects and reconnects, remote subscriptions to the Kaspa node are lost and must be re-established, though local subscriptions to the RPC subsystem remain intact.
+</Callout>
+
+## Rust API
+
+In Rust, the Wallet API is accessed through the `WalletApi` trait. Method arguments are passed as dedicated structs, making the interface self-documenting.
+
+```rust
+use kaspa_wallet_core::prelude::*;
+
+let wallet = Wallet::new(rpc_client);
+
+// Open wallet
+wallet.wallet_open("my_wallet", "password").await?;
+
+// Create a new account
+wallet.account_create(AccountCreateArgs {
+    account_name: "default".to_string(),
+    account_type: AccountType::Bip32,
+    ..Default::default()
+}).await?;
+
+// Send a transaction
+wallet.transaction_send(TransactionSendArgs {
+    destination: address,
+    amount: 100_000_000, // 1 KAS
+    priority_fee: 0,
+    ..Default::default()
+}).await?;
+
+// Close wallet
+wallet.wallet_close().await?;
+```
+
+## Further Reading
+
+- [Wallet SDK](/docs/wallets/wallet-sdk) -- Lower-level SDK components (UtxoProcessor, Generator).
+- [HD Derivation](/docs/wallets/hd-derivation) -- Key derivation paths and standards.
+- [RPC API](/docs/rpc/overview) -- Full wRPC method reference for direct node interaction.
+- [WASM SDK](/docs/sdks/wasm-sdk) -- Using the Kaspa WASM bindings in JavaScript.
+- [CLI Wallet](/docs/wallets/cli-wallet) -- Reference wallet application built on the Wallet API.
