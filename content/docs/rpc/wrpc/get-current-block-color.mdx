@@ -1,0 +1,39 @@
+---
+title: "GetCurrentBlockColor"
+description: "Determine whether a specific block is blue (in the selected chain) or red."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `hash` | string | Yes | The hash of the block to check. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `blue` | boolean | `true` if the block is blue (part of the selected chain), `false` if red. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getCurrentBlockColor",
+  "params": {
+    "hash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5"
+  }
+}
+
+// Response
+{
+  "blue": true
+}
+```
+
+## Notes
+
+- In GHOSTDAG, blocks are classified as blue or red. Blue blocks are considered part of the honest majority's chain; red blocks are included in the DAG but penalized (their transactions may not be accepted if they conflict with blue block transactions).
+- A block's color can change during chain reorganizations, though this is rare for blocks with sufficient confirmations.
+- This method checks the block's color according to the current virtual's perspective.

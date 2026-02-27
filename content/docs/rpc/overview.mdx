@@ -1,0 +1,84 @@
+---
+title: "RPC Overview"
+description: "Overview of Kaspa's RPC architecture — wRPC, gRPC, and REST interfaces for interacting with Kaspa nodes."
+---
+
+## RPC Architecture
+
+Kaspa nodes expose a Remote Procedure Call (RPC) interface that allows external applications to query blockchain state, submit transactions, monitor events, and manage node operations. The RPC layer sits between your application and the Kaspa node's consensus and mempool engines.
+
+Three protocols are available for interacting with a Kaspa node, each suited to different use cases.
+
+## Protocols
+
+### wRPC (WebSocket RPC) — Primary Interface
+
+wRPC is Kaspa's primary RPC protocol, built on WebSocket connections. It provides full-duplex communication, meaning the server can push notifications to clients without polling. All RPC methods are available over wRPC.
+
+- **Transport**: WebSocket (`ws://` or `wss://`)
+- **Encoding**: Borsh (binary, compact) or JSON (human-readable)
+- **Subscriptions**: Full support for real-time event notifications
+- **Best for**: Most applications — wallets, explorers, dApps, monitoring tools
+
+### gRPC (Protocol Buffers)
+
+gRPC uses HTTP/2 and Protocol Buffers for strongly-typed, high-performance communication. It is well-suited for server-to-server integrations where both ends can share `.proto` definitions.
+
+- **Transport**: HTTP/2
+- **Encoding**: Protocol Buffers (binary)
+- **Best for**: Server-to-server communication, infrastructure tooling, high-throughput pipelines
+
+### REST (via api.kaspa.org)
+
+A public REST API is available at `api.kaspa.org` for simple read-only queries. It wraps a subset of RPC methods behind standard HTTP endpoints.
+
+- **Transport**: HTTPS
+- **Encoding**: JSON
+- **Best for**: Simple queries, quick prototyping, browser-based tools that need CORS support
+
+## Choosing a Protocol
+
+| Use Case | Recommended Protocol |
+|----------|---------------------|
+| Wallet or dApp development | wRPC (JSON encoding) |
+| Real-time monitoring / subscriptions | wRPC |
+| High-performance server integration | gRPC |
+| Simple balance or UTXO lookups | REST |
+| Browser-based applications | wRPC (JSON) or REST |
+| Mining software | wRPC or gRPC |
+
+<Callout>
+wRPC is the recommended protocol for most applications. It provides access to all RPC methods, supports subscriptions for real-time updates, and works in both Node.js and browser environments via the Kaspa WASM SDK.
+</Callout>
+
+## Encoding Options
+
+wRPC supports two encoding formats on separate ports:
+
+- **Borsh** (Binary Object Representation Serializer for Hashing): A compact binary format that is faster to serialize and deserialize. Preferred for performance-sensitive applications.
+- **JSON**: Human-readable format, easier to debug and inspect. Preferred for development and browser-based applications.
+
+Both encodings expose identical methods and return identical logical data. The only difference is wire format and port number.
+
+## Subscription Model
+
+wRPC supports a full-duplex subscription model. Clients can subscribe to events such as new blocks, UTXO changes for specific addresses, or virtual chain updates. When subscribed, the node pushes notifications to the client over the same WebSocket connection — no polling required.
+
+Subscriptions are managed with paired `subscribe` and `unsubscribe` calls. See the [Subscriptions](/docs/rpc/subscriptions) section for details on available notification types.
+
+## Authentication and Security
+
+<Callout type="info">
+Kaspa's RPC interface has no built-in authentication mechanism. By default, any client that can reach the RPC port can issue any command, including administrative operations like `Shutdown`.
+</Callout>
+
+To secure your node's RPC interface:
+
+- **Firewall rules**: Restrict RPC port access to trusted IP addresses.
+- **VPN / private network**: Run your node on a private network and expose RPC only to authorized services.
+- **Bind address**: Configure the node to listen on `127.0.0.1` (localhost) rather than `0.0.0.0` if only local access is needed.
+- **Reverse proxy with TLS**: Place a reverse proxy (e.g., nginx) in front of the RPC port to add TLS encryption and optional authentication headers.
+
+## Rate Limiting
+
+Kaspa nodes do not enforce rate limiting at the RPC layer. If you expose an RPC endpoint publicly, consider placing a rate-limiting reverse proxy in front of it to prevent abuse. Public infrastructure such as the Resolver service and `api.kaspa.org` may impose their own rate limits.

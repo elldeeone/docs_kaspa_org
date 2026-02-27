@@ -1,0 +1,142 @@
+---
+title: Scripting
+description: Kaspa's Bitcoin-like stack-based transaction scripting system, including standard scripts, opcodes reactivated by KIP-10, and signature operations.
+---
+
+## Overview
+
+Kaspa uses a **stack-based scripting language** derived from Bitcoin Script. Every transaction output contains a **script public key** (locking script) that defines the conditions under which the output can be spent. To spend that output, a transaction input must provide a **signature script** (unlocking script) that satisfies those conditions.
+
+The scripting system is intentionally not Turing-complete — scripts always terminate and their execution cost is bounded, preventing denial-of-service attacks through unbounded computation.
+
+<Callout>
+Kaspa's scripting language is based on Bitcoin Script but has evolved independently. KIP-10 reactivated many opcodes that were disabled in Bitcoin, giving Kaspa a more expressive scripting capability.
+</Callout>
+
+## Standard Scripts
+
+### Pay-to-Public-Key (P2PK)
+
+The most common script type in Kaspa is **Pay-to-Public-Key**, which locks an output to a specific Schnorr public key:
+
+**Script Public Key (locking):**
+```
+OP_DATA_32 <32-byte-x-only-pubkey> OP_CHECKSIG
+```
+
+**Signature Script (unlocking):**
+```
+OP_DATA_64 <64-byte-schnorr-signature>
+```
+
+Validation proceeds as follows:
+1. The signature script pushes the signature onto the stack.
+2. The script public key pushes the public key onto the stack.
+3. `OP_CHECKSIG` pops both values and verifies the Schnorr signature against the transaction's sighash. If valid, it pushes `true`; otherwise `false`.
+
+### Pay-to-Script-Hash (P2SH)
+
+**P2SH** allows locking an output to the hash of an arbitrary script. The spender reveals the full script at spend time:
+
+**Script Public Key (locking):**
+```
+OP_BLAKE2B OP_DATA_32 <32-byte-script-hash> OP_EQUAL
+```
+
+**Signature Script (unlocking):**
+```
+<signatures and data> <serialized-redeem-script>
+```
+
+The node hashes the provided redeem script with BLAKE2b, checks it matches the hash in the script public key, then executes the redeem script with the remaining stack items. This approach keeps the locking script compact regardless of the complexity of the spending conditions.
+
+<Callout type="info">
+Kaspa uses BLAKE2b for script hashing, unlike Bitcoin which uses SHA-256 and RIPEMD-160. BLAKE2b is faster and provides equivalent security.
+</Callout>
+
+## Script Execution
+
+Script execution follows a stack-based model: the **signature script** is executed first, pushing data onto the stack. The **script public key** is then executed on the same stack. After both scripts complete, the top stack value is checked — if it is non-zero (truthy), the spend is valid. The execution environment is isolated; scripts cannot access external state beyond the transaction data they are validating.
+
+## KIP-10: Opcode Reactivation
+
+**KIP-10** is a significant upgrade to Kaspa's scripting capabilities. It reactivated many opcodes that had been disabled since Kaspa's early releases (and which were historically disabled in Bitcoin as a precaution). These opcodes enable more expressive smart contract-like functionality.
+
+Categories of reactivated opcodes include:
+
+| Category | Opcodes | Description |
+|---|---|---|
+| Arithmetic | `OP_ADD`, `OP_SUB`, `OP_MUL`, `OP_DIV`, `OP_MOD`, `OP_NEGATE`, `OP_ABS`, `OP_MIN`, `OP_MAX` | Integer arithmetic and comparison |
+| Bitwise | `OP_AND`, `OP_OR`, `OP_XOR`, `OP_LSHIFT`, `OP_RSHIFT` | Bitwise logic and shifting |
+| String/Byte | `OP_CAT`, `OP_SUBSTR`, `OP_LEFT`, `OP_RIGHT`, `OP_SIZE` | Byte string manipulation |
+| Cryptographic | `OP_BLAKE2B`, `OP_SHA256`, `OP_CHECKSIG`, `OP_CHECKMULTISIG`, `OP_CHECKDATASIG` | Hashing and signature verification |
+| Flow Control | `OP_IF`, `OP_ELSE`, `OP_ENDIF`, `OP_NOTIF`, `OP_VERIFY` | Conditional execution |
+
+Notable additions include `OP_CHECKDATASIG` (verify a signature against arbitrary data, enabling oracle-based contracts) and `OP_CAT` (byte string concatenation, enabling covenants and other advanced constructions).
+
+<Callout>
+KIP-10 significantly expands what can be built on Kaspa's scripting layer. With opcodes like `OP_CHECKDATASIG`, `OP_CAT`, and arithmetic operations, developers can construct covenants, hash-time-locked contracts (HTLCs), and other advanced spending conditions directly in Kaspa Script.
+</Callout>
+
+## Signature Operations and Mass Cost
+
+Each signature verification operation in a script contributes to the transaction's **compute mass**. The cost is:
+
+```
+sig_op_mass = sig_op_count × 1000
+```
+
+Standard transactions have one `OP_CHECKSIG` per input, so a 3-input transaction has a compute mass of 3,000. Scripts with `OP_CHECKMULTISIG` count each potential signature check toward the sigop total.
+
+This mass cost ensures that transactions with many signature operations pay higher fees, preventing abuse of computationally expensive verification.
+
+## Lock Time Scripts
+
+Kaspa supports time-based spending conditions through lock time mechanisms:
+
+The transaction's `lock_time` field prevents inclusion before a specified DAA score or timestamp. At the script level, `OP_CHECKLOCKTIMEVERIFY` (CLTV) enforces absolute time locks and `OP_CHECKSEQUENCEVERIFY` (CSV) enforces relative time locks (a number of blocks since the UTXO was created).
+
+These opcodes enable vesting schedules, payment channels, and hash-time-locked contracts (HTLCs) for atomic swaps.
+
+## Conditional Scripts
+
+With `OP_IF`/`OP_ELSE`/`OP_ENDIF`, scripts can implement branching logic. A practical example is a **hash-time-locked contract (HTLC)**:
+
+```
+OP_IF
+  OP_BLAKE2B <hash> OP_EQUALVERIFY <pubkey-A> OP_CHECKSIG
+OP_ELSE
+  <timeout> OP_CHECKLOCKTIMEVERIFY OP_DROP <pubkey-B> OP_CHECKSIG
+OP_ENDIF
+```
+
+This script can be spent either by providing the hash preimage and A's signature (before timeout) or by B's signature (after timeout).
+
+## Comparison with Bitcoin Script
+
+| Feature | Kaspa Script | Bitcoin Script |
+|---|---|---|
+| Signature scheme | Schnorr (secp256k1) | ECDSA + Schnorr (Taproot) |
+| Hash function | BLAKE2b | SHA-256, RIPEMD-160 |
+| Standard address type | P2PK (direct public key) | P2PKH, P2WPKH, P2TR |
+| Arithmetic opcodes | Active (KIP-10) | Mostly disabled |
+| String opcodes | Active (KIP-10) | Disabled |
+| `OP_CHECKDATASIG` | Available | Not available (natively) |
+| Turing completeness | No | No |
+
+## Script Validation Process
+
+When a node validates a transaction, each input is validated independently:
+
+1. **Deserialize** the signature script and script public key.
+2. **Execute** the signature script, building up the stack.
+3. **Execute** the script public key on the resulting stack.
+4. **Check** that the top stack element is truthy (non-zero).
+5. **Count** signature operations for mass calculation.
+6. **Reject** if any step fails, if the stack is malformed, or if the script exceeds size limits.
+
+## Further Reading
+
+- [Transactions](/docs/core-concepts/transactions) — Transaction structure including script fields.
+- [Fees & Mass](/docs/core-concepts/fees-and-mass) — How script complexity affects transaction mass and fees.
+- [Addresses](/docs/core-concepts/addresses) — How addresses encode script public keys.

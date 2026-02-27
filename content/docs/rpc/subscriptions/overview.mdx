@@ -1,0 +1,160 @@
+---
+title: Subscriptions Overview
+description: "Real-time event subscriptions in Kaspa — subscribe to blocks, UTXO changes, and network events via wRPC."
+---
+
+## How Subscriptions Work
+
+Kaspa's RPC interface supports a publish-subscribe model that enables real-time event notifications. Instead of polling the node repeatedly, your application subscribes to specific event types and receives push notifications as events occur. This is critical for Kaspa's 10 BPS block rate, where polling would be prohibitively expensive.
+
+The subscription lifecycle follows three steps:
+
+1. **Subscribe** -- Call the `notify*` method (e.g., `notifyBlockAdded`) to register your interest in a specific event type.
+2. **Receive notifications** -- The node pushes notification messages to your connection as events occur.
+3. **Unsubscribe** -- Call the same method with a command to stop receiving notifications.
+
+<Callout type="info">
+Subscriptions are connection-scoped. If your connection drops, all subscriptions are lost. After reconnecting, you must resubscribe to all event types you need.
+</Callout>
+
+## Available Subscription Types
+
+| Subscription | Method | Use Case |
+|---|---|---|
+| [Block Added](/docs/rpc/subscriptions/block-added) | `notifyBlockAdded` | Track new blocks entering the DAG |
+| [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed) | `notifyVirtualChainChanged` | Detect chain reorganizations and accepted transactions |
+| [Finality Conflict](/docs/rpc/subscriptions/finality-conflict) | `notifyFinalityConflict` | Monitor for finality violations (rare) |
+| [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed) | `notifyUtxosChanged` | Watch address balances and UTXO changes |
+| [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed) | `notifySinkBlueScoreChanged` | Track the chain's blue score progression |
+| [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) | `notifyVirtualDaaScoreChanged` | Monitor DAA score for timing and difficulty |
+| [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override) | `notifyPruningPointUtxoSetOverride` | Detect pruning point advances |
+| [New Block Template](/docs/rpc/subscriptions/new-block-template) | `notifyNewBlockTemplate` | Receive mining templates (for miners) |
+
+## Subscribing and Unsubscribing
+
+### Using the WASM SDK (JavaScript/TypeScript)
+
+The WASM SDK provides event-driven methods for managing subscriptions:
+
+```typescript
+import { RpcClient, Resolver } from "@aspect-build/kaspa-wasm";
+
+const rpc = new RpcClient({
+  resolver: new Resolver(),
+  networkId: "mainnet",
+});
+
+await rpc.connect();
+
+// Subscribe to block notifications
+await rpc.subscribeBlockAdded();
+
+// Subscribe to UTXO changes for specific addresses
+await rpc.subscribeUtxosChanged([
+  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
+]);
+
+// Subscribe to DAA score changes
+await rpc.subscribeVirtualDaaScoreChanged();
+```
+
+### Unsubscribing
+
+```typescript
+// Unsubscribe from block notifications
+await rpc.unsubscribeBlockAdded();
+
+// Unsubscribe from UTXO changes
+await rpc.unsubscribeUtxosChanged([
+  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
+]);
+```
+
+## Handling Notifications
+
+### Event Listener Pattern
+
+```typescript
+// Listen for block-added events
+rpc.addEventListener("block-added", (event) => {
+  const block = event.data.block;
+  console.log(`New block: ${block.verboseData.hash}`);
+  console.log(`  DAA score: ${block.header.daaScore}`);
+  console.log(`  Blue score: ${block.header.blueScore}`);
+  console.log(`  Transactions: ${block.transactions.length}`);
+});
+
+// Listen for UTXO changes
+rpc.addEventListener("utxos-changed", (event) => {
+  const { added, removed } = event.data;
+  for (const utxo of added) {
+    console.log(`New UTXO: ${utxo.address} +${utxo.utxoEntry.amount} sompi`);
+  }
+  for (const utxo of removed) {
+    console.log(`Spent UTXO: ${utxo.address} -${utxo.utxoEntry.amount} sompi`);
+  }
+});
+
+// Listen for virtual chain changes
+rpc.addEventListener("virtual-chain-changed", (event) => {
+  const { addedChainBlockHashes, removedChainBlockHashes } = event.data;
+  if (removedChainBlockHashes.length > 0) {
+    console.log(`Reorg: ${removedChainBlockHashes.length} blocks removed`);
+  }
+  console.log(`${addedChainBlockHashes.length} blocks added to chain`);
+});
+
+// Listen for DAA score changes
+rpc.addEventListener("virtual-daa-score-changed", (event) => {
+  console.log(`DAA score: ${event.data.virtualDaaScore}`);
+});
+```
+
+## Reconnection and Resubscription
+
+Since subscriptions are tied to the connection, you must handle reconnection gracefully.
+
+```typescript
+rpc.addEventListener("disconnect", async () => {
+  console.log("Disconnected from node, attempting reconnect...");
+});
+
+rpc.addEventListener("connect", async () => {
+  console.log("Reconnected, resubscribing...");
+
+  // Resubscribe to all event types
+  await rpc.subscribeBlockAdded();
+  await rpc.subscribeVirtualDaaScoreChanged();
+  await rpc.subscribeUtxosChanged(myWatchedAddresses);
+
+  // Catch up on any events missed during disconnection
+  const dagInfo = await rpc.getBlockDagInfo();
+  console.log(`Current DAA score: ${dagInfo.virtualDaaScore}`);
+});
+```
+
+<Callout>
+After reconnecting, there may be a gap between the last notification you received and the current network state. Use query methods (such as `getBlockDagInfo`, `getUtxosByAddresses`, or `getVirtualSelectedParentChainFromBlock`) to catch up on missed events before relying solely on the notification stream.
+</Callout>
+
+## Best Practices
+
+- **Subscribe only to what you need.** Each subscription consumes resources on both the node and your client. Avoid subscribing to high-frequency events (like `notifyBlockAdded`) if you only need periodic state checks.
+- **Process notifications quickly.** If your handler blocks, notifications queue up and your client falls behind. Offload heavy processing to a background queue.
+- **Always handle reconnection.** Network disruptions, node restarts, and connection timeouts are inevitable. Build reconnection and resubscription into your application from the start.
+- **Use `notifyUtxosChanged` for balance tracking** instead of polling `getBalanceByAddress`. The subscription is far more efficient and provides real-time updates.
+- **Combine subscriptions for richer context.** For example, use `notifyVirtualDaaScoreChanged` alongside `notifyBlockAdded` to correlate blocks with DAA score progression.
+- **Track state for gap detection.** Store the last DAA score or blue score received, so you can detect and fill gaps after reconnection.
+
+## Next Steps
+
+Explore individual subscription types for detailed notification formats and usage patterns:
+
+- [Block Added](/docs/rpc/subscriptions/block-added)
+- [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed)
+- [Finality Conflict](/docs/rpc/subscriptions/finality-conflict)
+- [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed)
+- [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed)
+- [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed)
+- [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override)
+- [New Block Template](/docs/rpc/subscriptions/new-block-template)

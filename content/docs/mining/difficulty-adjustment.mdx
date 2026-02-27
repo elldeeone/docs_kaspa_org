@@ -1,0 +1,84 @@
+---
+title: "Difficulty Adjustment"
+description: "Deep dive into Kaspa's Difficulty Adjustment Algorithm (DAA) — how mining difficulty adapts per-block to maintain 10 BPS."
+---
+
+## Overview
+
+Kaspa's Difficulty Adjustment Algorithm (DAA) is responsible for keeping the block production rate stable at 10 blocks per second (BPS) as global hashrate fluctuates. Unlike Bitcoin, which recalculates difficulty every 2016 blocks (roughly two weeks), Kaspa adjusts the mining target on every single block. This per-block adjustment allows the network to respond to hashrate changes within minutes rather than weeks.
+
+## How the DAA Works
+
+The DAA examines a trailing window of recent blocks and computes a new target value based on the observed timestamps and the expected time span for that window. The algorithm works as follows:
+
+1. **Window selection**: The DAA looks back over a window of **2641 blocks** (the `DifficultyAdjustmentWindowSize` parameter). For each block being mined, the algorithm collects the timestamps of blocks within this window.
+
+2. **Timestamp extraction**: The timestamps of blocks in the window are sorted, and outliers are trimmed. The algorithm uses the minimum and maximum timestamps from the trimmed set to determine how much real time elapsed during the window.
+
+3. **Target calculation**: The new target is calculated proportionally. If blocks were produced faster than expected (meaning hashrate increased), the target decreases (difficulty increases). If blocks were produced slower than expected, the target increases (difficulty decreases).
+
+<Callout type="info">
+The target is a 256-bit number. A miner must find a block hash that is below this target. A lower target means fewer valid hashes exist, making blocks harder to find.
+</Callout>
+
+## Per-Block Adjustment vs Epoch-Based Adjustment
+
+Bitcoin recalculates difficulty every 2016 blocks, creating two-week "epochs." During an epoch, if hashrate doubles, blocks arrive twice as fast and there is nothing the protocol can do until the next recalculation. This creates instability in block times and can be exploited by miners who time-shift hashrate.
+
+Kaspa's per-block adjustment eliminates this problem. Every block carries an updated target that reflects the most recent network conditions. The result is a block rate that stays close to the 10 BPS target even during rapid hashrate changes.
+
+## Response Time to Hashrate Changes
+
+Because the DAA window spans 2641 blocks at 10 BPS, the full window covers approximately **4.4 minutes** of block production. However, the algorithm does not require the full window to rotate before responding. A sudden change in hashrate begins influencing the target immediately, with the effect growing stronger as more blocks at the new hashrate enter the window.
+
+In practice, a large hashrate swing (such as a mining farm coming online or going offline) produces a visible difficulty adjustment within **one to two minutes**.
+
+<Callout type="warn">
+During very rapid hashrate oscillations, miners may temporarily see blocks produced faster or slower than 10 BPS. The DAA will correct this within a few minutes, but short-term variance is expected.
+</Callout>
+
+## DAA Score as a Logical Clock
+
+Every block in the Kaspa DAG has a **DAA score**, which represents the cumulative difficulty of the selected parent chain up to that block. The DAA score serves as a logical clock for the network:
+
+- **Block rewards** are calculated from the DAA score (see [Block Rewards](/docs/mining/block-rewards)).
+- **Coinbase maturity** is measured in blue score, which is closely related to DAA score.
+- **Finality depth** is defined in terms of blue score.
+
+The DAA score increases monotonically along the selected parent chain and provides a consistent time-like ordering even though the DAG may contain many parallel blocks at any given moment.
+
+## Impact on Solo Miners vs Pool Miners
+
+The per-block difficulty adjustment affects solo miners and pool miners differently:
+
+- **Solo miners** experience difficulty as a direct factor in how often they find blocks. As network hashrate rises, each individual miner's share of total hashrate decreases, and their expected time between blocks increases. The DAA ensures this relationship is accurately reflected in the target.
+
+- **Pool miners** are partially insulated from difficulty changes because the pool aggregates hashrate from many contributors. However, the pool's total share of network hashrate still determines how many blocks it finds, and the DAA governs this ratio.
+
+## Hashrate Estimation
+
+The current network hashrate can be estimated from the difficulty:
+
+```
+estimated_hashrate = difficulty / target_block_interval
+```
+
+Since Kaspa targets 10 BPS, the block interval is 0.1 seconds. Mining pools and monitoring tools use this formula to display estimated network hashrate on dashboards. Keep in mind that this is a statistical estimate — actual hashrate can only be inferred indirectly from the rate of block production.
+
+## Practical Implications for Mining Profitability
+
+- **Rapid difficulty response** means that when new ASICs come online or a large farm powers down, the economics of mining adjust quickly. There is no extended period of "easy" or "hard" blocks as there can be in epoch-based systems.
+- **Stable block rate** means that total block rewards per unit of time remain predictable. At 10 BPS, the network produces roughly 864,000 blocks per day, regardless of total hashrate.
+- **Profitability tracking** should focus on your share of total network hashrate rather than absolute difficulty. A higher difficulty with a proportionally higher hashrate means the same expected revenue.
+
+<Callout>
+Mining profitability calculators should account for Kaspa's per-block difficulty adjustment. Revenue projections based on current difficulty are accurate for the short term but will shift as hashrate changes.
+</Callout>
+
+## Further Reading
+
+- [Block Rewards](/docs/mining/block-rewards) — How block rewards are calculated from DAA score.
+- [Solo Mining](/docs/mining/solo-mining) — Setting up a solo mining operation.
+- [Pool Mining](/docs/mining/pool-mining) — Mining with a pool to reduce variance.
+- [kHeavyHash](/docs/mining/kheavyhash) — The proof-of-work algorithm used by Kaspa.
+- [Network Parameters](/docs/reference/network-params) — Full list of consensus parameters including DAA window size.

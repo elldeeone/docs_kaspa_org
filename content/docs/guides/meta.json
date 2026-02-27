@@ -1,0 +1,13 @@
+{
+  "title": "Guides",
+  "pages": [
+    "first-transaction",
+    "dev-environment",
+    "testnet-development",
+    "build-payment-gateway",
+    "build-wallet-app",
+    "production-node",
+    "monitoring-setup",
+    "kaspad-to-rusty-kaspa"
+  ]
+}

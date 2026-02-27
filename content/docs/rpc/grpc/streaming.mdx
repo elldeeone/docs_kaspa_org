@@ -1,0 +1,202 @@
+---
+title: Streaming
+description: "Using gRPC streaming for real-time Kaspa notifications — block notifications, UTXO changes, and more."
+---
+
+## gRPC Streaming Model
+
+Kaspa's gRPC interface uses a **bidirectional streaming** model. The service definition exposes a single RPC method:
+
+```protobuf
+service RPC {
+  rpc MessageStream (stream KaspadMessage) returns (stream KaspadMessage);
+}
+```
+
+Both the client and server send messages over the same persistent connection. Request messages flow from client to server, and response messages (including push notifications for active subscriptions) flow from server to client. This design multiplexes all RPC operations over a single HTTP/2 stream, avoiding the overhead of establishing separate connections for each request.
+
+## How Subscriptions Work Over gRPC
+
+Subscribing to events via gRPC follows the same logical model as wRPC subscriptions:
+
+1. **Open the stream** -- Establish the bidirectional `MessageStream` connection.
+2. **Send a subscribe request** -- Send a `Notify*` request message (e.g., `NotifyBlockAddedRequestMessage`) over the stream.
+3. **Receive the confirmation** -- The node responds with a corresponding response message confirming the subscription.
+4. **Receive notifications** -- As events occur, the node pushes notification messages over the same stream.
+5. **Unsubscribe** -- Send an unsubscribe request to stop receiving notifications for that event type.
+
+<Callout type="info">
+All notifications for all active subscriptions are delivered over the same bidirectional stream. Your client must inspect the `oneof` field in each incoming `KaspadMessage` to determine the notification type and dispatch it accordingly.
+</Callout>
+
+## Available Notification Types
+
+The following subscription types are available through gRPC streaming:
+
+| Subscribe Request | Notification Message | Description |
+|---|---|---|
+| `NotifyBlockAddedRequestMessage` | `BlockAddedNotificationMessage` | New block added to the DAG |
+| `NotifyVirtualChainChangedRequestMessage` | `VirtualChainChangedNotificationMessage` | Virtual chain reorganization |
+| `NotifyFinalityConflictRequestMessage` | `FinalityConflictNotificationMessage` | Finality conflict detected |
+| `NotifyUtxosChangedRequestMessage` | `UtxosChangedNotificationMessage` | UTXO set changes for watched addresses |
+| `NotifySinkBlueScoreChangedRequestMessage` | `SinkBlueScoreChangedNotificationMessage` | Sink blue score updated |
+| `NotifyVirtualDaaScoreChangedRequestMessage` | `VirtualDaaScoreChangedNotificationMessage` | Virtual DAA score updated |
+| `NotifyPruningPointUtxoSetOverrideRequestMessage` | `PruningPointUtxoSetOverrideNotificationMessage` | Pruning point UTXO set changed |
+| `NotifyNewBlockTemplateRequestMessage` | `NewBlockTemplateNotificationMessage` | New block template available for mining |
+
+## Example: Streaming Client in Rust
+
+The following example demonstrates subscribing to block notifications and DAA score changes over gRPC.
+
+```rust
+use kaspa_grpc_client::GrpcClient;
+use kaspa_rpc_core::api::rpc::RpcApi;
+use kaspa_rpc_core::notify::connection::ChannelConnection;
+use kaspa_rpc_core::Notification;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = GrpcClient::connect(
+        "grpc://127.0.0.1:16110".to_string(),
+        true,
+        None,
+        false,
+        None,
+    )
+    .await?;
+
+    // Subscribe to block-added notifications
+    client.start_notify(
+        Default::default(),
+        Notification::BlockAdded(Default::default()),
+    ).await?;
+
+    // Subscribe to DAA score changes
+    client.start_notify(
+        Default::default(),
+        Notification::VirtualDaaScoreChanged(Default::default()),
+    ).await?;
+
+    println!("Listening for notifications...");
+
+    // Process notifications from the client's notification channel
+    // The GrpcClient delivers notifications via an internal channel
+    // that you can consume in your application loop.
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        // In production, read from the notification channel
+        // provided by the GrpcClient's listener infrastructure
+    }
+}
+```
+
+## Example: Streaming Client in Python
+
+```python
+import grpc
+import threading
+from generated import messages_pb2, messages_pb2_grpc
+
+def run():
+    channel = grpc.insecure_channel("127.0.0.1:16110")
+    stub = messages_pb2_grpc.RPCStub(channel)
+
+    def request_iterator():
+        # Subscribe to block notifications
+        msg = messages_pb2.KaspadMessage()
+        msg.notifyBlockAddedRequest.CopyFrom(
+            messages_pb2.NotifyBlockAddedRequestMessage()
+        )
+        yield msg
+
+        # Subscribe to DAA score changes
+        msg = messages_pb2.KaspadMessage()
+        msg.notifyVirtualDaaScoreChangedRequest.CopyFrom(
+            messages_pb2.NotifyVirtualDaaScoreChangedRequestMessage()
+        )
+        yield msg
+
+        # Keep the stream open
+        event = threading.Event()
+        event.wait()
+
+    responses = stub.MessageStream(request_iterator())
+
+    for response in responses:
+        which = response.WhichOneof("payload")
+        if which == "blockAddedNotification":
+            block = response.blockAddedNotification.block
+            print(f"New block: DAA score {block.header.daaScore}")
+        elif which == "virtualDaaScoreChangedNotification":
+            score = response.virtualDaaScoreChangedNotification.virtualDaaScore
+            print(f"DAA score changed: {score}")
+        else:
+            print(f"Received: {which}")
+
+if __name__ == "__main__":
+    run()
+```
+
+## Handling Stream Reconnection
+
+gRPC streams can disconnect due to network issues, node restarts, or idle timeouts. A production client must handle reconnection gracefully.
+
+Key reconnection strategies:
+
+- **Automatic retry with backoff** -- When the stream drops, wait and reconnect with exponential backoff (e.g., 1s, 2s, 4s, up to a maximum delay).
+- **Resubscribe after reconnect** -- After establishing a new stream, resend all subscription requests. Subscriptions are not persisted across connections.
+- **Track last known state** -- Store the last DAA score, blue score, or block hash received so your application can detect gaps after reconnection.
+
+```rust
+// Pseudocode for reconnection loop
+loop {
+    match connect_and_subscribe().await {
+        Ok(stream) => {
+            if let Err(e) = process_notifications(stream).await {
+                eprintln!("Stream error: {e}, reconnecting...");
+            }
+        }
+        Err(e) => {
+            eprintln!("Connection failed: {e}");
+        }
+    }
+    tokio::time::sleep(backoff_duration()).await;
+}
+```
+
+<Callout>
+After reconnection, there may be a gap between the last notification received and the current state. Use query methods like `getBlockDagInfo` or `getVirtualSelectedParentBlueScore` to catch up before relying on the notification stream.
+</Callout>
+
+## Backpressure Considerations
+
+When the node produces notifications faster than your client can process them, backpressure builds up. In gRPC, this manifests as the server-side send buffer filling up, which can cause the node to slow down or drop the subscription.
+
+To avoid backpressure issues:
+
+- **Process notifications quickly** -- Offload heavy processing to background tasks rather than blocking the notification handler.
+- **Use buffered channels** -- Buffer incoming notifications in an internal queue so the gRPC receive loop is never blocked.
+- **Monitor lag** -- Track the difference between the notification's DAA score and the current DAA score. If the gap grows, your consumer is falling behind.
+- **Shed load if necessary** -- If your application cannot keep up, consider subscribing to fewer notification types or processing notifications in batches.
+
+## Performance Tips
+
+- **Single stream, multiple subscriptions** -- All subscriptions share one bidirectional stream. There is no benefit to opening multiple streams.
+- **Keep-alive settings** -- Configure HTTP/2 keep-alive pings to prevent idle connection drops, especially for subscriptions that may have infrequent notifications.
+- **Message size awareness** -- `BlockAddedNotification` messages can be large when blocks contain many transactions. Ensure your gRPC client's maximum receive message size is configured appropriately (the default of 4 MB may not be sufficient for large blocks).
+
+```rust
+// Example: Setting max message size with tonic
+let channel = tonic::transport::Channel::from_static("http://127.0.0.1:16110")
+    .connect()
+    .await?;
+
+// Configure the client to accept larger messages
+let client = RpcClient::new(channel)
+    .max_decoding_message_size(16 * 1024 * 1024); // 16 MB
+```
+
+## Next Steps
+
+- [Subscriptions Overview](/docs/rpc/subscriptions/overview) -- Detailed reference for each notification type.
+- [Protobuf Schema](/docs/rpc/grpc/protobuf-schema) -- Full message definitions for notifications.

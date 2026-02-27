@@ -1,0 +1,223 @@
+---
+title: Generate Address
+description: "Generate new receive addresses from an HD wallet."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **An HD wallet** (mnemonic or extended private/public key)
+
+<Callout type="info">
+Kaspa uses BIP-44 hierarchical deterministic (HD) wallets. From a single mnemonic, you can derive an effectively unlimited number of unique addresses. Best practice is to use a fresh address for each incoming payment to improve privacy.
+</Callout>
+
+## Code
+
+The following example demonstrates generating sequential receive addresses, as well as deriving addresses from an extended public key for watch-only scenarios:
+
+```typescript
+import {
+  Mnemonic,
+  XPrv,
+  XPub,
+  PrivateKey,
+  PublicKey,
+  Address,
+} from "kaspa-wasm";
+
+// Generate multiple receive addresses from a mnemonic
+function generateAddresses(
+  mnemonicPhrase: string,
+  network: string = "mainnet",
+  count: number = 10,
+  startIndex: number = 0
+) {
+  const mnemonic = new Mnemonic(mnemonicPhrase);
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+
+  const addresses: { index: number; address: string; publicKey: string }[] = [];
+
+  for (let i = startIndex; i < startIndex + count; i++) {
+    // Derive receive address at index i (external chain = 0)
+    const key = account.derivePath(`0/${i}`).toPrivateKey();
+    const pubKey = key.toPublicKey();
+    const address = pubKey.toAddress(network);
+
+    addresses.push({
+      index: i,
+      address: address.toString(),
+      publicKey: pubKey.toString(),
+    });
+  }
+
+  return addresses;
+}
+
+// Generate change addresses (internal chain)
+function generateChangeAddresses(
+  mnemonicPhrase: string,
+  network: string = "mainnet",
+  count: number = 5,
+  startIndex: number = 0
+) {
+  const mnemonic = new Mnemonic(mnemonicPhrase);
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+
+  const addresses: { index: number; address: string }[] = [];
+
+  for (let i = startIndex; i < startIndex + count; i++) {
+    // Derive change address at index i (internal chain = 1)
+    const key = account.derivePath(`1/${i}`).toPrivateKey();
+    const address = key.toPublicKey().toAddress(network);
+
+    addresses.push({
+      index: i,
+      address: address.toString(),
+    });
+  }
+
+  return addresses;
+}
+
+// Watch-only address generation using XPub (no private keys needed)
+function generateAddressesFromXPub(
+  xpubString: string,
+  network: string = "mainnet",
+  count: number = 10,
+  startIndex: number = 0
+) {
+  const xpub = XPub.fromString(xpubString);
+
+  const addresses: { index: number; address: string }[] = [];
+
+  for (let i = startIndex; i < startIndex + count; i++) {
+    const pubKey = xpub.derivePath(`0/${i}`).toPublicKey();
+    const address = pubKey.toAddress(network);
+
+    addresses.push({
+      index: i,
+      address: address.toString(),
+    });
+  }
+
+  return addresses;
+}
+
+// Address index manager for tracking which addresses have been used
+class AddressManager {
+  private account: any;
+  private network: string;
+  private nextReceiveIndex: number = 0;
+  private nextChangeIndex: number = 0;
+
+  constructor(mnemonicPhrase: string, network: string = "mainnet") {
+    const mnemonic = new Mnemonic(mnemonicPhrase);
+    const seed = mnemonic.toSeed("");
+    const xprv = new XPrv(seed);
+    this.account = xprv.derivePath("m/44'/111111'/0'");
+    this.network = network;
+  }
+
+  // Get the next unused receive address
+  getNextReceiveAddress(): { index: number; address: string; privateKey: PrivateKey } {
+    const index = this.nextReceiveIndex;
+    const key = this.account.derivePath(`0/${index}`).toPrivateKey();
+    const address = key.toPublicKey().toAddress(this.network).toString();
+    this.nextReceiveIndex++;
+
+    return { index, address, privateKey: key };
+  }
+
+  // Get the next unused change address
+  getNextChangeAddress(): { index: number; address: string; privateKey: PrivateKey } {
+    const index = this.nextChangeIndex;
+    const key = this.account.derivePath(`1/${index}`).toPrivateKey();
+    const address = key.toPublicKey().toAddress(this.network).toString();
+    this.nextChangeIndex++;
+
+    return { index, address, privateKey: key };
+  }
+
+  // Get the current indices
+  getState(): { receiveIndex: number; changeIndex: number } {
+    return {
+      receiveIndex: this.nextReceiveIndex,
+      changeIndex: this.nextChangeIndex,
+    };
+  }
+
+  // Restore indices (e.g., from persistent storage)
+  restoreState(receiveIndex: number, changeIndex: number) {
+    this.nextReceiveIndex = receiveIndex;
+    this.nextChangeIndex = changeIndex;
+  }
+}
+
+// Usage examples
+const phrase = "your twenty four word mnemonic phrase goes here ...";
+
+// Generate first 10 receive addresses
+const addresses = generateAddresses(phrase, "mainnet", 10, 0);
+for (const addr of addresses) {
+  console.log(`  [${addr.index}] ${addr.address}`);
+}
+
+// Use the address manager for sequential generation
+const manager = new AddressManager(phrase, "mainnet");
+const addr1 = manager.getNextReceiveAddress(); // index 0
+const addr2 = manager.getNextReceiveAddress(); // index 1
+const change1 = manager.getNextChangeAddress(); // index 0
+console.log("Receive #0:", addr1.address);
+console.log("Receive #1:", addr2.address);
+console.log("Change #0:", change1.address);
+```
+
+## Explanation
+
+### HD derivation path
+
+The full derivation path for a Kaspa address is:
+
+```
+m / 44' / 111111' / account' / chain / index
+```
+
+| Component | Values | Purpose |
+|---|---|---|
+| `44'` | Fixed | BIP-44 standard |
+| `111111'` | Fixed | Kaspa coin type |
+| `account'` | `0'`, `1'`, `2'`... | Separate accounts within the wallet |
+| `chain` | `0` (receive), `1` (change) | External vs. internal addresses |
+| `index` | `0`, `1`, `2`... | Sequential address number |
+
+### Receive vs. change chains
+
+- **Chain 0 (receive)**: Addresses you share with others for incoming payments. Increment the index for each new payment to improve privacy.
+- **Chain 1 (change)**: Addresses used internally by the wallet to receive change when a UTXO is partially spent. These are never shared externally.
+
+### Watch-only with XPub
+
+An extended public key (`XPub`) can derive all public keys and addresses for its subtree without knowing the private keys. This is useful for:
+
+- **Payment servers** that generate unique addresses per order
+- **Monitoring dashboards** that track wallet balances
+- **Auditors** who need to verify funds without spending authority
+
+<Callout>
+The `XPub` for the account level (`m/44'/111111'/0'`) can derive all receive and change addresses for that account. Never expose the `XPrv` or mnemonic in environments where only address generation is needed.
+</Callout>
+
+### Tracking address indices
+
+The `AddressManager` class demonstrates how to maintain state across address generation. In a real application, persist the `nextReceiveIndex` and `nextChangeIndex` to a database so that you never reuse addresses or skip indices after a restart.
+
+## Further Reading
+
+- [Create Wallet](/docs/cookbook/wallets/create-wallet) -- Create the HD wallet that generates these addresses.
+- [Get Balance](/docs/cookbook/wallets/get-balance) -- Query balances for generated addresses.
+- [Addresses](/docs/core-concepts/addresses) -- Address format and encoding details.

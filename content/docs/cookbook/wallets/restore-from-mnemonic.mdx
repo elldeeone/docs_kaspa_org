@@ -1,0 +1,193 @@
+---
+title: Restore from Mnemonic
+description: "Restore a Kaspa wallet from a 24-word mnemonic seed phrase."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **An existing 24-word (or 12-word) mnemonic seed phrase**
+- **Connection to a Kaspa node** for balance scanning
+
+<Callout>
+Wallet restoration regenerates all keys and addresses deterministically from the mnemonic. The mnemonic itself does not store balances -- the blockchain does. After restoring keys, you must scan the blockchain to find UTXOs belonging to the derived addresses.
+</Callout>
+
+## Code
+
+The following example restores a wallet from a mnemonic phrase and scans for existing balances:
+
+```typescript
+import {
+  Mnemonic,
+  XPrv,
+  RpcClient,
+  Resolver,
+  Encoding,
+  UtxoProcessor,
+  UtxoContext,
+  sompiToKas,
+} from "kaspa-wasm";
+
+async function restoreWallet(
+  mnemonicPhrase: string,
+  network: string = "mainnet",
+  scanDepth: number = 20
+) {
+  // 1. Validate and parse the mnemonic
+  let mnemonic: Mnemonic;
+  try {
+    mnemonic = new Mnemonic(mnemonicPhrase);
+  } catch (err) {
+    console.error("Invalid mnemonic phrase:", err.message);
+    console.error(
+      "Ensure you have the correct number of words (12 or 24)",
+      "and that each word is a valid BIP-39 word."
+    );
+    return;
+  }
+
+  console.log("Mnemonic validated successfully.");
+  console.log(`Word count: ${mnemonicPhrase.trim().split(/\s+/).length}`);
+
+  // 2. Derive the master key and account key
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+
+  // 3. Derive receive and change addresses up to the scan depth
+  const receiveAddresses: string[] = [];
+  const changeAddresses: string[] = [];
+  const privateKeys = [];
+
+  for (let i = 0; i < scanDepth; i++) {
+    const receiveKey = account.derivePath(`0/${i}`).toPrivateKey();
+    const changeKey = account.derivePath(`1/${i}`).toPrivateKey();
+
+    receiveAddresses.push(
+      receiveKey.toPublicKey().toAddress(network).toString()
+    );
+    changeAddresses.push(
+      changeKey.toPublicKey().toAddress(network).toString()
+    );
+
+    privateKeys.push(receiveKey, changeKey);
+  }
+
+  console.log(`\nDerived ${scanDepth} receive addresses and ${scanDepth} change addresses.`);
+  console.log("First receive address:", receiveAddresses[0]);
+
+  // 4. Connect to a node and scan for balances
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: network,
+  });
+  await rpc.connect();
+  console.log("\nConnected to node. Scanning for balances...");
+
+  // 5. Track all derived addresses
+  const allAddresses = [...receiveAddresses, ...changeAddresses];
+  const processor = new UtxoProcessor({ rpc, networkId: network });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+  await context.trackAddresses(allAddresses);
+
+  // Wait for UTXO data to populate
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  // 6. Report balances
+  const balance = context.balance;
+  const matureBalance = balance?.mature ?? 0n;
+  const pendingBalance = balance?.pending ?? 0n;
+
+  console.log("\nWallet restored successfully.");
+  console.log("  Mature balance:", sompiToKas(matureBalance), "KAS");
+  console.log("  Pending balance:", sompiToKas(pendingBalance), "KAS");
+
+  // 7. Check which addresses have UTXOs
+  const utxoResponse = await rpc.getUtxosByAddresses(allAddresses);
+  const addressesWithUtxos = new Set<string>();
+  for (const entry of utxoResponse.entries) {
+    addressesWithUtxos.add(entry.address);
+  }
+
+  console.log(
+    "\nAddresses with UTXOs:",
+    addressesWithUtxos.size,
+    "of",
+    allAddresses.length
+  );
+
+  // 8. Determine if deeper scanning is needed
+  //    If the last receive address has UTXOs, there may be more
+  const lastReceive = receiveAddresses[receiveAddresses.length - 1];
+  if (addressesWithUtxos.has(lastReceive)) {
+    console.log(
+      "\nWarning: The last scanned address has UTXOs.",
+      "Consider increasing the scan depth to find all funds."
+    );
+  }
+
+  // Clean up
+  await processor.stop();
+  await rpc.disconnect();
+
+  return {
+    receiveAddresses,
+    changeAddresses,
+    matureBalance,
+    pendingBalance,
+    addressesWithUtxos: Array.from(addressesWithUtxos),
+  };
+}
+
+// Usage
+const phrase =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
+
+restoreWallet(phrase, "mainnet", 20).catch(console.error);
+```
+
+## Explanation
+
+### Mnemonic validation
+
+The `Mnemonic` constructor validates that the input is a well-formed BIP-39 phrase. It checks:
+
+- Word count (must be 12, 15, 18, 21, or 24)
+- Each word exists in the BIP-39 English wordlist
+- The checksum is correct
+
+If any check fails, the constructor throws an error.
+
+### Address gap limit
+
+The `scanDepth` parameter controls how many addresses to derive and scan. Wallet software typically uses a **gap limit** of 20, meaning it derives addresses until it finds 20 consecutive addresses with no transaction history. For this simplified recipe, we derive a fixed number of addresses.
+
+<Callout type="info">
+If the wallet was heavily used (many addresses generated), you may need to increase the scan depth beyond 20. Exchange wallets or payment processors that generate a new address per transaction may need scan depths of 100 or more.
+</Callout>
+
+### Passphrase (optional 25th word)
+
+The `toSeed("")` call uses an empty string as the BIP-39 passphrase. If the original wallet was created with a passphrase (sometimes called the "25th word"), you must provide the same passphrase here. A different passphrase produces an entirely different set of keys and addresses.
+
+### Balance scanning
+
+The `UtxoProcessor` and `UtxoContext` subscribe to the node's UTXO index. After calling `trackAddresses`, the context populates with all unspent outputs belonging to those addresses. The `balance` property provides:
+
+| Field | Description |
+|---|---|
+| `mature` | Confirmed, spendable balance in sompi |
+| `pending` | Unconfirmed or immature (coinbase) balance in sompi |
+
+### Detecting the need for deeper scanning
+
+If the last derived address holds UTXOs, it is likely that the wallet used addresses beyond the scan depth. The recipe includes a warning for this case. In production, implement an iterative scan that keeps extending the depth until the gap limit is reached.
+
+## Further Reading
+
+- [Create Wallet](/docs/cookbook/wallets/create-wallet) -- Generate a new wallet from scratch.
+- [Get Balance](/docs/cookbook/wallets/get-balance) -- Detailed balance queries.
+- [Generate Address](/docs/cookbook/wallets/generate-address) -- Derive additional addresses after restoration.

@@ -1,0 +1,106 @@
+---
+title: "Responsible Disclosure"
+description: "How to report security vulnerabilities in Kaspa software responsibly."
+---
+
+## Overview
+
+The security of the Kaspa network depends on the responsible behavior of security researchers, developers, and community members who discover vulnerabilities. This page describes how to report security issues, what to expect during the process, and the scope of the disclosure program.
+
+## What Constitutes a Vulnerability
+
+A security vulnerability is any bug, flaw, or weakness in Kaspa software that could be exploited to:
+
+- **Steal funds**: Bypass transaction signing, create unauthorized transactions, or extract private keys.
+- **Disrupt the network**: Crash nodes, cause consensus failures, halt block production, or partition the network.
+- **Undermine consensus**: Manipulate block ordering, enable double-spend attacks without majority hashrate, or bypass finality.
+- **Compromise user data**: Expose seed phrases, private keys, or wallet data through software defects.
+- **Deny service**: Consume excessive resources on nodes, causing them to become unresponsive or crash.
+
+If you are unsure whether a particular issue qualifies as a security vulnerability, err on the side of reporting it. The team will assess severity and determine the appropriate response.
+
+## Scope
+
+The responsible disclosure program covers the following Kaspa software:
+
+| Project | Repository | Description |
+|---|---|---|
+| rusty-kaspa | [github.com/kaspanet/rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) | Full node, consensus engine, wallet, mining infrastructure |
+| Kaspa Web Wallet | Official web wallet | Browser-based wallet at wallet.kaspa.org |
+| KasVault | Browser extension | Browser extension wallet |
+| Infrastructure | kaspa.org services | Public-facing APIs, explorers, and websites |
+
+Third-party software (community wallets, pools, exchanges) is **outside the scope** of this program. Contact those projects directly if you discover vulnerabilities in their software.
+
+## How to Report
+
+<Callout>
+Do not report security vulnerabilities through public channels. Public disclosure before a fix is available puts users at risk. Use the private reporting process described below.
+</Callout>
+
+### Reporting Process
+
+1. **Contact the team privately**: Send your report to the Kaspa security team via:
+   - **GitHub Security Advisories**: Use the "Report a vulnerability" feature on the [rusty-kaspa GitHub repository](https://github.com/kaspanet/rusty-kaspa/security/advisories).
+   - **Direct message**: Contact core developers through verified channels on the official Kaspa Discord server.
+
+2. **Include the following in your report**:
+   - A clear description of the vulnerability.
+   - Steps to reproduce the issue.
+   - The affected component (consensus, networking, wallet, RPC, etc.).
+   - The potential impact (what an attacker could achieve).
+   - Any proof-of-concept code or logs, if available.
+   - Your suggested fix, if you have one.
+
+3. **Await acknowledgment**: The security team will acknowledge your report within **72 hours**.
+
+4. **Collaborate on a fix**: The team may ask follow-up questions or request additional details. Work with them to verify the vulnerability and test the fix.
+
+5. **Coordinated disclosure**: Once a fix is developed, tested, and deployed, the vulnerability will be disclosed publicly with credit to the reporter (unless you prefer to remain anonymous).
+
+## Expected Response Timeline
+
+| Stage | Timeline |
+|---|---|
+| Initial acknowledgment | Within 72 hours |
+| Severity assessment | Within 1 week |
+| Fix development | Varies by complexity (days to weeks) |
+| Fix deployment | After testing and review |
+| Public disclosure | After the fix is deployed and node operators have had time to update |
+
+<Callout type="info">
+Critical vulnerabilities that affect the security of user funds or network consensus will be prioritized and fast-tracked. The team may release an emergency patch and coordinate with mining pools and exchanges to expedite adoption.
+</Callout>
+
+## What Not to Do
+
+- **Do not exploit the vulnerability** on the live network. If you need to test, use testnet or a local devnet.
+- **Do not disclose publicly** before a fix is available and deployed. Public disclosure of an unpatched vulnerability puts all users at risk.
+- **Do not sell or trade vulnerability information**. Responsible disclosure means reporting to the affected project, not to third parties.
+- **Do not attack production infrastructure** (nodes, APIs, explorers) to demonstrate a vulnerability. Report it with a theoretical or testnet-based proof of concept.
+- **Do not access other users' funds or data** as part of your research.
+
+## Recognition
+
+The Kaspa project values responsible security researchers. Reporters of valid vulnerabilities will receive:
+
+- **Public credit**: Your name or handle will be included in the security advisory (unless you prefer anonymity).
+- **Community recognition**: Acknowledgment in release notes and security bulletins.
+
+<Callout type="warn">
+Exploiting a vulnerability on the live network — even if you intend to report it — may result in loss of funds for real users and may have legal consequences. Always test on testnet or local environments.
+</Callout>
+
+## Non-Vulnerability Issues
+
+Not all bugs are security vulnerabilities. For general bugs, feature requests, or performance issues, please use the standard GitHub issue tracker:
+
+- [rusty-kaspa Issues](https://github.com/kaspanet/rusty-kaspa/issues)
+
+If you are unsure whether an issue is security-sensitive, report it privately first. The team will redirect you to the public tracker if appropriate.
+
+## Further Reading
+
+- [Security Model](/docs/security/security-model) — Understanding Kaspa's protocol-level security guarantees.
+- [Staying Safe](/docs/security/staying-safe) — Best practices for protecting your funds.
+- [Running a Node](/docs/node-operations/running-a-node) — Keeping your node software up to date.

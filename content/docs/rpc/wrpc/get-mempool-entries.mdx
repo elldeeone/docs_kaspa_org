@@ -1,0 +1,52 @@
+---
+title: "GetMempoolEntries"
+description: "Retrieve all transaction entries currently in the node's mempool."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `includeOrphanPool` | boolean | No | Whether to include orphan pool entries. Defaults to `false`. |
+| `filterTransactionPool` | boolean | No | If `true`, excludes the main transaction pool and returns only orphan pool entries. Defaults to `false`. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entries` | object[] | Array of mempool entry objects, each containing `fee`, `mass`, `transaction`, and `isOrphan`. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getMempoolEntries",
+  "params": {
+    "includeOrphanPool": true,
+    "filterTransactionPool": false
+  }
+}
+
+// Response
+{
+  "entries": [
+    {
+      "fee": 5000,
+      "mass": 2345,
+      "transaction": {
+        "version": 0,
+        "inputs": [{ "previousOutpoint": { "transactionId": "...", "index": 0 } }],
+        "outputs": [{ "value": 100000000, "scriptPublicKey": { "version": 0, "script": "20..." } }]
+      },
+      "isOrphan": false
+    }
+  ]
+}
+```
+
+## Notes
+
+- The mempool can contain a large number of transactions. Use this method with caution on busy networks as the response may be large.
+- For address-specific mempool queries, use `GetMempoolEntriesByAddresses` instead.
+- Entries are not returned in any guaranteed order.

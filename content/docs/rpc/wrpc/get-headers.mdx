@@ -1,0 +1,54 @@
+---
+title: "GetHeaders"
+description: "Retrieve a range of block headers starting from a given hash."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startHash` | string | Yes | The hash of the block to start from. |
+| `limit` | u64 | Yes | Maximum number of headers to return. |
+| `isAscending` | boolean | Yes | If `true`, returns headers in ascending order (oldest first). If `false`, descending (newest first). |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `headers` | object[] | Array of block header objects. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getHeaders",
+  "params": {
+    "startHash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5",
+    "limit": 100,
+    "isAscending": true
+  }
+}
+
+// Response
+{
+  "headers": [
+    {
+      "version": 1,
+      "parentsByLevel": [["..."]],
+      "hashMerkleRoot": "aabb...",
+      "timestamp": 1700000000000,
+      "bits": 1234567890,
+      "nonce": 98765,
+      "daaScore": 50000001,
+      "blueScore": 48000001
+    }
+  ]
+}
+```
+
+## Notes
+
+- Headers are lightweight compared to full blocks, making this method efficient for scanning large portions of the DAG.
+- The `limit` parameter controls how many headers are returned in a single call. Use pagination with updated `startHash` for larger ranges.
+- This method is useful for SPV-like verification workflows or light clients.

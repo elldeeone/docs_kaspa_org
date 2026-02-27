@@ -1,4 +1,10 @@
 {
   "title": "Core Concepts",
-  "pages": ["blockdag", "ghostdag", "transactions", "pruning", "spv"]
+  "pages": [
+    "blockdag", "ghostdag", "dagknight",
+    "transactions", "utxo-model", "addresses",
+    "fees-and-mass", "scripting",
+    "pruning", "spv",
+    "difficulty-adjustment", "emission-schedule"
+  ]
 }

@@ -1,0 +1,150 @@
+---
+title: "Testnet Development"
+description: "Connect to Kaspa testnet-10 or testnet-11, obtain test KAS, build and test your application, and understand the differences from mainnet."
+---
+
+Kaspa operates two public testnets for development and testing. They mirror mainnet consensus rules but use worthless test KAS, making them safe for experimentation. This guide covers connecting to testnet, funding your addresses, testing your application, and understanding how testnet differs from mainnet.
+
+## Available Testnets
+
+| Property | Testnet-10 | Testnet-11 |
+|---|---|---|
+| Network ID | `testnet-10` | `testnet-11` |
+| wRPC port | 16210 | 16310 |
+| P2P port | 16211 | 16311 |
+| Block rate | 10 BPS | 10 BPS |
+| Address prefix | `kaspatest:` | `kaspatest:` |
+| Purpose | General app testing | Protocol experiments |
+
+<Callout type="info">
+Testnet-10 is the recommended network for most application development. Testnet-11 is sometimes used for protocol-level experiments and may be reset more frequently.
+</Callout>
+
+## Option A -- Use a Public Node via Resolver
+
+The fastest way to connect is via the SDK's built-in `Resolver`, which automatically discovers public testnet nodes:
+
+```typescript
+import { RpcClient, Resolver, Encoding } from "kaspa-wasm";
+
+const rpc = new RpcClient({
+  resolver: new Resolver(),
+  encoding: Encoding.Borsh,
+  networkId: "testnet-10",
+});
+await rpc.connect();
+```
+
+This requires no infrastructure on your part and is suitable for development and light testing.
+
+## Option B -- Run Your Own Testnet Node
+
+For heavier workloads or when you need `--utxoindex`:
+
+```bash
+kaspad --testnet --utxoindex --rpclisten=0.0.0.0:16210
+```
+
+The `--testnet` flag defaults to testnet-10. To use testnet-11:
+
+```bash
+kaspad --testnet --netsuffix=11 --utxoindex --rpclisten=0.0.0.0:16310
+```
+
+Then connect your SDK directly:
+
+```typescript
+const rpc = new RpcClient({
+  url: "ws://127.0.0.1:16210",
+  encoding: Encoding.Borsh,
+});
+await rpc.connect();
+```
+
+## Getting Test KAS
+
+Use the community-operated faucets to receive free testnet KAS:
+
+1. Generate a testnet address (prefix `kaspatest:`).
+2. Paste it into the faucet web page.
+3. Wait a few seconds -- at 10 BPS, confirmation is nearly instant.
+
+<Callout type="warn">
+Faucets may rate-limit requests. If you need large amounts of test KAS for load testing, consider running your own testnet miner.
+</Callout>
+
+## Building Your App Against Testnet
+
+### Address Handling
+
+Testnet addresses use the `kaspatest:` prefix. Ensure your application handles both prefixes:
+
+```typescript
+function isTestnet(address: string): boolean {
+  return address.startsWith("kaspatest:");
+}
+```
+
+### UTXO Tracking
+
+Set up a `UtxoProcessor` scoped to the testnet network:
+
+```typescript
+import { UtxoProcessor, UtxoContext } from "kaspa-wasm";
+
+const processor = new UtxoProcessor({ rpc, networkId: "testnet-10" });
+const context = new UtxoContext({ processor });
+await processor.start();
+await context.trackAddresses(["kaspatest:qr..."]);
+
+// Listen for balance changes
+processor.addEventListener("balance", () => {
+  console.log("Balance changed:", context.balance);
+});
+```
+
+### Transaction Flow
+
+The transaction lifecycle is identical to mainnet:
+
+1. Track UTXOs via `UtxoProcessor`.
+2. Build transactions with `createTransactions`.
+3. Sign with private keys.
+4. Submit via `tx.submit(rpc)`.
+5. Monitor confirmation by watching DAA score depth.
+
+See [Send KAS](/docs/cookbook/transactions/send-kas) for the full code pattern.
+
+## Testnet vs Mainnet Differences
+
+| Aspect | Testnet | Mainnet |
+|---|---|---|
+| Address prefix | `kaspatest:` | `kaspa:` |
+| KAS value | Worthless | Real value |
+| wRPC port | 16210 / 16310 | 16110 |
+| Network ID | `testnet-10` / `testnet-11` | `mainnet` |
+| Resets | May be reset periodically | Never reset |
+| Mining difficulty | Lower | Production difficulty |
+| Block rate | 10 BPS | 10 BPS |
+
+## Switching to Mainnet
+
+When your application is ready for production, change `networkId` from `"testnet-10"` to `"mainnet"` in your `RpcClient` constructor. All other SDK code remains identical.
+
+<Callout type="warn">
+Always validate the address prefix before sending real KAS. A bug that sends mainnet KAS to a `kaspatest:` address (or vice versa) will result in lost funds.
+</Callout>
+
+## Debugging Tips
+
+- **Check sync status**: Call `rpc.getInfo()` and verify `isSynced` is `true`.
+- **Inspect mempool**: Use `rpc.getMempoolEntriesByAddresses()` to see pending transactions.
+- **Monitor DAA score**: Compare `virtualDaaScore` over time to verify the network is producing blocks.
+- **Use block explorers**: Community testnet explorers let you look up transactions and addresses visually.
+
+## Next Steps
+
+- [Your First Transaction](/docs/guides/first-transaction) -- Send your first testnet transaction.
+- [Build a Payment Gateway](/docs/guides/build-payment-gateway) -- Accept payments using UTXO subscriptions.
+- [Testnet Node](/docs/node-operations/testnet) -- Detailed node configuration for testnet.
+- [Network Parameters](/docs/reference/network-params) -- Full port and parameter reference.

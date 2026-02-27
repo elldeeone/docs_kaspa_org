@@ -1,0 +1,113 @@
+---
+title: Block Added
+description: "NotifyBlockAdded — subscribe to new blocks added to the Kaspa DAG."
+---
+
+## Overview
+
+The `notifyBlockAdded` subscription notifies your application every time a new block is added to the DAG. At Kaspa's current rate of 10 blocks per second, this is one of the highest-frequency subscription types.
+
+## Subscribe
+
+```typescript
+await rpc.subscribeBlockAdded();
+```
+
+**RPC request:**
+
+```json
+{
+  "method": "notifyBlockAdded",
+  "params": {}
+}
+```
+
+## Unsubscribe
+
+```typescript
+await rpc.unsubscribeBlockAdded();
+```
+
+## Notification Format
+
+Each notification contains the full block data, including header, transactions, and verbose metadata.
+
+```json
+{
+  "block": {
+    "header": {
+      "version": 1,
+      "parents": [
+        {
+          "parentHashes": [
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+          ]
+        }
+      ],
+      "hashMerkleRoot": "b2c3d4e5...",
+      "acceptedIdMerkleRoot": "c3d4e5f6...",
+      "utxoCommitment": "d4e5f6a7...",
+      "timestamp": 1700000001000,
+      "bits": 486604799,
+      "nonce": 98765432,
+      "daaScore": 52345679,
+      "blueWork": "1a2b3c4d...",
+      "blueScore": 48234568,
+      "pruningPoint": "e5f6a7b8..."
+    },
+    "transactions": [
+      {
+        "version": 0,
+        "inputs": [],
+        "outputs": [
+          {
+            "amount": 50000000000,
+            "scriptPublicKey": {
+              "version": 0,
+              "scriptPublicKey": "2011a7215f..."
+            }
+          }
+        ],
+        "subnetworkId": "0100000000000000000000000000000000000000"
+      }
+    ],
+    "verboseData": {
+      "hash": "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7",
+      "difficulty": 1.234567890123e+15,
+      "selectedParentHash": "a1b2c3d4...",
+      "transactionIds": ["abcdef..."],
+      "isHeaderOnly": false,
+      "blueScore": 48234568,
+      "mergeSetBluesHashes": ["..."],
+      "mergeSetRedsHashes": [],
+      "isChainBlock": true
+    }
+  }
+}
+```
+
+## Event Handling
+
+```typescript
+rpc.addEventListener("block-added", (event) => {
+  const block = event.data.block;
+  const hash = block.verboseData.hash;
+  const daaScore = block.header.daaScore;
+  const txCount = block.transactions.length;
+  const isChainBlock = block.verboseData.isChainBlock;
+
+  console.log(`Block ${hash.substring(0, 12)}...`);
+  console.log(`  DAA: ${daaScore}, Txs: ${txCount}, Chain: ${isChainBlock}`);
+});
+```
+
+## Use Cases
+
+- **Block explorers** -- Display new blocks in real time as they arrive.
+- **Mining monitors** -- Track block production rate and your own mined blocks.
+- **Transaction tracking** -- Check if a specific transaction appears in a new block.
+- **Network health dashboards** -- Monitor block rate and detect anomalies.
+
+<Callout>
+At 10 BPS, you will receive approximately 10 notifications per second. Ensure your handler is efficient and non-blocking. If you only need to know about chain progression rather than every individual block, consider using [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed) or [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) instead.
+</Callout>

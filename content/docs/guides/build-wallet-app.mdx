@@ -1,0 +1,152 @@
+---
+title: "Build a Wallet Application"
+description: "Build a Kaspa wallet app with HD key derivation (BIP-32/39/44), address generation, balance tracking, transaction construction, signing, fee estimation, and UTXO management."
+---
+
+This guide covers the core components of a Kaspa wallet: mnemonic generation, HD key derivation, address management, balance tracking, transaction building, and UTXO management.
+
+## Wallet Architecture
+
+A Kaspa wallet manages private keys derived from a single mnemonic seed. The UTXO model means the wallet must track individual unspent outputs across many addresses, unlike account-model chains.
+
+```
+Mnemonic (24 words)
+  └─ Seed
+       └─ Master Key (XPrv)
+            └─ m/44'/111111'/0'  (Account 0)
+                 ├─ 0/0  Receive address 0
+                 ├─ 0/1  Receive address 1
+                 ├─ 1/0  Change address 0
+                 └─ 1/1  Change address 1
+```
+
+## Step 1 -- Mnemonic and Seed Generation
+
+```typescript
+import { Mnemonic, XPrv } from "kaspa-wasm";
+
+// Generate a fresh 24-word BIP-39 mnemonic
+const mnemonic = Mnemonic.random();
+console.log("Backup phrase:", mnemonic.phrase);
+
+// Derive the master seed (empty passphrase)
+const seed = mnemonic.toSeed("");
+const masterKey = new XPrv(seed);
+```
+
+<Callout type="warn">
+The mnemonic phrase is the root of all keys. If it is lost, all funds are permanently unrecoverable. Encrypt it at rest and never transmit it over the network.
+</Callout>
+
+To restore from a backup, pass the 24-word phrase to `new Mnemonic("word1 word2 ... word24")` and derive the seed the same way.
+
+## Step 2 -- Key Derivation (BIP-44)
+
+Kaspa uses the BIP-44 derivation path with coin type `111111`:
+
+| Level | Value | Meaning |
+|---|---|---|
+| Purpose | `44'` | BIP-44 standard |
+| Coin type | `111111'` | Kaspa registered coin type |
+| Account | `0'` | Account index (hardened) |
+| Change | `0` | `0` = receive, `1` = change |
+| Index | `0..n` | Address index |
+
+```typescript
+function deriveReceiveKey(account: number, index: number) {
+  const path = `m/44'/111111'/${account}'/0/${index}`;
+  return masterKey.derivePath(path).toPrivateKey();
+}
+
+function deriveChangeKey(account: number, index: number) {
+  const path = `m/44'/111111'/${account}'/1/${index}`;
+  return masterKey.derivePath(path).toPrivateKey();
+}
+```
+
+Generate addresses from keys:
+
+```typescript
+const receiveKey = deriveReceiveKey(0, 0);
+const address = receiveKey.toPublicKey().toAddress("mainnet").toString();
+// kaspa:qr...
+```
+
+<Callout type="info">
+Good wallet practice is to generate a new receive address for each incoming payment and use internal (change) addresses for transaction change outputs. This improves privacy.
+</Callout>
+
+## Step 3 -- Balance Tracking with UtxoProcessor
+
+The `UtxoProcessor` subscribes to the node and maintains a live UTXO set for your tracked addresses:
+
+```typescript
+import { RpcClient, Resolver, Encoding, UtxoProcessor, UtxoContext } from "kaspa-wasm";
+
+const rpc = new RpcClient({ resolver: new Resolver(), encoding: Encoding.Borsh, networkId: "mainnet" });
+await rpc.connect();
+
+const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+const context = new UtxoContext({ processor });
+await processor.start();
+
+// Track the first 20 receive addresses
+const addresses = Array.from({ length: 20 }, (_, i) =>
+  deriveReceiveKey(0, i).toPublicKey().toAddress("mainnet").toString()
+);
+await context.trackAddresses(addresses);
+
+// Listen for balance changes
+processor.addEventListener("balance", () => {
+  console.log("Mature:", context.balance?.mature ?? 0n, "sompi");
+});
+```
+
+## Step 4 -- Sending Transactions
+
+```typescript
+import { createTransactions, kaspaToSompi } from "kaspa-wasm";
+
+const changeAddress = deriveChangeKey(0, 0).toPublicKey().toAddress("mainnet").toString();
+const { transactions, summary } = await createTransactions({
+  entries: context,
+  outputs: [{ address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi(5) }],
+  changeAddress,
+  priorityFee: 0n,
+});
+
+// Sign and submit -- provide all keys; the SDK matches them to inputs
+const signingKeys = Array.from({ length: 20 }, (_, i) => [
+  deriveReceiveKey(0, i), deriveChangeKey(0, i)
+]).flat();
+
+for (const tx of transactions) {
+  tx.sign(signingKeys);
+  const txId = await tx.submit(rpc);
+  console.log("Submitted:", txId);
+}
+```
+
+<Callout type="info">
+If `createTransactions` returns more than one transaction, the earlier ones are UTXO consolidation (compound) transactions. You must submit them in order because each depends on outputs from the previous one.
+</Callout>
+
+## Step 5 -- Fee Estimation
+
+Call `createTransactions` with your intended outputs to get the `summary.fees` value (in sompi) before committing. Kaspa fees are based on **transaction mass** (byte size, input/output count, and signature operations), not on network congestion. Fees are extremely low -- typically fractions of a cent. See [Estimate Fees](/docs/cookbook/transactions/estimate-fees) for details.
+
+## UTXO Management Tips
+
+| Scenario | Strategy |
+|---|---|
+| Many small UTXOs (e.g., mining rewards) | Consolidate periodically using `compound` operations |
+| Large wallet with many addresses | Use `UtxoProcessor` to track all addresses; the SDK handles selection |
+| High-frequency payments | Pre-consolidate UTXOs to reduce multi-transaction sends |
+| Privacy | Use a new receive address for each incoming payment |
+
+## Next Steps
+
+- [HD Derivation](/docs/wallets/hd-derivation) -- Derivation path reference.
+- [UTXO Model](/docs/core-concepts/utxo-model) -- How Kaspa's UTXO model works.
+- [UTXO Consolidation](/docs/cookbook/transactions/utxo-consolidation) -- Consolidation patterns.
+- [Wallet SDK](/docs/wallets/wallet-sdk) -- Full wallet SDK reference.

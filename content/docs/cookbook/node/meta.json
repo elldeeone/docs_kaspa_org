@@ -1,0 +1,10 @@
+{
+  "title": "Node",
+  "pages": [
+    "connect-wrpc",
+    "connect-grpc",
+    "subscribe-blocks",
+    "query-utxos",
+    "check-node-status"
+  ]
+}

@@ -1,0 +1,130 @@
+---
+title: "Production Node Hardening"
+description: "Harden a Kaspa node for production: hardware sizing, firewall rules, systemd service, monitoring, log management, backups, and security best practices."
+---
+
+Running a Kaspa node in production requires careful attention to hardware, security, and operational reliability. This guide covers the key areas for a production deployment.
+
+## Hardware Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|---|---|---|---|
+| CPU | 4 cores | 8+ cores | More cores help during initial sync |
+| RAM | 8 GB | 16-32 GB | Adjust `--ram-scale` if constrained |
+| Storage | 80 GB SSD | 200+ GB NVMe | HDD is not viable at 10 BPS |
+| Network | 25 Mbps | 100+ Mbps | High peer counts increase bandwidth |
+
+<Callout type="warn">
+An SSD is mandatory. Kaspa's 10 BPS block rate generates heavy disk I/O. Running on a spinning disk will cause the node to fall behind the DAG tip.
+</Callout>
+
+## Firewall Configuration
+
+Expose only the ports you need:
+
+```bash
+sudo ufw allow 16111/tcp comment "Kaspa P2P mainnet"
+# Only if serving external clients:
+sudo ufw allow 16110/tcp comment "Kaspa wRPC mainnet"
+sudo ufw enable
+```
+
+| Port | Purpose | Exposure |
+|---|---|---|
+| 16111 | P2P gossip | Public (required) |
+| 16110 | wRPC | Restrict to trusted IPs |
+
+<Callout type="info">
+If your node only serves local applications, bind wRPC to localhost: `--rpclisten=127.0.0.1:16110`. Never expose wRPC to the public internet without authentication.
+</Callout>
+
+## Systemd Service
+
+```ini
+# /etc/systemd/system/kaspad.service
+[Unit]
+Description=Kaspa Node (rusty-kaspa)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kaspa
+Group=kaspa
+ExecStart=/usr/local/bin/kaspad \
+  --utxoindex \
+  --rpclisten=127.0.0.1:16110 \
+  --listen=0.0.0.0:16111 \
+  --appdir=/var/lib/kaspa \
+  --perf-metrics \
+  --ram-scale=0.8
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65536
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin kaspa
+sudo mkdir -p /var/lib/kaspa && sudo chown kaspa:kaspa /var/lib/kaspa
+sudo systemctl daemon-reload && sudo systemctl enable --now kaspad
+```
+
+## Performance Tuning
+
+| RAM Available | Recommended `--ram-scale` |
+|---|---|
+| 8 GB | 0.3-0.5 |
+| 16 GB | 1.0 (default) |
+| 32 GB+ | 2.0-3.0 |
+
+Mount storage with `noatime` to reduce unnecessary write operations. Use NVMe over SATA for best RocksDB performance.
+
+## Log Management
+
+Configure log rotation to prevent disk exhaustion:
+
+```ini
+# /etc/logrotate.d/kaspad
+/var/lib/kaspa/logs/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+
+Alternatively, run with `--nologfiles` and rely on journald.
+
+## Backup Strategy
+
+| Component | Backup method | Frequency |
+|---|---|---|
+| Configuration | Version control | On change |
+| Data directory | Filesystem snapshot (LVM/ZFS) | Daily |
+| Wallet mnemonic | Encrypted offline backup | Once (at creation) |
+
+<Callout type="info">
+You do not need to back up blockchain data. A new node can re-sync from the network in 2-4 hours. Backing up the data directory avoids this wait.
+</Callout>
+
+## Security Checklist
+
+- Run kaspad as a non-root, dedicated system user
+- Bind wRPC to `127.0.0.1` unless remote access is required
+- Keep the OS and rusty-kaspa updated
+- Use SSH key authentication; disable password login
+- Set `LimitNOFILE=65536` in the systemd unit
+- Monitor logs for `[ERR]` entries and investigate promptly
+
+## Next Steps
+
+- [Monitoring Setup](/docs/guides/monitoring-setup) -- Prometheus + Grafana monitoring stack.
+- [Configuration](/docs/node-operations/configuration) -- All kaspad CLI flags.
+- [Troubleshooting](/docs/node-operations/troubleshooting) -- Diagnosing production issues.
+- [Running a Node](/docs/node-operations/running-a-node) -- Initial node setup reference.

@@ -1,0 +1,73 @@
+---
+title: Sink Blue Score Changed
+description: "NotifySinkBlueScoreChanged — subscribe to blue score updates as the DAG progresses."
+---
+
+## Overview
+
+The `notifySinkBlueScoreChanged` subscription notifies your application whenever the blue score of the DAG sink (the virtual selected parent) changes. The blue score is a monotonically increasing counter that represents the number of blue blocks in the selected parent chain from genesis. It serves as Kaspa's analogue to block height in a traditional blockchain.
+
+## Subscribe
+
+```typescript
+await rpc.subscribeSinkBlueScoreChanged();
+```
+
+**RPC request:**
+
+```json
+{
+  "method": "notifySinkBlueScoreChanged",
+  "params": {}
+}
+```
+
+## Unsubscribe
+
+```typescript
+await rpc.unsubscribeSinkBlueScoreChanged();
+```
+
+## Notification Format
+
+```json
+{
+  "sinkBlueScore": 48234569
+}
+```
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `sinkBlueScore` | integer | The current blue score of the virtual selected parent |
+
+## Event Handling
+
+```typescript
+rpc.addEventListener("sink-blue-score-changed", (event) => {
+  const blueScore = event.data.sinkBlueScore;
+  console.log(`Blue score: ${blueScore}`);
+});
+```
+
+## Blue Score vs DAA Score
+
+While both are monotonically increasing, blue score and DAA score serve different purposes:
+
+| Property | Blue Score | DAA Score |
+|---|---|---|
+| **Meaning** | Count of blue blocks in selected chain | Difficulty-weighted block count |
+| **Increments by** | 1 per chain block | Varies based on timestamps and difficulty |
+| **Use** | Confirmation depth, chain progression | Timing, difficulty adjustment, lock times |
+| **Subscription** | `notifySinkBlueScoreChanged` | `notifyVirtualDaaScoreChanged` |
+
+## Use Cases
+
+- **Confirmation depth** -- Calculate how many blue blocks have been added since a transaction was accepted. More blue blocks means deeper confirmation.
+- **Progress indicators** -- Display chain progression in a UI.
+- **Sync monitoring** -- Track how quickly the node is catching up during initial block download.
+
+<Callout type="info">
+The blue score increases by exactly 1 for each new chain block. At 10 BPS, you can expect approximately 10 blue score increments per second under normal conditions.
+</Callout>

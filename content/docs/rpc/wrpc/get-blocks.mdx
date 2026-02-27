@@ -1,0 +1,54 @@
+---
+title: "GetBlocks"
+description: "Retrieve a batch of blocks starting from a given hash, useful for syncing or scanning the DAG."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `lowHash` | string | Yes | The hash to start from (exclusive). Use the genesis hash or a known block hash. |
+| `includeBlocks` | boolean | No | Whether to include full block data. Defaults to `false`. |
+| `includeTransactions` | boolean | No | Whether to include transactions within blocks. Only relevant if `includeBlocks` is `true`. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `blockHashes` | string[] | Ordered list of block hashes from `lowHash` onward. |
+| `blocks` | object[] | Full block objects (only present if `includeBlocks` was `true`). |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getBlocks",
+  "params": {
+    "lowHash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5",
+    "includeBlocks": true,
+    "includeTransactions": false
+  }
+}
+
+// Response
+{
+  "blockHashes": [
+    "aabb1122...",
+    "ccdd3344..."
+  ],
+  "blocks": [
+    {
+      "header": { "version": 1, "daaScore": 50000001 },
+      "verboseData": { "hash": "aabb1122...", "blueScore": 48000001 }
+    }
+  ]
+}
+```
+
+## Notes
+
+- The node returns blocks in topological order from the low hash.
+- The number of blocks returned per call is bounded by the node's internal limits.
+- Use the last hash in the response as the `lowHash` for the next call to paginate through the DAG.
+- If `lowHash` refers to a pruned block, the node returns an error.

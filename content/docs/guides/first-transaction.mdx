@@ -1,0 +1,149 @@
+---
+title: "Your First Transaction with the WASM SDK"
+description: "End-to-end guide: install the Kaspa WASM SDK, connect to testnet, create a wallet, get testnet KAS from the faucet, send a transaction, and verify it on-chain."
+---
+
+This guide walks you through sending your first Kaspa transaction programmatically using the WASM SDK in a Node.js project. By the end you will have installed the SDK, generated a wallet, funded it with testnet KAS, sent a transaction, and confirmed it on-chain.
+
+## Prerequisites
+
+- **Node.js 18+** installed
+- Basic TypeScript / JavaScript knowledge
+- A terminal and code editor
+
+## Step 1 -- Create a Project
+
+```bash
+mkdir kaspa-first-tx && cd kaspa-first-tx
+npm init -y
+npm install kaspa-wasm typescript tsx
+npx tsc --init
+```
+
+<Callout type="info">
+The `kaspa-wasm` package bundles the full Kaspa SDK compiled to WebAssembly. It works in Node.js, browsers, and Deno.
+</Callout>
+
+## Step 2 -- Connect to Testnet
+
+Create a file called `send.ts`:
+
+```typescript
+import {
+  RpcClient, Resolver, Encoding, Mnemonic, XPrv,
+  UtxoProcessor, UtxoContext, createTransactions, kaspaToSompi,
+} from "kaspa-wasm";
+
+async function main() {
+  const rpc = new RpcClient({
+    resolver: new Resolver(), encoding: Encoding.Borsh, networkId: "testnet-10",
+  });
+  await rpc.connect();
+  console.log("Connected. Synced:", (await rpc.getInfo()).isSynced);
+```
+
+The `Resolver` automatically discovers a public testnet node. For mainnet you would pass `networkId: "mainnet"` (wRPC port 16110). Testnet-10 uses port 16210 and testnet-11 uses port 16310.
+
+## Step 3 -- Generate a Wallet
+
+Append the wallet creation code inside `main()`:
+
+```typescript
+  // Generate a new 24-word mnemonic
+  const mnemonic = Mnemonic.random();
+  console.log("Mnemonic (SAVE THIS):", mnemonic.phrase);
+
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+
+  // Kaspa BIP-44 path: m/44'/111111'/account'/change/index
+  const receiveKey = xprv.derivePath("m/44'/111111'/0'/0/0").toPrivateKey();
+  const address = receiveKey.toPublicKey().toAddress("testnet-10").toString();
+  console.log("Receive address:", address);
+```
+
+<Callout type="warn">
+In a real application, never log or hard-code mnemonic phrases. Store them encrypted at rest. This tutorial logs the phrase only for convenience on testnet.
+</Callout>
+
+## Step 4 -- Fund with Testnet KAS
+
+Copy the `kaspatest:` address printed above and paste it into the Kaspa testnet faucet. Wait a few seconds for the funds to arrive -- at 10 blocks per second, confirmation is nearly instant.
+
+| Network | Faucet URL | Address prefix |
+|---|---|---|
+| Testnet-10 | `https://faucet-t10.kaspa.org` | `kaspatest:` |
+| Testnet-11 | `https://faucet-t11.kaspa.org` | `kaspatest:` |
+
+## Step 5 -- Send a Transaction
+
+Continue inside `main()`:
+
+```typescript
+  // Track UTXOs for the sender address
+  const processor = new UtxoProcessor({ rpc, networkId: "testnet-10" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+  await context.trackAddresses([address]);
+
+  // Allow UTXO data to sync
+  await new Promise((r) => setTimeout(r, 5000));
+
+  // Build, sign, and submit
+  const recipient = "kaspatest:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0";
+  const { transactions } = await createTransactions({
+    entries: context,
+    outputs: [{ address: recipient, amount: kaspaToSompi(1) }],
+    changeAddress: address,
+    priorityFee: 0n,
+  });
+
+  for (const tx of transactions) {
+    tx.sign([receiveKey]);
+    const txId = await tx.submit(rpc);
+    console.log("Submitted TX:", txId);
+  }
+```
+
+<Callout type="info">
+`createTransactions` may return multiple transactions if UTXO consolidation is needed. Always iterate the full array and submit in order -- later transactions depend on outputs from earlier ones.
+</Callout>
+
+## Step 6 -- Verify the Transaction
+
+```typescript
+  // Check the balance after sending
+  const balance = await rpc.getBalanceByAddress({ address });
+  console.log("Remaining balance (sompi):", balance.balance);
+
+  await processor.stop();
+  await rpc.disconnect();
+}
+
+main().catch(console.error);
+```
+
+Run the full script:
+
+```bash
+npx tsx send.ts
+```
+
+You can also look up the transaction ID on a testnet block explorer to see its position in the BlockDAG.
+
+## Key Concepts Recap
+
+| Concept | Detail |
+|---|---|
+| Unit of value | 1 KAS = 100,000,000 sompi (10^8) |
+| Derivation path | `m/44'/111111'/account'/change/index` |
+| Confirmation speed | Sub-second block inclusion, ~10 s full confirmation |
+| Fee model | Based on transaction mass, not congestion |
+| UTXO model | Like Bitcoin -- spend entire outputs, receive change |
+
+## Next Steps
+
+- [UTXO Model](/docs/core-concepts/utxo-model) -- Understand how Kaspa handles unspent outputs.
+- [Estimate Fees](/docs/cookbook/transactions/estimate-fees) -- Calculate fees before sending.
+- [Track Confirmation](/docs/cookbook/transactions/track-confirmation) -- Monitor DAA score depth.
+- [Testnet Development](/docs/guides/testnet-development) -- Build full apps against testnet.

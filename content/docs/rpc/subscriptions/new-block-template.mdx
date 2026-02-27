@@ -1,0 +1,103 @@
+---
+title: NotifyNewBlockTemplate
+description: "Subscribe to notifications when a new block template is available for mining."
+---
+
+## Overview
+
+Mining pools use the `notifyNewBlockTemplate` subscription to get notified whenever the
+node has a new block template ready. Templates change when new transactions enter the
+mempool, a new block is added to the DAG (changing the parent set), or the DAA score
+advances (adjusting the difficulty target).
+
+## Subscribe
+
+```typescript
+await rpc.subscribeNewBlockTemplate();
+```
+
+**RPC request:**
+
+```json
+{
+  "method": "notifyNewBlockTemplate",
+  "params": {}
+}
+```
+
+**Response:**
+
+```json
+{
+  "error": null
+}
+```
+
+## Notification Format
+
+The notification itself is empty -- it signals that a new template is available. The miner
+must then call `getBlockTemplate` to retrieve the full template.
+
+```json
+{}
+```
+
+<Callout type="info">
+The notification does not include template data. This avoids sending large payloads that
+may be superseded before the miner processes them. Instead, call `getBlockTemplate`
+after each notification to fetch the current template.
+</Callout>
+
+## Unsubscribe
+
+```typescript
+await rpc.unsubscribeNewBlockTemplate();
+```
+
+## Code Example
+
+```typescript
+import { RpcClient, Resolver, Encoding } from "kaspa-wasm";
+
+async function startMiningListener() {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  await rpc.subscribeNewBlockTemplate();
+
+  rpc.addEventListener("new-block-template", async () => {
+    const template = await rpc.getBlockTemplate({
+      payAddress: "kaspa:qr...",
+      extraData: "my-pool-v1.0",
+    });
+    console.log(`New template - DAA: ${template.block.header.daaScore}`);
+    // Pass template.block to mining hardware/software
+  });
+
+  console.log("Listening for new block templates...");
+  await new Promise(() => {});
+}
+
+startMiningListener().catch(console.error);
+```
+
+## Use Cases
+
+- **Mining pools** -- Update work for connected miners immediately when the DAG tip changes, minimizing stale shares.
+- **Solo mining** -- Fetch fresh templates from your own node to mine blocks directly.
+- **Stratum servers** -- Convert Kaspa block templates into Stratum-compatible work units for mining hardware.
+
+<Callout type="warn">
+At 10 BPS, templates can update multiple times per second. Mining software must minimize
+latency between receiving the notification and beginning hash computation. Stale work
+reduces the probability of finding a valid block.
+</Callout>
+
+## Further Reading
+
+- [GetBlockTemplate](/docs/rpc/wrpc/get-block-template) -- RPC method to fetch the full block template after receiving this notification.
+- [Pool Mining](/docs/mining/pool-mining) -- Guide to setting up and operating a Kaspa mining pool.

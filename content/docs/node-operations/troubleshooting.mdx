@@ -1,0 +1,115 @@
+---
+title: Troubleshooting
+description: Solutions for common Kaspa node issues including startup failures, slow sync, peer connection problems, high memory usage, and database corruption.
+---
+
+## Node Will Not Start
+
+### Port Already in Use
+
+If kaspad fails to start with an "address already in use" error, another process is occupying the required port.
+
+**Solution**: Identify the conflicting process with `lsof -i :16111` (or `ss -tlnp | grep 16111` on Linux) and stop it, or use `--rpclisten` and `--listen` flags to assign different ports.
+
+### Missing Dependencies
+
+On some Linux distributions, kaspad may fail to start due to missing shared libraries (`libssl`, `libclang`, or `protobuf`). Install the required system packages for your distribution (e.g., `sudo apt-get install -y libssl-dev ca-certificates` on Debian/Ubuntu).
+
+### Corrupt Data Directory
+
+If the node crashes during operation, the database may be left in an inconsistent state. Symptoms include errors mentioning RocksDB, "corruption", or "checksum mismatch" on startup.
+
+**Solution**: Reset the database and re-sync:
+
+```bash
+kaspad --reset-db
+```
+
+<Callout type="warn">
+The `--reset-db` flag deletes the entire blockchain database. The node will need to perform a full re-sync, which can take considerable time. Only use this as a last resort after confirming the database is actually corrupt.
+</Callout>
+
+## Slow Sync
+
+### HDD vs SSD
+
+Running kaspad on a traditional hard drive (HDD) will result in dramatically slower sync performance. Kaspa's 10 BPS block rate generates heavy random I/O patterns that HDDs handle poorly.
+
+**Solution**: Migrate the data directory to an SSD. Copy the data directory, update `--appdir` if needed, and restart.
+
+### Insufficient RAM
+
+If the system has limited RAM, kaspad relies heavily on disk I/O for cache misses, slowing sync to a crawl.
+
+**Solution**: Increase system RAM, or adjust `--ram-scale`. Use `--ram-scale=0.3` to reduce memory usage (slower sync) or `--ram-scale=2.0` to use more RAM for faster sync.
+
+<Callout type="info">
+The `--ram-scale` flag is a multiplier applied to default cache sizes. Monitor system memory after adjusting to ensure kaspad does not cause out-of-memory conditions.
+</Callout>
+
+### Network Bandwidth
+
+Sync speed is also limited by your network bandwidth. During initial sync, kaspad downloads all block headers and the UTXO set from peers.
+
+**Solution**: Ensure you have a stable connection with at least 10 Mbps download speed. If possible, use `--addpeer` to connect to a well-connected peer on a fast network.
+
+## No Peers Connecting
+
+### Firewall Blocking P2P Port
+
+If the node shows zero peers, the P2P port (default 16111 for mainnet) may be blocked by a firewall.
+
+**Solution**: Open the P2P port in your firewall (e.g., `sudo ufw allow 16111/tcp` on Ubuntu, or the equivalent for your platform).
+
+### Wrong Network
+
+If you accidentally start on the wrong network (e.g., simnet instead of mainnet), the node will not find any peers because it is looking for peers on a different network.
+
+**Solution**: Verify you are using the correct network flag (or no flag for mainnet). Check the log output, which displays the active network name at startup.
+
+### NAT / Router Configuration
+
+If your node is behind a NAT router, inbound peer connections may be blocked even if your firewall is open. Configure port forwarding on your router for the P2P port, or use UPnP if supported.
+
+## High Memory Usage
+
+kaspad's memory usage scales with cache sizes, peer count, and DAG processing load. Reduce memory consumption with `--ram-scale=0.5` and consider reducing `--maxinpeers` and `--outpeers` to lower concurrent peer connections.
+
+<Callout>
+During initial sync, memory usage is typically higher than during steady-state operation. If the node completes sync successfully but uses too much memory, adjust `--ram-scale` and restart.
+</Callout>
+
+## RPC Connection Refused
+
+### Node Not Listening
+
+If RPC clients cannot connect, kaspad may not be listening on the expected address. By default it listens on `127.0.0.1:16110` (localhost only). For remote access, use `--rpclisten=0.0.0.0:16110`.
+
+### Wrong Port
+
+If you are running on testnet or simnet, the default gRPC port is different from mainnet.
+
+| Network | Default gRPC Port |
+|---|---|
+| Mainnet | 16110 |
+| Testnet | 16210 |
+| Simnet | 16510 |
+
+**Solution**: Ensure your RPC client is connecting to the correct port for the active network.
+
+## Block Validation Errors
+
+Occasional block validation errors in the logs are normal and typically indicate a peer sent an invalid block. The node rejects the invalid block and may disconnect the offending peer.
+
+Persistent validation errors may indicate:
+
+- **Outdated software**: Your node may be running an older version that does not understand new consensus rules. Upgrade to the latest release.
+- **Database corruption**: Corrupted state can cause valid blocks to appear invalid. Reset with `--reset-db` if other solutions fail.
+- **Network fork**: In rare cases, the network may have undergone a planned hardfork that your node is not aware of. Check for software updates.
+
+## Further Reading
+
+- [Running a Node](/docs/node-operations/running-a-node) — Initial setup and sync process.
+- [Configuration](/docs/node-operations/configuration) — All CLI flags for tuning node behavior.
+- [Monitoring](/docs/node-operations/monitoring) — Detecting issues before they become critical.
+- [Upgrading](/docs/node-operations/upgrading) — Keeping your node software current.

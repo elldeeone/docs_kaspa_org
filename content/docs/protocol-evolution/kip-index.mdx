@@ -1,0 +1,83 @@
+---
+title: "KIP Index"
+description: "Complete index of all Kaspa Improvement Proposals with their status and summaries."
+---
+
+## Kaspa Improvement Proposals
+
+This page provides a complete index of all Kaspa Improvement Proposals (KIPs). Each KIP goes through the lifecycle described in the [KIPs Overview](/docs/protocol-evolution/kips-overview): Draft, Review, Accepted, Implemented, and Active/Final.
+
+<Callout type="info">
+The canonical source for all KIP documents is the [KIPs repository on GitHub](https://github.com/kaspanet/kips). This index is a convenience reference. Always consult the GitHub repository for the latest status and full text of each proposal.
+</Callout>
+
+## Active KIPs
+
+These KIPs have been implemented and activated on the Kaspa mainnet.
+
+| KIP | Title | Category | Summary |
+|---|---|---|---|
+| KIP-1 | KIP Process | Process | Defines the formal process for submitting, reviewing, and activating Kaspa Improvement Proposals. Establishes the template, lifecycle stages, and roles involved in governance. |
+| KIP-9 | Storage Mass | Protocol | Introduces a storage mass component to the transaction mass calculation. Accounts for the long-term cost of growing the UTXO set by charging mass proportional to the number of outputs created minus inputs consumed. This prevents UTXO bloat attacks that could degrade node performance. |
+| KIP-14 | Crescendo | Protocol | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
+
+## KIPs in Review
+
+These KIPs are under active discussion and review by the community.
+
+| KIP | Title | Category | Summary |
+|---|---|---|---|
+| KIP-10 | Opcode Reactivation | Protocol | Proposes re-enabling a set of opcodes that were disabled in the original Kaspa launch for safety reasons. Reactivating these opcodes would enable more expressive scripting capabilities including conditional logic, arithmetic operations, and hash-locked contracts, opening the door to on-chain programmability. |
+| KIP-13 | Transient Mass | Protocol | Refines Kaspa's transaction mass model by distinguishing between transient costs (bandwidth, computation during validation) and persistent costs (UTXO storage). This allows more accurate pricing of transaction resources and could increase effective throughput for transactions that consume UTXOs without creating new ones. |
+
+## Proposed / Draft KIPs
+
+These KIPs are in early stages of development or discussion.
+
+| KIP | Title | Category | Summary |
+|---|---|---|---|
+| — | DAGKnight Activation | Protocol | Anticipated proposal to replace GHOSTDAG with the DAGKnight consensus protocol, which achieves optimal Byzantine fault tolerance without requiring a predetermined `k` parameter. Currently in research and specification phase. |
+
+<Callout>
+The KIP numbering may not be strictly sequential. Some numbers may be reserved, skipped, or assigned to proposals that were later withdrawn. The numbers listed here reflect the official assignments in the KIPs repository.
+</Callout>
+
+## KIP Categories
+
+**Protocol** — Changes to consensus rules, network protocol, transaction validation, or other aspects that require a node software upgrade. Protocol KIPs that alter consensus rules require a hardfork for activation.
+
+**Informational** — Design documents, best practices, guidelines, or analysis that do not propose protocol changes. These serve as reference material for the ecosystem.
+
+**Process** — Changes to the governance, workflow, or organizational processes of the Kaspa project. KIP-1 is the foundational process KIP.
+
+## KIP Status Definitions
+
+| Status | Meaning |
+|---|---|
+| Draft | Initial submission; open for early feedback |
+| Review | Under active community and technical review |
+| Accepted | Approved by rough consensus; awaiting implementation |
+| Implemented | Code merged into the reference implementation; awaiting activation |
+| Active | Activated on mainnet (for protocol KIPs) or considered complete (for process/informational KIPs) |
+| Withdrawn | Removed by the author |
+| Rejected | Rejected by community consensus |
+| Superseded | Replaced by a later KIP |
+
+## Contributing
+
+Anyone can propose a KIP. The process is fully open and permissionless:
+
+1. Review the KIP-1 process document for formatting and submission requirements.
+2. Draft your proposal using the standard template.
+3. Submit a pull request to the [kaspanet/kips](https://github.com/kaspanet/kips) repository on GitHub.
+
+<Callout type="warn">
+Before submitting a new KIP, search the existing proposals and community discussions to ensure your idea has not already been proposed or addressed. Duplicate proposals slow down the review process.
+</Callout>
+
+## Further Reading
+
+- [KIPs Overview](/docs/protocol-evolution/kips-overview) — Detailed explanation of the KIP process and lifecycle.
+- [Crescendo](/docs/protocol-evolution/crescendo) — Full details on KIP-14, the Crescendo hardfork.
+- [Roadmap](/docs/protocol-evolution/roadmap) — How pending KIPs fit into Kaspa's development trajectory.
+- [KIPs GitHub Repository](https://github.com/kaspanet/kips) — The canonical source for all KIP documents.

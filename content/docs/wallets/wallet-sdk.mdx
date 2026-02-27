@@ -1,0 +1,169 @@
+---
+title: "Wallet SDK"
+description: "Building Kaspa wallets using the Rust and WASM wallet framework — key management, transaction construction, and UTXO handling."
+---
+
+## Overview
+
+The Kaspa Wallet SDK is a framework for building wallet applications on top of the Kaspa network. It is implemented in Rust as part of the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) project and compiles to WebAssembly (WASM) for use in browser and Node.js environments. The SDK handles key management, UTXO tracking, transaction construction, signing, and network communication.
+
+## Architecture
+
+The wallet SDK is structured around several core components:
+
+- **`kaspa-wallet-core`**: The central crate that orchestrates wallet operations including account management, UTXO tracking, and transaction flow.
+- **`kaspa-bip32`**: BIP-32 hierarchical deterministic key derivation.
+- **`kaspa-addresses`**: Address encoding and decoding (Bech32 format with the `kaspa:` prefix).
+- **`kaspa-consensus-core`**: Transaction primitives, UTXO structures, and consensus types.
+- **`kaspa-txscript`**: Transaction script handling for signature verification and script construction.
+- **`kaspa-wrpc-client`**: wRPC client for communicating with a Kaspa node.
+
+<Callout type="info">
+The same Rust code that powers the CLI wallet and web wallet is available as a library. You can build custom wallet applications using the same battle-tested components.
+</Callout>
+
+## Key Management
+
+### Mnemonic Generation
+
+Generate a new 24-word BIP-39 mnemonic:
+
+```rust
+use kaspa_bip32::Mnemonic;
+
+let mnemonic = Mnemonic::random(kaspa_bip32::WordCount::Words24)?;
+println!("Seed phrase: {}", mnemonic.phrase());
+```
+
+### HD Derivation
+
+Derive child keys following the BIP-44 path `m/44'/111111'/account'/change/index`:
+
+```rust
+use kaspa_bip32::{ExtendedPrivateKey, SecretKey};
+
+let seed = mnemonic.to_seed("");
+let master = ExtendedPrivateKey::<SecretKey>::new(seed)?;
+
+// Derive m/44'/111111'/0'/0/0
+let receive_key = master
+    .derive_path("m/44'/111111'/0'/0/0")?;
+```
+
+Each derived key is a secp256k1 private key suitable for Schnorr signing.
+
+## UTXO Tracking and Selection
+
+Kaspa is a UTXO-based system. The wallet must track which UTXOs belong to the wallet's addresses and select appropriate UTXOs when constructing transactions.
+
+### UTXO Tracking
+
+The wallet subscribes to UTXO changes via the node's `notifyUtxosChanged` RPC method. When a transaction is confirmed that involves one of the wallet's addresses, the node sends a notification with the added and removed UTXO entries. The wallet maintains an in-memory UTXO set that stays in sync with the network state.
+
+### UTXO Selection
+
+When constructing a transaction, the wallet must select a set of UTXOs whose total value covers the desired send amount plus fees. The selection algorithm considers:
+
+- **Sufficient value**: The selected UTXOs must cover the output amount plus the transaction fee.
+- **Input limit**: Each transaction can have at most **84 inputs** (limited by the maximum transaction mass). If many small UTXOs need to be consolidated, the wallet may need to create multiple chained transactions.
+- **Change output**: If the selected UTXOs exceed the required amount, a change output is created and sent back to a change address in the wallet.
+
+<Callout type="warn">
+Wallets that receive many small payments (e.g., mining payouts) can accumulate thousands of small UTXOs. Sending large amounts may require multiple compound transactions to consolidate UTXOs before the final send. The SDK handles this automatically.
+</Callout>
+
+## Transaction Construction and Signing
+
+Building a transaction involves several steps:
+
+1. **Create outputs**: Define the recipient address(es) and amounts.
+2. **Select inputs**: Choose UTXOs from the wallet's tracked set.
+3. **Calculate fee**: Compute the transaction mass and determine the required fee.
+4. **Build the unsigned transaction**: Assemble inputs, outputs, and metadata.
+5. **Sign**: Use the derived private keys to produce Schnorr signatures for each input.
+6. **Broadcast**: Submit the signed transaction to the node via wRPC.
+
+```rust
+// Simplified transaction construction flow
+let tx = wallet.create_transaction(
+    destination_address,
+    amount_in_sompi,
+    priority_fee,
+)?;
+
+wallet.sign_transaction(&tx)?;
+wallet.submit_transaction(&tx).await?;
+```
+
+## Fee Estimation
+
+Transaction fees in Kaspa are based on **transaction mass**, which is a function of the transaction's size in bytes and the computational cost of verifying its scripts. The fee calculation:
+
+```
+fee = transaction_mass * minimum_relay_fee_per_unit_of_mass
+```
+
+The SDK computes transaction mass automatically when constructing a transaction. Priority fees can be added on top of the minimum to incentivize faster inclusion during periods of high mempool activity.
+
+## Balance Calculation
+
+The wallet's balance is the sum of all tracked UTXO values belonging to the wallet's addresses. The SDK distinguishes between:
+
+- **Mature balance**: UTXOs that are confirmed and spendable.
+- **Pending balance**: UTXOs from transactions that are in the mempool but not yet confirmed.
+- **Immature balance**: Coinbase UTXOs that have not yet reached the maturity threshold (100 blue score).
+
+## WASM Bindings for Browser Wallets
+
+The wallet SDK compiles to WebAssembly, making it usable in browser environments. The WASM bindings expose the core wallet functionality through JavaScript/TypeScript interfaces:
+
+```javascript
+import { Wallet, RpcClient } from "kaspa-wasm";
+
+const rpc = new RpcClient("ws://127.0.0.1:17110");
+await rpc.connect();
+
+const wallet = new Wallet(rpc);
+await wallet.createFromMnemonic(mnemonic);
+const balance = await wallet.getBalance();
+```
+
+The WASM build includes all cryptographic operations (key derivation, Schnorr signing, hashing) compiled from the same Rust source code, ensuring consistency between the Rust and browser implementations.
+
+## Integration with wRPC
+
+The wallet SDK communicates with a Kaspa node using the **wRPC** (WebSocket RPC) protocol. Key RPC methods used by the wallet include:
+
+| Method | Purpose |
+|---|---|
+| `notifyUtxosChanged` | Subscribe to UTXO changes for wallet addresses |
+| `submitTransaction` | Broadcast a signed transaction |
+| `getBalanceByAddress` | Query the balance of a specific address |
+| `getUtxosByAddresses` | Retrieve the UTXO set for wallet addresses |
+| `getServerInfo` | Get node information (network, version) |
+
+The wRPC client handles reconnection, subscription management, and message serialization automatically.
+
+## Example: Custom Wallet Architecture
+
+A minimal custom wallet built on the SDK would include:
+
+1. **Initialization**: Generate or import a mnemonic, derive the master key.
+2. **Address generation**: Derive receive and change addresses from the HD tree.
+3. **Node connection**: Connect to a Kaspa node via wRPC.
+4. **UTXO sync**: Subscribe to UTXO changes and build the initial UTXO set.
+5. **Balance display**: Sum tracked UTXOs to show the current balance.
+6. **Transaction sending**: Select UTXOs, construct and sign a transaction, broadcast it.
+7. **Event handling**: Process incoming UTXO notifications to update the balance in real time.
+
+<Callout>
+For a working reference implementation, study the `kaspa-cli-wallet` source code in the rusty-kaspa repository. It demonstrates the complete wallet lifecycle using the SDK components described above.
+</Callout>
+
+## Further Reading
+
+- [HD Derivation](/docs/wallets/hd-derivation) — Details on the BIP-32/39/44 key derivation used by the SDK.
+- [Transactions](/docs/core-concepts/transactions) — Protocol-level transaction structure and validation.
+- [RPC API](/docs/developer-guide/rpc-api) — Full wRPC method reference.
+- [WASM SDK](/docs/developer-guide/wasm-sdk) — Using the Kaspa WASM SDK in JavaScript applications.
+- [CLI Wallet](/docs/wallets/cli-wallet) — Reference implementation built on the wallet SDK.

@@ -1,0 +1,121 @@
+---
+title: WASM SDK
+description: "Build Kaspa applications in the browser and Node.js using the official WASM SDK — installation, wallet operations, RPC, and transaction construction."
+---
+
+## What Is the WASM SDK?
+
+The Kaspa WASM SDK is the official Rust codebase compiled to WebAssembly and exposed through an idiomatic JavaScript/TypeScript API. It brings the full power of the `rusty-kaspa` wallet, RPC, and transaction-building logic to browser and Node.js environments with near-native performance. Because it is compiled from the same Rust source as the node, all consensus-critical operations are guaranteed to match the canonical implementation.
+
+## Installation and Platform Support
+
+```bash
+npm install kaspa-wasm
+```
+
+<Callout type="info">
+The package name may vary across release channels. Check the [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa) for the latest package name. The SDK may also be published under `kaspa` or a scoped package name.
+</Callout>
+
+The SDK supports modern browsers (Chrome, Firefox, Safari, Edge), Node.js 16+, and experimentally React Native and Deno. In the browser, call `await init()` to load the WASM module before using any SDK classes. In Node.js, the module loads synchronously.
+
+## Core Modules
+
+- **`RpcClient`** — WebSocket RPC client supporting Borsh and JSON encodings.
+- **`Resolver`** — Automatic public node discovery for a given network.
+- **`UtxoProcessor` / `UtxoContext`** — Tracks addresses, caches unspent outputs, emits balance-change events.
+- **`PrivateKey` / `PublicKey`** — Schnorr key pair generation over secp256k1.
+- **`Address`** — Bech32 address creation, parsing, and validation.
+- **`Mnemonic` / `XPrv`** — BIP-39 mnemonics and BIP-32 HD key derivation (`m/44'/111111'/0'`).
+- **`createTransactions`** — Transaction builder with automatic UTXO selection, fee calculation, and compound chaining.
+
+## Connecting to a Node
+
+```typescript
+import { RpcClient, Encoding, Resolver } from 'kaspa-wasm';
+
+const rpc = new RpcClient({
+  resolver: new Resolver(),
+  encoding: Encoding.Borsh,
+  networkId: "mainnet",
+});
+await rpc.connect();
+const info = await rpc.getBlockDagInfo();
+console.log("Network:", info.networkName, "DAA score:", info.virtualDaaScore);
+```
+
+Pass `url: "ws://127.0.0.1:16110"` instead of a `resolver` to connect directly to your own node.
+
+<Callout type="warn">
+Public nodes are suitable for development and testing. For production applications handling real funds, always run your own Kaspa node.
+</Callout>
+
+## Creating a Wallet
+
+```typescript
+import { Mnemonic, XPrv } from 'kaspa-wasm';
+
+const mnemonic = Mnemonic.random(24);
+const seed = mnemonic.toSeed("");
+const xprv = new XPrv(seed);
+const account = xprv.derivePath("m/44'/111111'/0'");
+const receiveKey = account.derivePath("0/0").toPrivateKey();
+const address = receiveKey.toPublicKey().toAddress("mainnet");
+console.log("Address:", address.toString());
+```
+
+## Tracking Balances and Sending Transactions
+
+Use `UtxoProcessor` to track UTXOs, then `createTransactions` to build, sign, and submit:
+
+```typescript
+import { UtxoProcessor, UtxoContext, createTransactions, kaspaToSompi, PrivateKey } from 'kaspa-wasm';
+
+const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+const context = new UtxoContext({ processor });
+await processor.start();
+await context.trackAddresses(["kaspa:qr35..."]);
+
+// Build and send a transaction
+const privateKey = new PrivateKey("your-hex-key");
+const sender = privateKey.toPublicKey().toAddress("mainnet").toString();
+const { transactions } = await createTransactions({
+  entries: context,
+  outputs: [{ address: "kaspa:recipient", amount: kaspaToSompi(1.5) }],
+  changeAddress: sender,
+  priorityFee: 0n,
+});
+for (const tx of transactions) {
+  tx.sign([privateKey]);
+  console.log("Submitted:", await tx.submit(rpc));
+}
+```
+
+<Callout>
+If the wallet contains many small UTXOs (common for miners), `createTransactions` automatically produces a chain of compound transactions that consolidate UTXOs before the final transfer. Sign and submit each in order.
+</Callout>
+
+## Subscribing to Events
+
+The RPC client supports real-time subscriptions for blocks, UTXO changes, and DAA score updates:
+
+```typescript
+await rpc.subscribeBlockAdded();
+rpc.addEventListener("block-added", (e) => console.log("Block:", e.data.block.header.hash));
+
+await rpc.subscribeUtxosChanged(["kaspa:your-address"]);
+rpc.addEventListener("utxos-changed", (e) => {
+  for (const entry of e.data.added) console.log("Received:", entry.utxoEntry.amount, "sompi");
+});
+```
+
+## Error Handling and TypeScript
+
+Wrap SDK calls in try/catch blocks. Common errors include connection failures, insufficient funds, and UTXO sync issues. The SDK ships with full TypeScript declarations -- all classes, method signatures, event payloads, and option objects are typed, with `BigInt` support for sompi amounts.
+
+## Further Reading
+
+- [SDK Overview](/docs/sdks/overview) — Compare all available Kaspa SDKs.
+- [Building Applications](/docs/developer-guide/building-apps) — Architecture patterns for Kaspa apps.
+- [RPC API Reference](/docs/developer-guide/rpc-api) — Full listing of RPC methods available through `RpcClient`.
+- [Transactions](/docs/core-concepts/transactions) — Protocol-level transaction structure and mass calculation.

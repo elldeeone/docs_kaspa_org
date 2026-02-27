@@ -1,0 +1,102 @@
+---
+title: Running a Node
+description: How to set up and run a Kaspa full node using rusty-kaspa, including system requirements, build instructions, initial sync, and verifying correct operation.
+---
+
+## Why Run a Node
+
+Running your own Kaspa full node gives you direct, trustless access to the network. Rather than relying on third-party infrastructure, your node independently validates every block and transaction according to the consensus rules. Common reasons to run a node include:
+
+- **Sovereignty**: Verify the state of the ledger yourself without trusting any intermediary.
+- **Privacy**: Submit transactions directly to the network without exposing your activity to a third-party API provider.
+- **Mining**: A fully synced node with `--utxoindex` enabled is required for solo mining, as it constructs block templates locally.
+- **Development**: Build and test applications against a local node with full RPC access.
+
+## System Requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| CPU | 4 cores | 8+ cores |
+| RAM | 8 GB | 16 GB |
+| Storage | 50 GB free (SSD) | 100+ GB SSD |
+| Network | 10 Mbps | 50+ Mbps |
+
+<Callout type="warn">
+An SSD is strongly recommended. Kaspa's 10 BPS block rate generates significant disk I/O during sync and normal operation. Running on an HDD will result in extremely slow sync times and may cause the node to fall behind the DAG tip.
+</Callout>
+
+## Quick Start
+
+### Building from Source
+
+Clone the rusty-kaspa repository and build with Cargo:
+
+```bash
+git clone https://github.com/kaspanet/rusty-kaspa.git
+cd rusty-kaspa
+cargo build --release --bin kaspad
+```
+
+The compiled binary will be at `target/release/kaspad`.
+
+### Downloading a Prebuilt Binary
+
+Prebuilt binaries are available from the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases). Download the appropriate archive for your platform and extract the `kaspad` binary.
+
+## Starting kaspad
+
+Launch the node with common flags:
+
+```bash
+kaspad --utxoindex --rpclisten=0.0.0.0:16110
+```
+
+| Flag | Purpose |
+|---|---|
+| `--utxoindex` | Maintains a UTXO index required for mining and wallet queries. |
+| `--rpclisten` | Sets the gRPC listen address and port. Default is `127.0.0.1:16110`. |
+
+<Callout type="info">
+If you only need to validate and relay blocks without mining or wallet functionality, you can omit `--utxoindex` to reduce disk usage and speed up the initial sync.
+</Callout>
+
+## Initial Sync Process
+
+When a new node starts for the first time, it syncs with the network in several stages:
+
+1. **Headers download**: The node downloads all block headers from peers, establishing the full DAG structure. Headers are small and this phase completes relatively quickly.
+2. **UTXO set download**: The node downloads the UTXO set snapshot at the pruning point from peers and verifies it against the UTXO commitment in the headers.
+3. **Recent blocks download**: Full block data (including transactions) is downloaded for blocks above the pruning depth.
+4. **Validation and catch-up**: The node validates recent blocks and catches up to the current DAG tip.
+
+Sync time depends on your hardware, network bandwidth, and the current size of the DAG. On a machine with an SSD and a fast internet connection, initial sync typically takes 30 minutes to a few hours. On an HDD or with limited RAM, it may take significantly longer.
+
+<Callout>
+You can monitor sync progress in the log output. The node logs its current blue score and the timestamp of the DAG tip it has reached. Once the logged timestamp is close to the current wall clock time, the node is fully synced.
+</Callout>
+
+## Verifying Your Node Is Running
+
+After starting kaspad, verify it is operating correctly:
+
+- **Log output**: The console or log files should show the node discovering peers, downloading headers, and progressing through sync.
+- **RPC check**: Query the node's RPC endpoint to confirm it responds. Tools like `grpcurl` or the Kaspa CLI wallet can be used to call `GetInfo` or `GetSyncStatus`.
+- **Peer connections**: A healthy node maintains connections to multiple peers. If the node shows zero peers for an extended period, check your firewall and network configuration.
+
+## Data Directory Locations
+
+kaspad stores its blockchain data, logs, and configuration in a platform-specific data directory:
+
+| Platform | Default Path |
+|---|---|
+| Linux | `~/.kaspad/kaspa-mainnet/` |
+| macOS | `~/Library/Application Support/kaspad/kaspa-mainnet/` |
+| Windows | `%APPDATA%\kaspad\kaspa-mainnet\` |
+
+You can override this location with the `--appdir` flag. The data directory contains the block database, UTXO set, peer information, and log files.
+
+## Further Reading
+
+- [Configuration](/docs/node-operations/configuration) — Detailed reference for all kaspad CLI flags and tuning options.
+- [Monitoring](/docs/node-operations/monitoring) — How to monitor node health and performance metrics.
+- [Troubleshooting](/docs/node-operations/troubleshooting) — Solutions for common node issues.

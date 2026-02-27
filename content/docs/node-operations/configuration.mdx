@@ -1,0 +1,119 @@
+---
+title: Configuration
+description: Complete reference for kaspad CLI flags, data directory structure, RPC configuration, performance tuning, and network selection options.
+---
+
+## CLI Flags Reference
+
+kaspad is configured entirely through command-line flags. There is no configuration file; all options are passed as arguments when starting the node.
+
+### Core Flags
+
+| Flag | Description |
+|---|---|
+| `--utxoindex` | Enables the UTXO index, required for mining, wallet queries, and any RPC method that looks up UTXOs by address. Increases disk usage. |
+| `--archival` | Runs the node in archival mode, retaining all historical block and transaction data instead of pruning. Required for block explorers and analytics services. |
+| `--sanity` | Enables additional sanity checks during block validation. Useful for debugging but adds CPU overhead. Not recommended for production. |
+| `--yes` | Automatically answers "yes" to any interactive prompts, such as confirmation dialogs during database resets. Useful for scripted or automated deployments. |
+
+### Network Flags
+
+| Flag | Description |
+|---|---|
+| `--rpclisten` | Sets the gRPC listen address. Default: `127.0.0.1:16110`. Set to `0.0.0.0:16110` to accept remote connections. |
+| `--listen` | Sets the P2P listen address for incoming peer connections. Default: `0.0.0.0:16111`. |
+| `--connect` | Connect only to the specified peer(s). Disables automatic peer discovery. Useful for private network topologies. |
+| `--addpeer` | Add a persistent peer to connect to in addition to discovered peers. |
+| `--outpeers` | Target number of outbound peer connections. Default varies by network. |
+| `--maxinpeers` | Maximum number of inbound peer connections to accept. |
+
+### Network Selection
+
+| Flag | Description |
+|---|---|
+| `--testnet` | Connect to the public test network (testnet). |
+| `--simnet` | Run a local simulation network for development. |
+| `--devnet` | Connect to the development network. |
+
+<Callout type="info">
+Only one network flag can be specified at a time. If no network flag is provided, kaspad connects to mainnet by default.
+</Callout>
+
+### Performance and Tuning
+
+| Flag | Description |
+|---|---|
+| `--ram-scale` | Scales the amount of RAM used by internal caches and data structures. Default is `1.0`. Values greater than 1.0 allocate more RAM for faster sync and processing; values less than 1.0 reduce memory usage at the cost of performance. |
+| `--perf-metrics` | Enables periodic logging of performance metrics (CPU, memory, bandwidth). |
+| `--perf-metrics-interval-sec` | Sets the interval in seconds between performance metric log entries. Default: `60`. |
+
+<Callout>
+On machines with ample RAM (32 GB+), setting `--ram-scale=2.0` or higher can significantly speed up the initial sync. On memory-constrained systems, use `--ram-scale=0.5` to avoid out-of-memory conditions, accepting slower sync performance.
+</Callout>
+
+### Logging
+
+| Flag | Description |
+|---|---|
+| `--loglevel` | Sets the log verbosity level. Options include `trace`, `debug`, `info`, `warn`, `error`. Default: `info`. |
+| `--nologfiles` | Disables writing log output to files. Logs are only printed to stdout/stderr. Useful for containerized deployments where log aggregation is handled externally. |
+
+### Data Directory
+
+| Flag | Description |
+|---|---|
+| `--appdir` | Overrides the default data directory path. All database files, logs, and peer data are stored under this directory. |
+
+## Data Directory Structure
+
+The kaspad data directory contains the following:
+
+```
+kaspa-mainnet/
+  datadir2/
+    consensus/          # Block and DAG consensus database
+    utxoindex/          # UTXO index database (if --utxoindex enabled)
+    ...
+  logs/                 # Log files (unless --nologfiles is set)
+  kaspad.pid            # PID file for the running process
+```
+
+The database files use the RocksDB storage engine internally. These files should not be modified manually.
+
+<Callout type="warn">
+If you change networks (e.g., from mainnet to testnet), kaspad automatically uses a different subdirectory (`kaspa-testnet` vs `kaspa-mainnet`). Do not attempt to share a data directory between networks.
+</Callout>
+
+## RPC Configuration
+
+kaspad exposes three RPC interfaces:
+
+| Interface | Default Port (Mainnet) | Flag |
+|---|---|---|
+| gRPC | 16110 | `--rpclisten` |
+| wRPC Borsh | 17110 | Set via wRPC configuration |
+| wRPC JSON | 18110 | Set via wRPC configuration |
+
+By default, the gRPC interface listens on `127.0.0.1` (localhost only). To allow remote connections, bind to `0.0.0.0` and ensure appropriate firewall rules are in place.
+
+## Example Configurations
+
+```bash
+# Minimal relay node
+kaspad
+
+# Mining node with remote RPC
+kaspad --utxoindex --rpclisten=0.0.0.0:16110
+
+# Development node with verbose logging
+kaspad --utxoindex --loglevel=debug --perf-metrics --perf-metrics-interval-sec=10
+
+# Memory-constrained node
+kaspad --ram-scale=0.3 --nologfiles
+```
+
+## Further Reading
+
+- [Running a Node](/docs/node-operations/running-a-node) — Getting started with kaspad.
+- [Testnet](/docs/node-operations/testnet) — Configuring kaspad for the test network.
+- [Monitoring](/docs/node-operations/monitoring) — Using performance metrics and RPC to monitor your node.

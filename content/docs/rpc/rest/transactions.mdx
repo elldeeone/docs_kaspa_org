@@ -1,0 +1,203 @@
+---
+title: Transaction Endpoints
+description: "REST API endpoints for querying and submitting Kaspa transactions."
+---
+
+## Base URL
+
+```
+https://api.kaspa.org
+```
+
+## GET /transactions/\{transactionId\}
+
+Retrieves a specific transaction by its ID, including inputs, outputs, and block acceptance information.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/transactions/1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `inputs` | boolean | Include input details (default: `true`) |
+| `outputs` | boolean | Include output details (default: `true`) |
+| `resolve_previous_outpoints` | string | Set to `light` or `full` to resolve previous outpoints |
+
+**Response:**
+
+```json
+{
+  "subnetwork_id": "0000000000000000000000000000000000000000",
+  "transaction_id": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "hash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "mass": "2254",
+  "block_hash": [
+    "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+  ],
+  "block_time": 1700000000000,
+  "is_accepted": true,
+  "accepting_block_hash": "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2",
+  "accepting_block_blue_score": 48234567,
+  "inputs": [
+    {
+      "transaction_id": "1234567890abcdef...",
+      "index": 0,
+      "previous_outpoint_hash": "abcdef1234567890...",
+      "previous_outpoint_index": "0",
+      "signature_script": "41...",
+      "sig_op_count": "1",
+      "previous_outpoint_address": "kaspa:qr35enn...",
+      "previous_outpoint_amount": 200000000
+    }
+  ],
+  "outputs": [
+    {
+      "amount": 100000000,
+      "script_public_key": "2011a7215f...",
+      "script_public_key_address": "kaspa:qr35enn...",
+      "script_public_key_type": "pubkey"
+    },
+    {
+      "amount": 99997746,
+      "script_public_key": "20b8c9d0e1...",
+      "script_public_key_address": "kaspa:qzu8yng...",
+      "script_public_key_type": "pubkey"
+    }
+  ]
+}
+```
+
+<Callout type="info">
+The `mass` field represents the transaction's computed mass, which combines compute, bandwidth, and UTXO storage costs. The fee is the difference between the sum of input amounts and the sum of output amounts.
+</Callout>
+
+## POST /transactions
+
+Submits a signed transaction to the network for propagation and inclusion in a block.
+
+**Request:**
+
+```
+POST https://api.kaspa.org/transactions
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "transaction": {
+    "version": 0,
+    "inputs": [
+      {
+        "previousOutpoint": {
+          "transactionId": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+          "index": 0
+        },
+        "signatureScript": "41...",
+        "sequence": 0,
+        "sigOpCount": 1
+      }
+    ],
+    "outputs": [
+      {
+        "amount": 100000000,
+        "scriptPublicKey": {
+          "version": 0,
+          "scriptPublicKey": "2011a7215f668e921013eb7aac9b7e64b9ec6e757c1b648a89f32cb449a084850aac"
+        }
+      }
+    ],
+    "lockTime": 0,
+    "subnetworkId": "0000000000000000000000000000000000000000"
+  }
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "transactionId": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+}
+```
+
+**Response (error):**
+
+```json
+{
+  "error": "Transaction is not valid: missing input UTXOs"
+}
+```
+
+<Callout>
+Transactions must be fully signed before submission. The REST API does not perform signing. Use the WASM SDK, Rust crates, or another signing library to construct and sign transactions before submitting them via this endpoint.
+</Callout>
+
+## GET /transactions/search
+
+Searches for transactions matching given criteria. This endpoint allows filtering by block hash or other parameters.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/transactions/search?blueScoreGte=48234500&blueScoreLt=48234600
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `blueScoreGte` | integer | Minimum accepting block blue score (inclusive) |
+| `blueScoreLt` | integer | Maximum accepting block blue score (exclusive) |
+| `transactionIds` | string | Comma-separated list of transaction IDs to look up |
+
+## Understanding Mass and Fees
+
+Every transaction response includes a `mass` field. Transaction mass is a multi-dimensional measure of the transaction's resource cost:
+
+- **Compute mass** -- Cost of verifying signatures and evaluating scripts.
+- **Bandwidth mass** -- Serialized transaction size in bytes.
+- **UTXO mass** -- Net impact on the UTXO set (creating outputs costs more than consuming them).
+
+The total mass determines the minimum fee required:
+
+```
+fee = fee_rate * mass
+```
+
+To calculate the fee from a transaction response, subtract the total output amounts from the total input amounts:
+
+```
+fee = sum(inputs.amount) - sum(outputs.amount)
+```
+
+## Response Field Reference
+
+| Field | Type | Description |
+|---|---|---|
+| `transaction_id` | string | Unique transaction identifier (hash) |
+| `hash` | string | Transaction hash |
+| `mass` | string | Computed transaction mass |
+| `block_hash` | array | Hashes of blocks containing this transaction |
+| `block_time` | integer | Timestamp of the accepting block (Unix milliseconds) |
+| `is_accepted` | boolean | Whether the transaction has been accepted in the virtual chain |
+| `accepting_block_hash` | string | Hash of the block that accepted this transaction |
+| `accepting_block_blue_score` | integer | Blue score of the accepting block |
+| `inputs` | array | Transaction inputs with outpoint references |
+| `outputs` | array | Transaction outputs with amounts and script public keys |
+
+## Error Responses
+
+| Status Code | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Invalid request (malformed transaction, invalid ID format) |
+| `404` | Transaction not found |
+| `422` | Transaction rejected (invalid signature, missing UTXOs, etc.) |
+| `429` | Rate limit exceeded |
+| `500` | Internal server error |

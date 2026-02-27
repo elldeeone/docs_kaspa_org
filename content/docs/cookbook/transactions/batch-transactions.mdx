@@ -1,0 +1,205 @@
+---
+title: Batch Transactions
+description: "Send multiple transactions efficiently using the Kaspa WASM SDK."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **A funded wallet** with enough KAS for all payments plus fees
+- **Understanding of UTXO dependencies** -- each transaction consumes UTXOs and creates new ones, so sequential sends must wait for previous outputs
+
+<Callout>
+In Kaspa's UTXO model, each transaction consumes specific unspent outputs. When you send multiple transactions in sequence, the second transaction may depend on change outputs from the first. The SDK handles this automatically when using `createTransactions`, but you must submit transactions in order.
+</Callout>
+
+## Code
+
+The following example sends KAS to multiple recipients in a batch, correctly handling UTXO dependencies:
+
+```typescript
+import {
+  RpcClient,
+  Resolver,
+  Encoding,
+  Mnemonic,
+  XPrv,
+  UtxoProcessor,
+  UtxoContext,
+  createTransactions,
+  kaspaToSompi,
+} from "kaspa-wasm";
+
+interface Payment {
+  address: string;
+  amount: bigint;
+}
+
+async function batchSend(payments: Payment[]) {
+  // 1. Connect and set up wallet
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  const mnemonic = new Mnemonic("your twenty four word mnemonic ...");
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+  const privateKey = account.derivePath("0/0").toPrivateKey();
+  const senderAddress = privateKey
+    .toPublicKey()
+    .toAddress("mainnet")
+    .toString();
+
+  // 2. Set up UTXO tracking
+  const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+  await context.trackAddresses([senderAddress]);
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // 3. Strategy A: Single transaction with multiple outputs
+  //    Best when you want all payments in one transaction
+  const outputs = payments.map((p) => ({
+    address: p.address,
+    amount: p.amount,
+  }));
+
+  const { transactions, summary } = await createTransactions({
+    entries: context,
+    outputs: outputs,
+    changeAddress: senderAddress,
+    priorityFee: 0n,
+  });
+
+  console.log("Batch transaction count:", transactions.length);
+  console.log("Summary:", summary);
+
+  for (const tx of transactions) {
+    tx.sign([privateKey]);
+    const txId = await tx.submit(rpc);
+    console.log("Submitted:", txId);
+  }
+
+  // Clean up
+  await processor.stop();
+  await rpc.disconnect();
+}
+
+// Strategy B: Sequential individual transactions
+// Use when you need separate transaction IDs per payment
+async function sequentialSend(payments: Payment[]) {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  const mnemonic = new Mnemonic("your twenty four word mnemonic ...");
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+  const privateKey = account.derivePath("0/0").toPrivateKey();
+  const senderAddress = privateKey
+    .toPublicKey()
+    .toAddress("mainnet")
+    .toString();
+
+  const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+  await context.trackAddresses([senderAddress]);
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  const results: { address: string; txId: string }[] = [];
+
+  for (const payment of payments) {
+    // Build a transaction for each payment
+    const { transactions } = await createTransactions({
+      entries: context,
+      outputs: [
+        {
+          address: payment.address,
+          amount: payment.amount,
+        },
+      ],
+      changeAddress: senderAddress,
+      priorityFee: 0n,
+    });
+
+    // Submit all transactions in the chain (compound + final)
+    let lastTxId = "";
+    for (const tx of transactions) {
+      tx.sign([privateKey]);
+      lastTxId = await tx.submit(rpc);
+    }
+
+    results.push({ address: payment.address, txId: lastTxId });
+    console.log(`Sent ${payment.amount} sompi to ${payment.address}: ${lastTxId}`);
+
+    // Wait for UTXO context to update with new change outputs
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  console.log("\nAll payments completed:", results);
+
+  await processor.stop();
+  await rpc.disconnect();
+}
+
+// Example usage
+const payments: Payment[] = [
+  { address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi(1.0) },
+  { address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d", amount: kaspaToSompi(2.5) },
+  { address: "kaspa:qp9v6090sr2jt4kf3j8r4y63luhfmev555ghq4gl4v", amount: kaspaToSompi(0.75) },
+];
+
+batchSend(payments).catch(console.error);
+```
+
+## Explanation
+
+### Strategy A: Multiple outputs in one transaction
+
+This approach includes all recipient outputs in a single `createTransactions` call. The SDK builds one logical transaction (which may result in compound transactions if UTXO consolidation is needed).
+
+**Advantages:**
+- Fewer total transactions, lower aggregate fees
+- All payments are atomic -- they either all confirm or none do
+- Simpler to track (one or few transaction IDs)
+
+**Limitations:**
+- Higher transaction mass (more outputs means more bandwidth and storage mass)
+- The maximum transaction mass of 100,000 limits how many outputs a single transaction can contain (roughly 80--100 outputs depending on script sizes)
+
+### Strategy B: Sequential individual transactions
+
+This approach sends one transaction per payment. After each send, the UTXO context updates with the new change output, which becomes available for the next transaction.
+
+**Advantages:**
+- Each payment has its own transaction ID for independent tracking
+- Works for any number of payments without mass limits per transaction
+- Individual payments can use different fee priorities
+
+**Limitations:**
+- More total transactions, higher aggregate fees
+- Each subsequent transaction depends on the change from the previous one
+- Requires waiting for the UTXO context to update between sends
+
+### UTXO dependencies
+
+When sending sequential transactions from the same wallet, each transaction creates a change output that the next transaction may need to consume. The `UtxoContext` automatically tracks these changes when connected to the node. The brief delay between sends ensures the context has received the update.
+
+<Callout type="info">
+For high-volume payment systems (exchanges, payment processors), consider pre-splitting your balance into multiple UTXOs across different addresses. This allows you to send from multiple addresses concurrently without UTXO dependency chains.
+</Callout>
+
+## Further Reading
+
+- [Send KAS](/docs/cookbook/transactions/send-kas) -- Basic single transaction.
+- [UTXO Consolidation](/docs/cookbook/transactions/utxo-consolidation) -- Merge small UTXOs for more efficient batching.
+- [Estimate Fees](/docs/cookbook/transactions/estimate-fees) -- Estimate total fees for batch operations.

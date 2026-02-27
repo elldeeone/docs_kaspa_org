@@ -1,0 +1,132 @@
+---
+title: "Monitoring Setup with Prometheus and Grafana"
+description: "Set up Prometheus and Grafana monitoring for a Kaspa node: export metrics from RPC, configure scraping, and build dashboards for block rate, peer count, mempool, and sync status."
+---
+
+This guide walks through building a monitoring stack for a Kaspa node using Prometheus and Grafana. You will create an exporter that polls kaspad's RPC and exposes Prometheus-format metrics.
+
+## Architecture
+
+```
+kaspad (RPC) --> kaspa-exporter (:9333) --> Prometheus --> Grafana
+```
+
+## Step 1 -- Build a Metrics Exporter
+
+kaspad does not natively expose a `/metrics` endpoint, so we bridge the gap with a small Node.js script.
+
+```typescript
+// kaspa-exporter.ts
+import { RpcClient, Encoding } from "kaspa-wasm";
+import { createServer } from "node:http";
+
+const rpc = new RpcClient({ url: "ws://127.0.0.1:16110", encoding: Encoding.Borsh });
+
+async function collectMetrics(): Promise<string> {
+  const info = await rpc.getInfo();
+  const dag = await rpc.getBlockDagInfo();
+  const peers = await rpc.getConnectedPeerInfo();
+  const lines: string[] = [];
+  const g = (n: string, h: string, v: number | bigint) => {
+    lines.push(`# HELP ${n} ${h}`, `# TYPE ${n} gauge`, `${n} ${v}`);
+  };
+  g("kaspa_synced", "Node synced (1/0)", info.isSynced ? 1 : 0);
+  g("kaspa_daa_score", "Virtual DAA score", dag.virtualDaaScore);
+  g("kaspa_peer_count", "Connected peers", peers.infos?.length ?? 0);
+  g("kaspa_mempool_size", "Mempool txs", info.mempoolSize ?? 0);
+  g("kaspa_block_count", "Total blocks", dag.blockCount);
+  g("kaspa_difficulty", "Mining difficulty", dag.difficulty);
+  return lines.join("\n") + "\n";
+}
+
+async function main() {
+  await rpc.connect();
+  createServer(async (req, res) => {
+    if (req.url !== "/metrics") { res.writeHead(404); res.end(); return; }
+    try {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end(await collectMetrics());
+    } catch { res.writeHead(500); res.end("Error"); }
+  }).listen(9333, () => console.log("Exporter on :9333"));
+}
+main().catch(console.error);
+```
+
+```bash
+npx tsx kaspa-exporter.ts
+curl http://localhost:9333/metrics
+```
+
+## Step 2 -- Configure Prometheus
+
+Add the exporter as a scrape target:
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: "kaspa"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["localhost:9333"]
+```
+
+<Callout type="info">
+A 15-second scrape interval is a good default. Kaspa produces blocks every 100 ms (10 BPS), but node-level metrics change on a slower timescale.
+</Callout>
+
+```bash
+prometheus --config.file=prometheus.yml
+```
+
+Verify the target is UP at `http://localhost:9090/targets`.
+
+## Step 3 -- Create Grafana Dashboards
+
+Add Prometheus as a data source in Grafana (`http://localhost:3000`), then create panels:
+
+| Panel | PromQL | Type |
+|---|---|---|
+| Sync status | `kaspa_synced` | Stat (1=green, 0=red) |
+| Block rate | `rate(kaspa_daa_score[5m])` | Time series |
+| Peer count | `kaspa_peer_count` | Gauge |
+| Mempool size | `kaspa_mempool_size` | Time series |
+| Block count | `rate(kaspa_block_count[5m])` | Time series |
+| Difficulty | `kaspa_difficulty` | Time series |
+
+## Step 4 -- Configure Alerts
+
+Define alerting rules in Prometheus:
+
+```yaml
+# kaspa-alerts.yml
+groups:
+  - name: kaspa
+    rules:
+      - alert: KaspaNodeNotSynced
+        expr: kaspa_synced == 0
+        for: 5m
+        labels: { severity: critical }
+      - alert: KaspaLowPeerCount
+        expr: kaspa_peer_count < 5
+        for: 10m
+        labels: { severity: warning }
+      - alert: KaspaDaaStalled
+        expr: rate(kaspa_daa_score[5m]) == 0
+        for: 2m
+        labels: { severity: critical }
+```
+
+<Callout type="warn">
+Always include a `for` duration on alerts to avoid false positives. A node may briefly report `isSynced: false` during normal operation.
+</Callout>
+
+## Running as a Service
+
+For production, run the exporter under systemd alongside kaspad. Create `/etc/systemd/system/kaspa-exporter.service` with `Type=simple`, `User=kaspa`, `After=kaspad.service`, and `Restart=on-failure`.
+
+## Next Steps
+
+- [Production Node](/docs/guides/production-node) -- Full production hardening guide.
+- [Monitoring](/docs/node-operations/monitoring) -- Built-in kaspad monitoring features.
+- [Configuration](/docs/node-operations/configuration) -- `--perf-metrics` flag reference.
+- [Troubleshooting](/docs/node-operations/troubleshooting) -- Diagnosing issues found via monitoring.

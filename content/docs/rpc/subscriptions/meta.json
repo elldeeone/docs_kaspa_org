@@ -1,0 +1,10 @@
+{
+  "title": "Subscriptions",
+  "pages": [
+    "overview",
+    "block-added", "virtual-chain-changed", "finality-conflict",
+    "utxos-changed", "sink-blue-score-changed",
+    "virtual-daa-score-changed", "pruning-point-utxo-set-override",
+    "new-block-template"
+  ]
+}

@@ -1,0 +1,82 @@
+---
+title: Subscribe to New Blocks
+description: "Listen for new blocks added to the Kaspa DAG in real-time using wRPC subscriptions."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **Connection to a Kaspa node** via wRPC (port 17110 on mainnet)
+
+<Callout type="info">
+Kaspa produces 10 blocks per second (10 BPS). Block subscriptions deliver a notification
+for every block added to the DAG, so your event handler must be lightweight to keep up
+with the throughput.
+</Callout>
+
+## Code
+
+```typescript
+import { RpcClient, Resolver, Encoding } from "kaspa-wasm";
+
+async function subscribeToBlocks() {
+  // 1. Connect to a Kaspa node
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+  console.log("Connected to Kaspa node");
+
+  // 2. Subscribe to block-added notifications
+  await rpc.subscribeBlockAdded();
+
+  // 3. Handle incoming block notifications
+  rpc.addEventListener("block-added", (event) => {
+    const block = event.data.block;
+    console.log(`Block: ${block.verboseData.hash}`);
+    console.log(`  DAA Score: ${block.header.daaScore}`);
+    console.log(`  Blue Score: ${block.header.blueScore}`);
+    console.log(`  Transactions: ${block.transactions.length}`);
+  });
+
+  console.log("Listening for new blocks... (Press Ctrl+C to stop)");
+  await new Promise(() => {});
+}
+
+subscribeToBlocks().catch(console.error);
+```
+
+## Explanation
+
+`subscribeBlockAdded` registers for notifications whenever a new block is added to the
+DAG. Each notification includes the full block data:
+
+| Field | Description |
+|---|---|
+| `block.verboseData.hash` | Unique block hash identifier |
+| `block.header.daaScore` | Difficulty Adjustment Algorithm score at this block |
+| `block.header.blueScore` | Number of blue blocks in the selected chain up to this block |
+| `block.header.timestamp` | Block creation time (milliseconds since Unix epoch) |
+| `block.header.parents` | Parent block hashes organized by level |
+| `block.transactions` | Array of transactions included in the block |
+
+### Unsubscribing
+
+To stop receiving notifications without disconnecting from the node:
+
+```typescript
+await rpc.unsubscribeBlockAdded();
+```
+
+<Callout type="warn">
+At 10 BPS, avoid blocking I/O (database writes, HTTP requests) inside the event handler.
+Use an async queue or buffer if you need to persist block data.
+</Callout>
+
+## Further Reading
+
+- [Block Added Subscription](/docs/rpc/subscriptions/block-added) -- Full reference for the block-added notification format.
+- [Connect via wRPC](/docs/cookbook/node/connect-wrpc) -- Establish the wRPC connection used by subscriptions.
+- [GHOSTDAG](/docs/core-concepts/ghostdag) -- How blocks are ordered in the DAG.

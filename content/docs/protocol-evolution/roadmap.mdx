@@ -1,0 +1,119 @@
+---
+title: "Roadmap"
+description: "Kaspa's technical roadmap — from DAGKnight consensus to smart contracts and beyond."
+---
+
+## Current State
+
+Following the successful activation of the [Crescendo hardfork](/docs/protocol-evolution/crescendo), Kaspa operates at **10 blocks per second** using the GHOSTDAG consensus protocol with K=124. The network produces approximately 864,000 blocks per day, delivers sub-second first confirmations, and supports a growing ecosystem of wallets, miners, and applications.
+
+Kaspa's reference node implementation, `rusty-kaspa`, is written in Rust and actively maintained by a global community of contributors.
+
+<Callout type="info">
+Kaspa does not have a centralized development team with a fixed roadmap timeline. The items described on this page reflect the current direction of research and development as discussed publicly by contributors. Priorities, timelines, and specific approaches are subject to change based on research outcomes and community consensus.
+</Callout>
+
+## Near-Term Goals
+
+### DAGKnight Consensus
+
+The most anticipated protocol upgrade is the transition from GHOSTDAG to **DAGKnight** — a next-generation consensus protocol developed by the same researchers. DAGKnight provides a fundamental improvement over GHOSTDAG:
+
+- **Parameterless consensus.** GHOSTDAG requires a pre-configured K parameter based on assumptions about network delay. If actual delay exceeds the assumed bound, security degrades. DAGKnight dynamically adapts to observed network conditions, eliminating the need to hard-code delay assumptions.
+- **Optimal Byzantine fault tolerance.** DAGKnight achieves the theoretical optimum for BFT in a proof-of-work DAG setting, providing the strongest possible security guarantees for any given network condition.
+- **Faster confirmation times.** By adapting to real-time network conditions rather than worst-case assumptions, DAGKnight can provide faster confirmation guarantees when the network is performing well.
+
+DAGKnight is based on peer-reviewed research and is currently in the specification and implementation phase. Its activation will require a KIP and hardfork.
+
+<Callout>
+DAGKnight is not a replacement for GHOSTDAG in the sense of being a completely different system. It is a strict upgrade — DAGKnight generalizes GHOSTDAG by removing the fixed K parameter and dynamically computing the equivalent of K from the DAG structure itself. A GHOSTDAG BlockDAG is a valid DAGKnight BlockDAG.
+</Callout>
+
+### Further Block Rate Increases
+
+With Crescendo establishing 10 BPS as the baseline, research continues into higher block rates — potentially 32 BPS or beyond. Higher block rates would provide:
+
+- Even faster confirmation times.
+- Higher aggregate transaction throughput.
+- A foundation for more responsive smart contract execution.
+
+Each block rate increase requires recalculating consensus parameters, evaluating network propagation characteristics, and testing extensively. These changes follow the KIP process.
+
+## Medium-Term Goals
+
+### Smart Contract Layer
+
+Kaspa's scripting capabilities are currently limited to basic transaction scripts. The reactivation of opcodes (KIP-10) and the development of more expressive scripting are steps toward a broader smart contract capability:
+
+- **Opcode reactivation (KIP-10).** Re-enabling disabled opcodes to support conditional logic, arithmetic, and hash-locked contracts.
+- **Transient mass (KIP-13).** Refining the mass model to more accurately price computational resources, which is a prerequisite for efficient smart contract execution.
+- **Contract execution environment.** Research into what form a smart contract layer should take — whether it is a native scripting extension, an embedded VM, or a layered architecture.
+
+The design philosophy for Kaspa smart contracts prioritizes simplicity and security over feature completeness. The goal is to enable programmability without introducing the complexity and attack surface of a full EVM-style execution environment.
+
+### Archival Node Improvements
+
+As the network operates at 10 BPS and potentially higher in the future, the volume of data grows proportionally. Improvements to archival node infrastructure include:
+
+- More efficient storage formats for historical block data.
+- Better indexing for historical transaction queries.
+- Optimized initial block download (IBD) for new archival nodes joining the network.
+
+Pruned nodes already keep storage requirements bounded, but archival nodes (which retain the full history) require ongoing optimization to remain practical.
+
+## Long-Term Vision
+
+### Optical Mining
+
+Kaspa's kHeavyHash proof-of-work algorithm was designed with optical computing in mind. The core operation — a 64x64 matrix multiplication — maps naturally to photonic processors that can perform matrix operations using light rather than electricity.
+
+If optical mining hardware reaches commercial production, it could:
+
+- Reduce the energy cost of proof-of-work mining by orders of magnitude.
+- Fundamentally change the economics of PoW sustainability.
+- Demonstrate that proof-of-work does not inherently require massive energy consumption.
+
+This is a long-term research direction that depends on advances in photonic hardware beyond Kaspa's direct control, but the algorithm was intentionally designed to be ready for this future.
+
+### Maximum Decentralization
+
+The long-term vision for Kaspa is a network where:
+
+- Block rates are high enough for real-time applications.
+- Node operation remains accessible on consumer hardware.
+- Mining is distributed across a large, geographically diverse set of participants.
+- Protocol governance remains open and permissionless.
+
+Every protocol change is evaluated against these decentralization goals. Throughput increases that would price out small node operators or centralize mining are not pursued.
+
+<Callout type="warn">
+This roadmap describes research directions and community aspirations, not commitments. Kaspa has no corporate entity making binding promises about timelines. Each item requires a KIP, community consensus, rigorous testing, and a successful hardfork activation. Some items may be deprioritized, redesigned, or abandoned based on what the research and engineering work reveals.
+</Callout>
+
+## Research Areas
+
+Active areas of academic and applied research relevant to Kaspa's future:
+
+- **DAGKnight formal analysis.** Continued formal verification and security proofs for the DAGKnight protocol under various adversarial models.
+- **Propagation optimization.** Techniques to reduce block propagation latency as block rates increase, including compact block relay and improved peer selection algorithms.
+- **Mass model refinement.** Ongoing analysis of transaction pricing to balance spam prevention, throughput, and fairness.
+- **Pruning and state management.** Research into more efficient state representations as the UTXO set grows over time.
+
+## Community Governance
+
+All protocol changes follow the [KIP process](/docs/protocol-evolution/kips-overview). This means:
+
+- Anyone can propose a change.
+- Proposals undergo public technical review.
+- Activation requires broad consensus among node operators, miners, and the wider community.
+- There is no single entity that can unilaterally push through or block a protocol change.
+
+This governance model is slower and less predictable than a centrally managed roadmap, but it ensures that Kaspa's evolution reflects the genuine consensus of its participants rather than the priorities of a single organization.
+
+## Further Reading
+
+- [Crescendo](/docs/protocol-evolution/crescendo) — The hardfork that established 10 BPS as the current baseline.
+- [KIPs Overview](/docs/protocol-evolution/kips-overview) — How protocol changes are proposed and activated.
+- [KIP Index](/docs/protocol-evolution/kip-index) — Current status of all proposals.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — The current consensus protocol that DAGKnight will upgrade.
+- [kHeavyHash](/docs/mining/kheavyhash) — The optical-mining-ready proof-of-work algorithm.

@@ -1,0 +1,35 @@
+---
+title: "Unban"
+description: "Remove a ban on a peer IP address, allowing it to connect again."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ip` | string | Yes | The IP address to unban (without port). |
+
+## Response
+
+Empty response on success.
+
+## Example
+
+```json
+// Request
+{
+  "method": "unban",
+  "params": {
+    "ip": "203.0.113.50"
+  }
+}
+
+// Response
+{}
+```
+
+## Notes
+
+- After unbanning, the IP is removed from the ban list and peers from that address can connect again.
+- The node will not automatically reconnect to the unbanned peer; it must either be added manually with `AddPeer` or discovered through normal peer exchange.
+- Use `GetPeerAddresses` to verify the ban was removed.

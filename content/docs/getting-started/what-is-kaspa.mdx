@@ -1,0 +1,90 @@
+---
+title: "What is Kaspa?"
+description: "An introduction to Kaspa — the fastest proof-of-work cryptocurrency powered by BlockDAG technology and the GHOSTDAG protocol."
+---
+
+## Kaspa at a Glance
+
+Kaspa is a proof-of-work cryptocurrency that replaces the traditional blockchain with a **BlockDAG** (Block Directed Acyclic Graph). Instead of a single chain where blocks are produced one at a time, Kaspa's DAG allows multiple blocks to be created in parallel and all of them to be included in the ledger. This architecture, combined with the [GHOSTDAG consensus protocol](/docs/core-concepts/ghostdag), enables Kaspa to achieve **10 blocks per second** with sub-second first confirmations — without sacrificing decentralization or security.
+
+<Callout>
+Kaspa is not a blockchain. It is a BlockDAG — a generalization of a blockchain where each block can reference multiple parents. This seemingly simple structural change unlocks dramatically higher throughput while preserving the full security guarantees of Nakamoto-style proof-of-work consensus.
+</Callout>
+
+## Key Differentiators
+
+**BlockDAG architecture.** Every block mined by every miner is included in the DAG. There are no orphan blocks, which means no wasted work and no wasted energy. This is fundamentally different from Bitcoin and other blockchains, where only one block per interval survives.
+
+**GHOSTDAG consensus.** The GHOSTDAG protocol deterministically orders all blocks in the DAG, resolving double-spends and establishing a canonical transaction history. It is a direct generalization of Nakamoto consensus — a traditional blockchain is simply a special case of a BlockDAG with width one.
+
+**10 blocks per second.** Following the Crescendo hardfork, Kaspa produces 10 blocks every second. First confirmations arrive in approximately 100 milliseconds, making Kaspa fast enough for point-of-sale and real-time payment use cases.
+
+**Fair mining with no orphans.** Because all blocks are included, small miners receive rewards proportional to their hashrate. There is no structural advantage to being a large miner with better network connectivity.
+
+**Pure proof-of-work with no pre-mine.** Kaspa launched with no ICO, no pre-mine, no dev tax, and no token allocation of any kind. Every KAS in existence was mined through proof-of-work, starting from a genesis block with zero coins.
+
+## History
+
+Kaspa launched on **November 7, 2021** as a fair-launch, community-driven project. The project originated from academic research on the PHANTOM and GHOSTDAG protocols, led by Yonatan Sompolinsky and collaborators. Key milestones include:
+
+- **November 2021** — Mainnet genesis block mined. Initial block rate of 1 BPS.
+- **2022-2023** — Rapid growth of mining community and ecosystem tooling.
+- **2024** — The Rust-based node implementation (`rusty-kaspa`) reached production readiness, replacing the original Go implementation.
+- **May 2025** — The **Crescendo** hardfork activated, increasing the block rate from 1 BPS to 10 BPS and adjusting all related consensus parameters.
+
+<Callout type="info">
+Kaspa's launch was one of the fairest in cryptocurrency history. There was no venture capital funding, no insider allocation, and no developer treasury. The founding team mined KAS using the same public mining software available to everyone else.
+</Callout>
+
+## The Vision
+
+Kaspa's vision is to be **fast, fair, decentralized digital cash** — a peer-to-peer electronic payment system that is practical for everyday use. The project aims to prove that proof-of-work can scale to high throughput without resorting to proof-of-stake, federated validators, or centralized sequencers.
+
+Core principles guiding Kaspa's development:
+
+- **Decentralization first.** Anyone can run a node. Anyone can mine. There are no staking requirements, no validator sets, and no permissioned roles.
+- **PoW sustainability.** The kHeavyHash mining algorithm is designed with future optical mining hardware in mind, potentially reducing the energy cost of proof-of-work by orders of magnitude.
+- **Academic rigor.** Protocol changes are grounded in peer-reviewed research and formal analysis, not marketing timelines.
+
+## Community-Driven Open Source
+
+Kaspa is developed entirely in the open. The primary node implementation, [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa), is written in Rust and licensed under ISC. There is no foundation controlling development funds and no corporate entity behind the protocol. Contributions come from independent developers, researchers, and community members coordinating through public channels.
+
+Protocol changes follow the [KIP (Kaspa Improvement Proposal)](/docs/protocol-evolution/kips-overview) process, which is open to anyone.
+
+## Network Overview
+
+At 10 BPS, the Kaspa network produces approximately **864,000 blocks per day**. The network is secured by a global pool of miners running the kHeavyHash proof-of-work algorithm. Key network characteristics include:
+
+| Property | Value |
+|---|---|
+| Block rate | 10 BPS |
+| First confirmation | ~100 ms |
+| Consensus protocol | GHOSTDAG (k=124) |
+| Mining algorithm | kHeavyHash |
+| Maximum supply | 28.7 billion KAS |
+| Emission schedule | Chromatic (smooth monthly reductions) |
+| Pre-mine | None |
+
+## How Kaspa Compares
+
+| | Bitcoin | Ethereum | Kaspa |
+|---|---|---|---|
+| Consensus | PoW (SHA-256) | PoS (Beacon Chain) | PoW (kHeavyHash) |
+| Block time | ~10 minutes | ~12 seconds | 100 ms |
+| Structure | Blockchain | Blockchain | BlockDAG |
+| Parallel blocks | Orphaned | N/A | All included |
+| First confirmation | ~10 minutes | ~12 seconds | ~100 ms |
+| Fair launch | Yes | ICO | Yes |
+| Smart contracts | Limited (Script) | Full (EVM) | In development |
+
+<Callout type="info">
+Kaspa and Bitcoin share a philosophical commitment to proof-of-work and fair distribution. The key difference is architectural: Kaspa's BlockDAG removes the throughput bottleneck inherent in a linear chain, allowing dramatically faster confirmations without weakening security assumptions.
+</Callout>
+
+## Further Reading
+
+- [Why Kaspa?](/docs/getting-started/why-kaspa) — A deeper look at how Kaspa solves fundamental blockchain limitations.
+- [BlockDAG Architecture](/docs/core-concepts/blockdag) — Technical details of the DAG structure.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — How consensus ordering works in Kaspa.
+- [Installation](/docs/getting-started/installation) — Get a Kaspa node running.

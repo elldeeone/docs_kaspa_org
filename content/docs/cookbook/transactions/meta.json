@@ -1,0 +1,10 @@
+{
+  "title": "Transactions",
+  "pages": [
+    "send-kas",
+    "estimate-fees",
+    "batch-transactions",
+    "track-confirmation",
+    "utxo-consolidation"
+  ]
+}

@@ -1,0 +1,103 @@
+---
+title: "Why Kaspa?"
+description: "Why Kaspa's BlockDAG approach solves fundamental blockchain limitations — speed, fairness, scalability, and proof-of-work sustainability."
+---
+
+## The Blockchain Trilemma
+
+Every cryptocurrency faces the **blockchain trilemma**: the tension between decentralization, security, and scalability. Traditional blockchains force a tradeoff — increasing throughput typically means either centralizing validation (larger blocks requiring expensive hardware) or weakening security (shorter block times causing high orphan rates).
+
+Kaspa's BlockDAG architecture approaches this trilemma differently. Instead of trying to make a single chain faster, Kaspa allows **many blocks to exist in parallel** and uses the GHOSTDAG protocol to order them after the fact. This means throughput scales with the number of parallel blocks rather than the size of individual blocks, preserving both decentralization and security.
+
+<Callout>
+The key insight behind Kaspa is that block ordering does not need to happen at block creation time. Miners produce blocks independently and concurrently. The GHOSTDAG protocol then determines a canonical ordering deterministically. This separation of block production from block ordering is what breaks the trilemma.
+</Callout>
+
+## Speed: Sub-Second Confirmations
+
+Speed is Kaspa's most immediately visible advantage. Here is how confirmation times compare across major Layer 1 networks:
+
+| Network | Block Time | First Confirmation | Practical Finality |
+|---|---|---|---|
+| Bitcoin | ~10 minutes | ~10 minutes | ~60 minutes (6 blocks) |
+| Ethereum | ~12 seconds | ~12 seconds | ~15 minutes (64 slots) |
+| Litecoin | ~2.5 minutes | ~2.5 minutes | ~15 minutes (6 blocks) |
+| Kaspa | 100 ms | ~100 ms | ~10 seconds (100 blocks) |
+
+At **10 blocks per second**, Kaspa achieves a first-confirmation latency of approximately 100 milliseconds. Within 10 seconds, a transaction has approximately 100 block confirmations, providing strong probabilistic security for most practical purposes.
+
+<Callout type="info">
+Kaspa's speed comes entirely from the BlockDAG architecture and GHOSTDAG consensus — not from compromising on decentralization. Every node independently validates every block, and anyone can mine with commodity hardware. There are no centralized sequencers, no committee selection, and no delegated validation.
+</Callout>
+
+## Fairness: No Orphan Blocks
+
+In traditional blockchains, when two miners find a block at nearly the same time, only one block survives. The other becomes an **orphan** — its miner receives no reward and the energy spent mining it is wasted. This creates a structural advantage for large mining operations with better network connectivity, since they can propagate blocks faster and win orphan races more often.
+
+In Kaspa's BlockDAG, **every valid block is included**. There are no orphans. This has profound implications for fairness:
+
+- **Small miners earn proportional rewards.** A miner with 0.1% of the network hashrate will earn approximately 0.1% of the block rewards over time, without variance penalties from orphaning.
+- **Geographic decentralization is preserved.** Miners in regions with higher latency are not penalized, because their blocks are included even if other miners find blocks first.
+- **No wasted energy.** Every unit of proof-of-work contributes to network security, regardless of whether another miner found a block at the same time.
+
+## Scalability Through Parallel Block Production
+
+Kaspa's throughput is not limited by the capacity of a single block. Instead, the aggregate transaction throughput is the sum of all parallel blocks produced across the network. At 10 BPS with a maximum block mass of 500,000, the network processes transactions across all blocks produced each second.
+
+This parallelism also means that scaling does not require increasing individual block sizes (which would raise hardware requirements for node operators). Future throughput increases can come from raising the block rate — the research path toward 32 BPS and beyond — while keeping individual blocks small and fast to validate.
+
+<Callout type="warn">
+Higher block rates require careful tuning of consensus parameters. The GHOSTDAG `k` parameter must be recalculated to account for increased parallelism, and network propagation characteristics must be re-evaluated. This is why block rate increases go through a rigorous KIP process and hardfork activation rather than simple configuration changes.
+</Callout>
+
+## Proof-of-Work Sustainability
+
+A common criticism of proof-of-work is energy consumption. Kaspa addresses this through two mechanisms:
+
+**kHeavyHash mining algorithm.** Kaspa uses the kHeavyHash proof-of-work algorithm, which was specifically designed to be efficient on optical computing hardware. The algorithm's core operation — a 64x64 matrix multiplication — maps naturally to photonic processors. If optical mining hardware reaches production, it could reduce the energy cost of mining by orders of magnitude compared to traditional silicon ASICs.
+
+**No wasted work.** Because there are no orphan blocks in the BlockDAG, 100% of the proof-of-work performed by miners contributes to network security. In Bitcoin, orphan blocks (and the energy used to mine them) are wasted. In Kaspa, that same energy would contribute to the ledger.
+
+## Security Model
+
+Kaspa inherits the full Nakamoto-style security model of proof-of-work:
+
+- **51% attack threshold.** An attacker needs more than 50% of the network's hashrate to reliably perform double-spend attacks, the same threshold as Bitcoin.
+- **No staking risks.** There are no slashing conditions, no "nothing at stake" problems, and no long-range attack vectors that affect proof-of-stake systems.
+- **Objective consensus.** A new node can independently verify the entire history of the network from genesis without trusting any third party. There is no need for weak subjectivity checkpoints.
+- **Permissionless participation.** Anyone can mine, run a node, or submit transactions without approval from any authority.
+
+## Comparison with Other Layer 1 Networks
+
+| Feature | Bitcoin | Ethereum | Solana | Kaspa |
+|---|---|---|---|---|
+| Consensus | PoW | PoS | PoS + PoH | PoW |
+| Block time | ~10 min | ~12 sec | ~400 ms | 100 ms |
+| Decentralization | High | Moderate | Lower | High |
+| Fair launch | Yes | ICO | VC-funded | Yes |
+| Orphan blocks | Yes | N/A | N/A | None |
+| Smart contracts | Limited | Full (EVM) | Full (SVM) | In development |
+| Min. hardware to validate | Moderate | High | Very high | Moderate |
+| Pre-mine / insider allocation | None | Yes | Yes | None |
+
+## Decentralization: Anyone Can Participate
+
+Kaspa is designed so that full participation requires no permission and no stake:
+
+- **Mining** requires only a GPU or ASIC and an internet connection. There is no minimum hashrate and no registration process.
+- **Running a full node** requires modest hardware — an SSD, a modern CPU, and a standard broadband connection. Pruned nodes keep storage requirements bounded.
+- **Protocol governance** follows the open KIP process. Anyone can propose a protocol change, and changes require broad community consensus to activate.
+
+There are no validator sets, no staking minimums, no delegation mechanisms, and no governance tokens. This makes Kaspa one of the most permissionlessly decentralized networks in operation.
+
+<Callout>
+Kaspa's commitment to proof-of-work is not nostalgic — it is principled. PoW is the only known consensus mechanism that allows fully permissionless, objective verification of the ledger by any participant without trust assumptions beyond the protocol rules themselves.
+</Callout>
+
+## Further Reading
+
+- [What is Kaspa?](/docs/getting-started/what-is-kaspa) — A high-level introduction to Kaspa and its history.
+- [BlockDAG Architecture](/docs/core-concepts/blockdag) — How the DAG structure enables parallel block production.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — The consensus protocol that orders blocks in the DAG.
+- [Crescendo](/docs/protocol-evolution/crescendo) — The hardfork that brought Kaspa to 10 BPS.
+- [kHeavyHash](/docs/mining/kheavyhash) — Details of Kaspa's optical-mining-friendly PoW algorithm.

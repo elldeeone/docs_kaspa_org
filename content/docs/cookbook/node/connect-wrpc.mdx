@@ -1,0 +1,216 @@
+---
+title: Connect via wRPC
+description: "Connect to a Kaspa node using the wRPC WebSocket protocol."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **A running Kaspa node** with wRPC enabled, or access to a public node via the Resolver
+
+<Callout type="info">
+wRPC (WebSocket RPC) is Kaspa's native RPC protocol. It supports both **Borsh** (binary, faster) and **JSON** (human-readable, easier to debug) encodings. wRPC is the recommended protocol for all WASM SDK applications.
+</Callout>
+
+## Code
+
+The following example demonstrates connecting to a Kaspa node with various configurations, handling connection events, and implementing reconnection logic:
+
+```typescript
+import {
+  RpcClient,
+  Resolver,
+  Encoding,
+} from "kaspa-wasm";
+
+// Approach 1: Connect via Resolver (automatic node discovery)
+async function connectViaResolver() {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+
+  // Set up connection event handlers before connecting
+  rpc.addEventListener("connect", () => {
+    console.log("Connected to node");
+  });
+
+  rpc.addEventListener("disconnect", () => {
+    console.log("Disconnected from node");
+  });
+
+  await rpc.connect();
+
+  // Verify the connection
+  const info = await rpc.getBlockDagInfo();
+  console.log("Network:", info.networkName);
+  console.log("DAA score:", info.virtualDaaScore);
+  console.log("Block count:", info.blockCount);
+
+  return rpc;
+}
+
+// Approach 2: Connect directly to a specific node
+async function connectDirect(url: string) {
+  const rpc = new RpcClient({
+    url: url,
+    encoding: Encoding.Borsh,
+  });
+
+  rpc.addEventListener("connect", () => {
+    console.log(`Connected to ${url}`);
+  });
+
+  rpc.addEventListener("disconnect", () => {
+    console.log(`Disconnected from ${url}`);
+  });
+
+  await rpc.connect();
+  return rpc;
+}
+
+// Approach 3: Connect with JSON encoding (useful for debugging)
+async function connectWithJson() {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.SerdeJson,
+    networkId: "mainnet",
+  });
+
+  await rpc.connect();
+  console.log("Connected with JSON encoding");
+
+  return rpc;
+}
+
+// Approach 4: Robust connection with retry logic
+async function connectWithRetry(
+  maxRetries: number = 5,
+  retryDelayMs: number = 3000
+) {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+
+  let connected = false;
+  let attempts = 0;
+
+  while (!connected && attempts < maxRetries) {
+    try {
+      attempts++;
+      console.log(`Connection attempt ${attempts}/${maxRetries}...`);
+      await rpc.connect();
+      connected = true;
+      console.log("Connected successfully.");
+    } catch (err) {
+      console.error(`Attempt ${attempts} failed:`, err.message);
+      if (attempts < maxRetries) {
+        console.log(`Retrying in ${retryDelayMs / 1000} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
+  }
+
+  if (!connected) {
+    throw new Error(`Failed to connect after ${maxRetries} attempts`);
+  }
+
+  // Set up automatic reconnection on disconnect
+  rpc.addEventListener("disconnect", async () => {
+    console.log("Connection lost. Attempting to reconnect...");
+    try {
+      await rpc.connect();
+      console.log("Reconnected successfully.");
+    } catch (err) {
+      console.error("Reconnection failed:", err.message);
+    }
+  });
+
+  return rpc;
+}
+
+// Full lifecycle example
+async function connectionLifecycle() {
+  const rpc = await connectViaResolver();
+
+  // Make some RPC calls
+  const serverInfo = await rpc.getServerInfo();
+  console.log("\nServer info:");
+  console.log("  RPC version:", serverInfo.rpcApiVersion);
+  console.log("  Server version:", serverInfo.serverVersion);
+
+  const dagInfo = await rpc.getBlockDagInfo();
+  console.log("\nDAG info:");
+  console.log("  Network:", dagInfo.networkName);
+  console.log("  Block count:", dagInfo.blockCount);
+  console.log("  Header count:", dagInfo.headerCount);
+  console.log("  DAA score:", dagInfo.virtualDaaScore);
+  console.log("  Difficulty:", dagInfo.difficulty);
+
+  // Gracefully disconnect
+  await rpc.disconnect();
+  console.log("\nDisconnected gracefully.");
+}
+
+connectionLifecycle().catch(console.error);
+```
+
+## Explanation
+
+### wRPC protocol
+
+wRPC is a WebSocket-based RPC protocol designed for Kaspa. It provides:
+
+- **Full-duplex communication**: The server can push notifications to the client (subscriptions)
+- **Binary encoding (Borsh)**: Compact and fast serialization, recommended for production
+- **JSON encoding (SerdeJson)**: Human-readable, useful for debugging and development
+
+### Default ports
+
+| Network | Borsh (wRPC) | JSON (wRPC) | gRPC |
+|---|---|---|---|
+| Mainnet | 17110 | 18110 | 16110 |
+| Testnet | 17210 | 18210 | 16210 |
+| Simnet | 17510 | 18510 | 16510 |
+
+### Resolver vs. direct connection
+
+**Resolver** automatically discovers public nodes for the specified network. It queries a set of known endpoints and selects one that is healthy and responsive. This is convenient for development and applications that do not require a dedicated node.
+
+**Direct connection** specifies the exact WebSocket URL. Use this for:
+
+- Connecting to your own node
+- Environments where outbound DNS is restricted
+- Production systems that need deterministic connectivity
+
+<Callout>
+For production applications handling real funds, always run your own Kaspa node and connect directly. Public nodes are shared resources and may impose rate limits or become temporarily unavailable.
+</Callout>
+
+### Connection events
+
+The `RpcClient` emits two key events:
+
+| Event | Fires when |
+|---|---|
+| `connect` | WebSocket connection is established |
+| `disconnect` | Connection is lost (network error, server restart, etc.) |
+
+Register event handlers before calling `connect()` to ensure you capture the initial connection event.
+
+### Reconnection strategies
+
+The SDK does not automatically reconnect on disconnect. Implement reconnection logic in the `disconnect` event handler. Consider:
+
+- **Exponential backoff**: Increase the delay between retries to avoid overwhelming the node
+- **Maximum retry count**: Give up after a reasonable number of attempts and alert the operator
+- **Health checks**: After reconnecting, verify the node is synced before resuming operations
+
+## Further Reading
+
+- [Connect via gRPC](/docs/cookbook/node/connect-grpc) -- Alternative protocol for server-side applications.
+- [Subscribe to Blocks](/docs/cookbook/node/subscribe-blocks) -- Use wRPC subscriptions for real-time data.
+- [Check Node Status](/docs/cookbook/node/check-node-status) -- Verify node health after connecting.

@@ -1,0 +1,41 @@
+---
+title: "AddPeer"
+description: "Manually add a peer address to the node's connection list."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | The IP address and port of the peer to add (e.g., `192.168.1.100:16111`). |
+| `isPermanent` | boolean | Yes | If `true`, the node will persistently try to connect to this peer and reconnect if disconnected. |
+
+## Response
+
+Empty response on success.
+
+## Example
+
+```json
+// Request
+{
+  "method": "addPeer",
+  "params": {
+    "address": "192.168.1.100:16111",
+    "isPermanent": true
+  }
+}
+
+// Response
+{}
+```
+
+## Notes
+
+<Callout type="info">
+This is an administrative method. It allows you to manually connect your node to a specific peer, which is useful for private networks, testing, or ensuring connectivity to a trusted node.
+</Callout>
+
+- Permanent peers are reconnected automatically if the connection drops.
+- The address must include the P2P port (not the RPC port).
+- The node will attempt to connect to the peer asynchronously after this call returns.

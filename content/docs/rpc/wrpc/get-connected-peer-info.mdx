@@ -1,0 +1,50 @@
+---
+title: "GetConnectedPeerInfo"
+description: "Get detailed information about all currently connected peers."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `infos` | object[] | Array of connected peer information objects. |
+| `infos[].id` | string | Unique identifier for the peer. |
+| `infos[].address` | string | The peer's network address (IP:port). |
+| `infos[].lastPingDuration` | u64 | Duration of the last ping round-trip in milliseconds. |
+| `infos[].isOutbound` | boolean | `true` if the node initiated the connection, `false` if the peer connected to us. |
+| `infos[].timeOffset` | i64 | Time offset between the peer's clock and the local clock in milliseconds. |
+| `infos[].userAgent` | string | The peer's user agent string (software name and version). |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getConnectedPeerInfo",
+  "params": {}
+}
+
+// Response
+{
+  "infos": [
+    {
+      "id": "peer-abc123",
+      "address": "192.168.1.100:16111",
+      "lastPingDuration": 45,
+      "isOutbound": true,
+      "timeOffset": -200,
+      "userAgent": "rusty-kaspa:0.15.0"
+    }
+  ]
+}
+```
+
+## Notes
+
+- The `lastPingDuration` is useful for diagnosing network latency issues.
+- Large `timeOffset` values may indicate clock synchronization problems on remote peers.
+- The `userAgent` field shows the software and version of the connected peer.

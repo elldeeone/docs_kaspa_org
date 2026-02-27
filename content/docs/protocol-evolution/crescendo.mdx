@@ -1,0 +1,105 @@
+---
+title: "Crescendo"
+description: "The Crescendo hardfork — Kaspa's transition to 10 blocks per second and the technical changes involved."
+---
+
+## What is Crescendo?
+
+Crescendo is the name of the **hardfork** that transitioned the Kaspa network from 1 block per second (1 BPS) to **10 blocks per second (10 BPS)**. Formally defined in KIP-14, Crescendo was the most significant protocol upgrade in Kaspa's history, delivering a 10x increase in block production rate while preserving the security guarantees of the GHOSTDAG consensus protocol.
+
+The name "Crescendo" — a musical term meaning a gradual increase in volume — reflects the nature of the upgrade: a carefully orchestrated increase in network throughput.
+
+<Callout>
+Crescendo was not simply a parameter change. Increasing the block rate from 1 BPS to 10 BPS required recalculating and adjusting more than a dozen interdependent consensus parameters to maintain security, liveness, and performance at the higher block rate.
+</Callout>
+
+## Activation Mechanism
+
+Crescendo activated via a **DAA score threshold**. When the network's DAA (Difficulty Adjustment Algorithm) score reached a predetermined value, all upgraded nodes simultaneously switched to the new consensus rules. This deterministic activation mechanism ensured that there was no ambiguity about when the new rules took effect.
+
+Node operators, miners, exchanges, and wallet providers were required to upgrade to a Crescendo-compatible version of `rusty-kaspa` before the activation DAA score. Nodes running older software fell out of consensus at the activation point and could not follow the 10 BPS chain.
+
+## What Changed
+
+The following table summarizes the key parameter changes introduced by Crescendo:
+
+| Parameter | Pre-Crescendo (1 BPS) | Post-Crescendo (10 BPS) | Rationale |
+|---|---|---|---|
+| Block rate | 1 BPS | 10 BPS | Core throughput increase |
+| GHOSTDAG K | 18 | 124 | Higher K needed to tolerate more parallel blocks at the faster rate |
+| DAA window size | 2,641 blocks | 2,641 blocks | Adjusted to maintain equivalent time coverage at 10 BPS |
+| Finality depth | 86,400 blue score | 86,400 blue score | Maintains the same wall-clock finality duration |
+| Pruning depth | Scaled to 1 BPS | Scaled to 10 BPS | Maintains the same wall-clock pruning window |
+| Timestamp deviation | 132 seconds | 132 seconds | Scaled for the new block rate |
+| Max block parents | 10 | 16 | Increased to accommodate wider DAG at 10 BPS |
+| Maximum block mass | 500,000 | 500,000 | Per-block mass unchanged; aggregate throughput increases via more blocks |
+| Coinbase maturity | 100 blue score | 100 blue score | Maintained at same blue score depth |
+| Mergeset size limit | 180 | Scaled to K | Increased proportionally with GHOSTDAG K |
+
+<Callout type="info">
+Many parameters appear unchanged in their numerical values (like finality depth at 86,400 blue score) because they are defined in terms of blue score rather than wall-clock time. Since blue score accumulates 10x faster at 10 BPS, the wall-clock equivalent of these parameters changed accordingly. For example, 86,400 blue score at 1 BPS is approximately 24 hours; at 10 BPS, it corresponds to approximately 2.4 hours.
+</Callout>
+
+## GHOSTDAG K: The Critical Parameter
+
+The most technically significant change in Crescendo was increasing GHOSTDAG K from 18 to 124. The K parameter defines the maximum anticone size the protocol tolerates for blue blocks, and it must be set high enough that honest parallel blocks during normal network propagation delays do not exceed it.
+
+The formula from the PHANTOM paper calculates K using `x = 2Dλ`, where D is the network delay bound (5 seconds) and λ is the block rate. For 10 BPS:
+
+```
+x = 2 × 5 × 10 = 100
+K = 124 (at δ = 0.01, meaning <1% probability of exceeding K)
+```
+
+This ensures that even under worst-case network conditions, the probability of honest blocks having an anticone larger than K is less than 1%.
+
+## Timeline
+
+- **KIP-14 drafted** — The Crescendo proposal was formally written and submitted to the KIPs repository.
+- **Community review** — Extensive discussion and analysis of the parameter changes, security implications, and upgrade logistics.
+- **Implementation** — The Crescendo changes were implemented in `rusty-kaspa` and underwent thorough testing on testnet networks.
+- **Testnet activation** — Crescendo was activated on testnet-10 and testnet-11 for real-world validation.
+- **Mainnet activation (May 2025)** — Crescendo activated on mainnet at the predetermined DAA score, transitioning the live network to 10 BPS.
+
+## Impact on Miners
+
+Crescendo affected miners in several ways:
+
+- **Block rewards.** The per-block subsidy was adjusted so that the total emission rate remained consistent with the chromatic emission schedule. Miners produce 10x more blocks but each block carries a proportionally smaller reward.
+- **Mining software.** Miners needed to update their mining software (or the node it connects to) to a Crescendo-compatible version. The kHeavyHash algorithm itself did not change.
+- **Block propagation.** At 10 BPS, efficient block propagation becomes more important. Miners benefit from low-latency connections to the network to minimize the time between receiving a new block template and submitting their solution.
+
+<Callout type="warn">
+Miners running pre-Crescendo software after the activation point will mine blocks that are rejected by the upgraded network. It is essential to upgrade before the activation DAA score.
+</Callout>
+
+## Impact on Wallets and Applications
+
+- **Faster confirmations.** Applications that count block confirmations benefit directly from the 10x increase in confirmation rate. A transaction that previously took 10 seconds to reach 10 confirmations now achieves the same depth in 1 second.
+- **RPC compatibility.** The RPC interface remained backward-compatible. Existing RPC calls work the same way, but return data at a higher rate. Applications polling for new blocks should be prepared for 10x the event frequency.
+- **Address format.** No changes to address format or transaction structure. Wallets do not need to change how they construct or sign transactions.
+- **SDK updates.** The Kaspa WASM SDK and other client libraries were updated to account for the new parameters. Applications should use the latest SDK versions.
+
+## Ensuring Your Node is Crescendo-Ready
+
+If you are running a Kaspa node, verify that you are on a Crescendo-compatible release:
+
+```bash
+./target/release/kaspad --version
+```
+
+Ensure the version is at or above the minimum Crescendo-compatible release. If your node was synced before the hardfork, it will automatically follow the 10 BPS chain after the activation DAA score as long as it is running the correct software version.
+
+## Post-Crescendo Network
+
+Since Crescendo activation, the Kaspa network operates at 10 BPS, producing approximately **864,000 blocks per day**. The DAG is wider (more parallel blocks at any given moment), blue score accumulates faster, and first confirmations arrive in approximately 100 milliseconds.
+
+The successful activation of Crescendo validated the BlockDAG architecture's ability to support high block rates and demonstrated the community's capacity to coordinate a major consensus upgrade.
+
+## Further Reading
+
+- [KIPs Overview](/docs/protocol-evolution/kips-overview) — The governance process through which Crescendo was proposed and approved.
+- [BlockDAG Architecture](/docs/core-concepts/blockdag) — How the DAG structure supports 10 BPS.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — The consensus protocol and how K=124 works at 10 BPS.
+- [Network Parameters](/docs/reference/network-params) — Complete reference of current mainnet parameters.
+- [Roadmap](/docs/protocol-evolution/roadmap) — What comes after Crescendo.

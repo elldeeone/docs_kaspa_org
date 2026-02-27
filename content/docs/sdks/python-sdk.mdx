@@ -1,0 +1,119 @@
+---
+title: Python SDK
+description: "Use Kaspa from Python via PyO3 bindings — scripting, automation, and data analysis."
+---
+
+## What Is the Python SDK?
+
+The Kaspa Python SDK provides Python bindings to the core Rust crates via [PyO3](https://pyo3.rs/). Rather than reimplementing protocol logic in Python, the SDK calls directly into compiled Rust code. This means address derivation, transaction signing, and hash functions are identical to the canonical implementation while remaining accessible through familiar Python syntax.
+
+<Callout type="info">
+The Python SDK is currently in beta. The API surface covers the most common wallet and RPC operations, but some advanced features available in the Rust crates or WASM SDK may not yet be exposed. Check the repository for the latest supported functionality.
+</Callout>
+
+## Installation
+
+```bash
+pip install kaspa
+```
+
+Precompiled wheels are available for Linux x86_64, macOS ARM64/x86_64, and Windows x86_64. Without a wheel, pip compiles from source (requires a Rust toolchain).
+
+<Callout type="warn">
+The package name on PyPI may differ from `kaspa`. Check the [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa) for the current package name.
+</Callout>
+
+## Connecting to a Node
+
+```python
+import asyncio
+from kaspa import RpcClient
+
+async def main():
+    rpc = RpcClient(url="ws://127.0.0.1:16110")
+    await rpc.connect()
+
+    info = await rpc.get_block_dag_info()
+    print(f"Network: {info.network_name}")
+    print(f"DAA score: {info.virtual_daa_score}")
+
+    await rpc.disconnect()
+
+asyncio.run(main())
+```
+
+The SDK uses `asyncio` for all RPC operations. You can also use the `Resolver` class for automatic public node discovery.
+
+## Generating Keys and Addresses
+
+```python
+from kaspa import Mnemonic, XPrv
+
+mnemonic = Mnemonic.random(24)
+print(f"Seed phrase: {mnemonic.phrase}")
+
+seed = mnemonic.to_seed("")
+xprv = XPrv(seed)
+account = xprv.derive_path("m/44'/111111'/0'")
+receive_key = account.derive_path("0/0").to_private_key()
+address = receive_key.to_public_key().to_address("mainnet")
+print(f"Address: {address}")
+```
+
+## Querying Balances
+
+```python
+result = await rpc.get_balance_by_address(address="kaspa:qr35...")
+print(f"Balance: {int(result.balance) / 1e8} KAS")
+```
+
+For continuous monitoring, use `UtxoProcessor` and `UtxoContext` to track addresses and cache UTXOs in real time, the same pattern as the WASM SDK.
+
+## Sending Transactions
+
+```python
+from kaspa import create_transactions, kaspa_to_sompi, PrivateKey
+
+private_key = PrivateKey("your-hex-key")
+sender = private_key.to_public_key().to_address("mainnet")
+
+result = await create_transactions(
+    entries=context,
+    outputs=[{"address": "kaspa:recipient", "amount": kaspa_to_sompi(1.0)}],
+    change_address=str(sender),
+    priority_fee=0,
+)
+
+for tx in result.transactions:
+    tx.sign([private_key])
+    tx_id = await tx.submit(rpc)
+    print(f"Submitted: {tx_id}")
+```
+
+## Use Cases
+
+The Python SDK is well suited for tasks where development speed and ecosystem integration matter more than raw throughput:
+
+- **Automation** — Scheduled payments, batch UTXO consolidation, wallet sweeps.
+- **Analytics** — Query blockchain data and process it with pandas, numpy, or matplotlib.
+- **Testing** — Integration tests against testnet or simnet, address validation, transaction fuzz testing.
+- **Prototyping** — Experiment in Jupyter notebooks before porting to Rust or TypeScript.
+- **Monitoring** — Alerting scripts that watch addresses, track DAA scores, or detect unusual activity.
+
+## Limitations
+
+| Aspect | Python SDK | Rust / WASM |
+|---|---|---|
+| Performance | Bound by Python async loop | Native / near-native |
+| Consensus internals | Limited subset exposed | Full access |
+| Script evaluation | Not yet exposed | Full `kaspa-txscript` engine |
+| Multithreading | Limited by GIL | Full concurrency |
+
+For high-throughput applications (indexers, mining pools), use the Rust crates. For browser-based apps, use the WASM SDK. The Python SDK fills the gap for scripting, automation, and analysis workflows where convenience outweighs raw performance.
+
+## Further Reading
+
+- [SDK Overview](/docs/sdks/overview) — Compare all available Kaspa SDKs.
+- [Rust Crates](/docs/sdks/rust-crates) — The underlying Rust crates that power the Python bindings.
+- [RPC API Reference](/docs/developer-guide/rpc-api) — Full listing of RPC methods available through the Python client.
+- [Transactions](/docs/core-concepts/transactions) — Protocol-level transaction structure and fee model.

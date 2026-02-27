@@ -1,0 +1,83 @@
+---
+title: Query UTXOs for an Address
+description: "Retrieve and inspect unspent transaction outputs (UTXOs) for a Kaspa address."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **Connection to a Kaspa node** with the UTXO index enabled (`--utxoindex` flag)
+
+<Callout type="info">
+Kaspa uses the UTXO model. Each address holds one or more unspent outputs, and the sum of
+those outputs is the address balance. 1 KAS = 100,000,000 sompi.
+</Callout>
+
+## Code
+
+```typescript
+import { RpcClient, Resolver, Encoding } from "kaspa-wasm";
+
+async function queryUtxos(address: string) {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  // Query UTXOs for the address
+  const result = await rpc.getUtxosByAddresses([address]);
+
+  console.log(`Found ${result.entries.length} UTXOs for ${address}\n`);
+
+  let totalSompi = 0n;
+
+  for (const entry of result.entries) {
+    const kas = Number(entry.utxoEntry.amount) / 1e8;
+    totalSompi += BigInt(entry.utxoEntry.amount);
+
+    console.log(`${kas} KAS - TX: ${entry.outpoint.transactionId}:${entry.outpoint.index}`);
+    console.log(`  DAA Score: ${entry.utxoEntry.blockDaaScore}, Coinbase: ${entry.utxoEntry.isCoinbase}`);
+  }
+
+  console.log(`\nTotal balance: ${Number(totalSompi) / 1e8} KAS`);
+
+  await rpc.disconnect();
+}
+
+queryUtxos("kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0").catch(console.error);
+```
+
+## Explanation
+
+### UTXO entry fields
+
+Each entry returned by `getUtxosByAddresses` contains:
+
+| Field | Description |
+|---|---|
+| `outpoint.transactionId` | Hash of the transaction that created this output |
+| `outpoint.index` | Index of this output within the transaction |
+| `utxoEntry.amount` | Value in sompi (divide by 1e8 for KAS) |
+| `utxoEntry.blockDaaScore` | DAA score of the block that included the creating transaction |
+| `utxoEntry.isCoinbase` | Whether this output is a mining reward |
+| `utxoEntry.scriptPublicKey` | The locking script that defines who can spend this output |
+
+### Coinbase maturity
+
+Coinbase outputs (mining rewards) cannot be spent until they mature. Maturity is measured
+by the difference between the current virtual DAA score and the UTXO's `blockDaaScore`.
+Immature coinbase outputs appear in query results but are not available for spending.
+
+<Callout type="warn">
+The UTXO index must be enabled on the node you connect to. Without it,
+`getUtxosByAddresses` will return an error. Public resolver nodes may or may not have
+the UTXO index enabled.
+</Callout>
+
+## Further Reading
+
+- [UTXO Model](/docs/core-concepts/utxo-model) -- How the UTXO model works in Kaspa.
+- [Get Balance](/docs/cookbook/wallets/get-balance) -- Higher-level balance queries using the wallet API.
+- [UTXO Consolidation](/docs/cookbook/transactions/utxo-consolidation) -- Merge fragmented UTXOs to reduce transaction sizes.

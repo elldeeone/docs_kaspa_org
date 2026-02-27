@@ -1,0 +1,39 @@
+---
+title: "ResolveFinalityConflict"
+description: "Manually resolve a finality conflict by specifying the correct finality point block."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `finalityBlockHash` | string | Yes | The hash of the block to set as the finality point. |
+
+## Response
+
+Empty response on success.
+
+## Example
+
+```json
+// Request
+{
+  "method": "resolveFinalityConflict",
+  "params": {
+    "finalityBlockHash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5"
+  }
+}
+
+// Response
+{}
+```
+
+## Notes
+
+<Callout>
+This is an administrative method intended for emergency use only. Incorrectly resolving a finality conflict can cause your node to diverge from the rest of the network. Do not use this method unless you fully understand the implications.
+</Callout>
+
+- A finality conflict occurs when the node detects two competing chains that both have sufficient depth to be considered final.
+- Under normal network conditions, finality conflicts do not occur. This method exists as a safety mechanism for extraordinary situations.
+- When a finality conflict is detected, the node halts consensus progress until the conflict is resolved either automatically or via this method.

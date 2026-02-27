@@ -1,0 +1,42 @@
+---
+title: "GetPeerAddresses"
+description: "Get the list of known and banned peer addresses from the node's address book."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `knownAddresses` | object[] | List of known peer addresses with their metadata. |
+| `bannedAddresses` | string[] | List of banned IP addresses. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getPeerAddresses",
+  "params": {}
+}
+
+// Response
+{
+  "knownAddresses": [
+    { "address": "192.168.1.100:16111" },
+    { "address": "10.0.0.50:16111" }
+  ],
+  "bannedAddresses": [
+    "203.0.113.50"
+  ]
+}
+```
+
+## Notes
+
+- Known addresses are peers the node has discovered through DNS seeds, manual additions, or address exchange with connected peers.
+- Not all known addresses are currently connected; they are potential peers the node may connect to.
+- Banned addresses are IPs that have been explicitly banned via the `Ban` method or due to misbehavior.

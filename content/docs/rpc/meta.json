@@ -1,0 +1,11 @@
+{
+  "title": "RPC",
+  "pages": [
+    "overview",
+    "connecting",
+    "wrpc",
+    "grpc",
+    "rest",
+    "subscriptions"
+  ]
+}

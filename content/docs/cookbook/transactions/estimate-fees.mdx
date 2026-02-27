@@ -1,0 +1,157 @@
+---
+title: Estimate Fees
+description: "Estimate transaction fees before sending using the Kaspa WASM SDK."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **Connection to a Kaspa node** with an active `RpcClient`
+
+<Callout type="info">
+Kaspa transaction fees are calculated as `fee_rate x transaction_mass`. The mass is a multi-dimensional metric that accounts for compute cost (signature verification), bandwidth (serialized size), and UTXO storage impact. See [Fees and Mass](/docs/core-concepts/fees-and-mass) for the full breakdown.
+</Callout>
+
+## Code
+
+The following example demonstrates how to query fee estimates from a Kaspa node and calculate the total fee for a transaction:
+
+```typescript
+import {
+  RpcClient,
+  Resolver,
+  Encoding,
+  UtxoProcessor,
+  UtxoContext,
+  createTransactions,
+  kaspaToSompi,
+} from "kaspa-wasm";
+
+async function estimateFees() {
+  // 1. Connect to a Kaspa node
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  // 2. Retrieve fee estimates from the node
+  const feeEstimate = await rpc.getFeeEstimate();
+  console.log("Fee estimate buckets:");
+  console.log("  Priority:", feeEstimate.priorityBucket);
+  console.log("  Normal:", feeEstimate.normalBuckets);
+  console.log("  Low:", feeEstimate.lowBuckets);
+
+  // 3. For more detailed estimates with bucket breakdowns
+  const detailedEstimate = await rpc.getFeeEstimateExperimental({
+    verbose: true,
+  });
+  console.log("Detailed estimate:", detailedEstimate);
+
+  // 4. Calculate total fee for a specific transaction
+  // Set up UTXO tracking for the sender
+  const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+
+  const senderAddress = "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0";
+  await context.trackAddresses([senderAddress]);
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Build the transaction to determine its mass
+  const { transactions, summary } = await createTransactions({
+    entries: context,
+    outputs: [
+      {
+        address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d",
+        amount: kaspaToSompi(5.0),
+      },
+    ],
+    changeAddress: senderAddress,
+    priorityFee: 0n,
+  });
+
+  // 5. Read the mass and compute fees at each priority level
+  const priorityFeeRate = feeEstimate.priorityBucket.feerate;
+
+  console.log("\nTransaction details:");
+  console.log("  Number of transactions:", transactions.length);
+  console.log("  Summary:", summary);
+
+  // Estimate what the fee would be at priority rate
+  console.log("\nEstimated fees:");
+  console.log(
+    "  At priority rate (" + priorityFeeRate + " sompi/mass):",
+    "Use priorityFee parameter in createTransactions"
+  );
+
+  // 6. Rebuild with a priority fee to ensure fast confirmation
+  const { transactions: priorityTxs, summary: prioritySummary } =
+    await createTransactions({
+      entries: context,
+      outputs: [
+        {
+          address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d",
+          amount: kaspaToSompi(5.0),
+        },
+      ],
+      changeAddress: senderAddress,
+      priorityFee: kaspaToSompi(0.0001), // Small priority fee boost
+    });
+
+  console.log("Priority transaction summary:", prioritySummary);
+
+  // Clean up
+  await processor.stop();
+  await rpc.disconnect();
+}
+
+estimateFees().catch(console.error);
+```
+
+## Explanation
+
+### Fee estimate buckets
+
+The `getFeeEstimate` RPC method returns fee rate recommendations organized into three priority tiers:
+
+| Bucket | Meaning |
+|---|---|
+| **Priority** | Highest fee rate for inclusion in the very next block. Use this when speed is critical. |
+| **Normal** | An array of fee rate buckets representing reasonable fee levels for confirmation within a few seconds. |
+| **Low** | An array of lower fee rate buckets for transactions that can tolerate longer confirmation times. |
+
+Each bucket contains a `feerate` value in sompi per mass unit. The total fee for a transaction is:
+
+```
+total_fee = feerate x transaction_mass
+```
+
+### The experimental endpoint
+
+`getFeeEstimateExperimental` provides additional detail, including the estimated time-to-inclusion for each bucket. This is useful for building UIs that let users choose between speed and cost.
+
+### How createTransactions handles fees
+
+The `createTransactions` function computes the minimum required fee automatically based on the transaction mass. The `priorityFee` parameter adds an extra fee on top of the minimum to boost inclusion priority. When `priorityFee` is `0n`, the transaction pays only the minimum relay fee.
+
+<Callout>
+Under normal network conditions (no mempool congestion), the minimum relay fee is sufficient for near-instant inclusion because Kaspa's 10 BPS block rate provides ample capacity. You only need to increase fees during periods of sustained high demand.
+</Callout>
+
+### Mass components
+
+A standard 1-input, 2-output transaction has approximately:
+
+- **Compute mass**: 1,000 (one signature operation at 1,000 mass each)
+- **Transactional mass**: 300--400 (serialized byte size)
+- **Storage mass**: Varies based on input/output values (see KIP-9)
+
+The effective mass is the maximum of these three components, so for typical transactions the compute mass of 1,000 dominates.
+
+## Further Reading
+
+- [Fees and Mass](/docs/core-concepts/fees-and-mass) -- Complete mass calculation reference.
+- [Send KAS](/docs/cookbook/transactions/send-kas) -- Build and send a transaction.
+- [UTXO Consolidation](/docs/cookbook/transactions/utxo-consolidation) -- Reduce mass costs by consolidating UTXOs.

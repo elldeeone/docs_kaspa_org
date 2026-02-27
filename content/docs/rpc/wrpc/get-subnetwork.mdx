@@ -1,0 +1,40 @@
+---
+title: "GetSubnetwork"
+description: "Retrieve information about a specific subnetwork by its ID."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `subnetworkId` | string | Yes | The 20-byte hex-encoded subnetwork identifier. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gasLimit` | u64 | The gas limit for the specified subnetwork. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getSubnetwork",
+  "params": {
+    "subnetworkId": "0100000000000000000000000000000000000000"
+  }
+}
+
+// Response
+{
+  "gasLimit": 0
+}
+```
+
+## Notes
+
+- Subnetworks are a Kaspa feature that allows partitioning transaction processing. The native Kaspa subnetwork and the coinbase subnetwork are built-in.
+- The coinbase subnetwork ID is `0100000000000000000000000000000000000000`.
+- The native (regular transaction) subnetwork ID is `0000000000000000000000000000000000000000`.
+- Most applications do not need to interact with this method directly.

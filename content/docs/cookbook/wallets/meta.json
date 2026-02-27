@@ -1,0 +1,10 @@
+{
+  "title": "Wallets",
+  "pages": [
+    "create-wallet",
+    "restore-from-mnemonic",
+    "get-balance",
+    "generate-address",
+    "sign-message"
+  ]
+}

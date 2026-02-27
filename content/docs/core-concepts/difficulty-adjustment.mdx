@@ -1,0 +1,129 @@
+---
+title: Difficulty Adjustment
+description: How Kaspa's Difficulty Adjustment Algorithm (DAA) maintains consistent block production by adjusting difficulty every block using a windowed sampling approach.
+---
+
+## Overview
+
+Kaspa's **Difficulty Adjustment Algorithm (DAA)** ensures that blocks are produced at a consistent target rate despite fluctuations in the network's total hash power. Unlike Bitcoin, which adjusts difficulty every 2,016 blocks (approximately two weeks), Kaspa adjusts difficulty **every single block**. This per-block adjustment allows the network to respond rapidly to changes in hash rate, maintaining stable block production even during large mining power swings.
+
+<Callout>
+Kaspa adjusts difficulty on every block, providing a much faster response to hash rate changes than Bitcoin's 2,016-block adjustment interval. This is essential at 10 BPS, where a slow adjustment could allow extended periods of incorrect block timing.
+</Callout>
+
+## Target Block Time
+
+Kaspa's target block time is **100 milliseconds** (0.1 seconds), corresponding to a block rate of **10 blocks per second (10 BPS)**. The DAA continuously tunes the mining difficulty to maintain this rate as an average over its sampling window.
+
+At 10 BPS, even modest delays in difficulty adjustment would be noticeable. If hash power doubled and the difficulty remained unchanged, the block rate would temporarily double to 20 BPS. Per-block adjustment minimizes the duration and magnitude of such deviations.
+
+## DAA Window
+
+The DAA operates over a fixed **window of 2,641 blocks**. For each new block, the algorithm samples the timestamps and difficulty targets of blocks within this window to compute the new difficulty.
+
+The window size is a carefully chosen parameter:
+
+- **Large enough** to smooth out natural variance in block times caused by the probabilistic nature of mining.
+- **Small enough** to respond to genuine hash rate changes in a timely manner.
+- **Odd-numbered** (2,641) to simplify the median calculation used for timestamp sampling.
+
+At 10 BPS, 2,641 blocks span approximately **4.4 minutes** of real time, meaning the DAA reflects hash rate conditions from roughly the last 4-5 minutes.
+
+## How the DAA Works
+
+For each new block, the DAA computation proceeds as follows:
+
+1. **Sample timestamps**: Collect the timestamps of blocks within the DAA window. The algorithm uses the selected parent chain (the "blue" chain determined by GHOSTDAG) to identify the window boundaries.
+
+2. **Compute the time span**: Calculate the elapsed time between the earliest and latest sampled timestamps. This represents the actual time taken to produce the blocks in the window.
+
+3. **Compute the expected time**: Based on the target block rate (10 BPS), calculate how long the blocks in the window *should* have taken.
+
+4. **Adjust the target**: If blocks were produced faster than expected, increase the difficulty (lower the target). If slower, decrease the difficulty (raise the target).
+
+The adjustment formula ensures that the new difficulty is proportional to the ratio of expected time to actual time:
+
+```
+new_target = old_target × (actual_time / expected_time)
+```
+
+This is applied with dampening to prevent oscillation — the adjustment is smoothed so that a single anomalous block cannot cause a dramatic difficulty swing.
+
+<Callout type="info">
+The DAA uses timestamps from the selected parent chain (determined by GHOSTDAG), not from all blocks in the DAG. This ensures that the difficulty calculation follows a consistent linear sequence and is not distorted by the parallelism of the DAG structure.
+</Callout>
+
+## DAA Score
+
+Every block in Kaspa has a **DAA score** — a monotonically increasing counter on the selected parent chain. The DAA score serves as a logical clock for the network:
+
+```
+block.daa_score = selected_parent.daa_score + mergeset_size
+```
+
+Where `mergeset_size` is the number of blocks in the new block's mergeset (the blocks being merged into the ordering by this block).
+
+The DAA score is used throughout the protocol for:
+
+- **Lock time**: Transaction lock times can be specified as DAA scores, providing block-production-rate-independent timing.
+- **Block reward calculation**: The [emission schedule](/docs/core-concepts/emission-schedule) uses the DAA score to determine the current block reward.
+- **Finality depth**: Finality and pruning thresholds are measured in DAA score.
+- **Difficulty window**: The DAA window boundaries are defined in terms of DAA score.
+
+Because the DAA score increments by the mergeset size (which includes parallel blocks), it grows faster than a simple block count. At 10 BPS with typical parallelism, the DAA score increases at roughly 10 per second.
+
+## Timestamp Manipulation Resistance
+
+The DAA must be resistant to miners manipulating timestamps to artificially lower difficulty. Kaspa employs several defenses:
+
+### Timestamp Bounds
+
+Block timestamps must satisfy:
+- **Lower bound**: A block's timestamp must be greater than the median timestamp of its past blocks. This prevents miners from using timestamps in the past.
+- **Upper bound**: A block's timestamp must not be too far in the future relative to the receiving node's local clock. Blocks with future timestamps are temporarily rejected.
+
+### Median-Based Sampling
+
+The DAA uses **median timestamps** rather than raw timestamps for its time span calculations. This is resistant to individual miners submitting anomalous timestamps, because the median of a window is not significantly affected by a small number of outliers.
+
+### Selected Chain Basis
+
+By computing difficulty only along the selected parent chain, the DAA avoids being influenced by timestamps in parallel blocks that a miner might manipulate without cost.
+
+## Minimum Difficulty
+
+There is a **minimum difficulty** (equivalently, a maximum target value) that prevents the difficulty from dropping to zero. Even if all miners leave the network, the difficulty will not fall below this floor. This ensures that blocks always require meaningful proof-of-work.
+
+## Comparison with Bitcoin's DAA
+
+| Property | Kaspa DAA | Bitcoin DAA |
+|---|---|---|
+| Adjustment frequency | Every block | Every 2,016 blocks (~2 weeks) |
+| Target block time | 100ms (10 BPS) | 10 minutes |
+| Window size | 2,641 blocks (~4.4 min) | 2,016 blocks (~2 weeks) |
+| Response to 2x hashrate | Minutes | ~2 weeks |
+| Timestamp source | Selected parent chain | Linear chain |
+| Timestamp protection | Median-based, bounded | Median-based, bounded |
+
+The key advantage of Kaspa's approach is responsiveness. Bitcoin's two-week adjustment interval means that significant hash rate changes (such as miners switching between coins or large farms going online/offline) cause extended periods of abnormal block production. Kaspa's per-block adjustment keeps block times close to the target even during rapid hash rate changes.
+
+## DAA at Different BPS Rates
+
+The DAA is designed to be parametric with respect to the block rate. When Kaspa operated at 1 BPS, the same algorithm was used with adjusted parameters. The DAA window size and other constants are functions of the target BPS rate.
+
+As block rates increase:
+- The DAA window covers a shorter wall-clock duration for the same number of blocks.
+- Adjustments become more granular, tracking hash rate changes more precisely.
+- The DAA score grows proportionally faster.
+
+This parametric design ensures the DAA remains effective as Kaspa's block rate evolves over time.
+
+<Callout>
+The DAA is one of the components that must be carefully recalibrated when the block rate changes. The Crescendo hardfork, which moved Kaspa from 1 BPS to 10 BPS, included updated DAA parameters to maintain proper difficulty adjustment at the higher rate.
+</Callout>
+
+## Further Reading
+
+- [BlockDAG Architecture](/docs/core-concepts/blockdag) — The block structure and block rate that the DAA targets.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — How the selected parent chain is determined for DAA computation.
+- [Emission Schedule](/docs/core-concepts/emission-schedule) — How the DAA score drives block reward calculations.

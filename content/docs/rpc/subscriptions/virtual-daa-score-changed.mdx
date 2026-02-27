@@ -1,0 +1,74 @@
+---
+title: Virtual DAA Score Changed
+description: "NotifyVirtualDaaScoreChanged — subscribe to DAA score changes for timing and difficulty tracking."
+---
+
+## Overview
+
+The `notifyVirtualDaaScoreChanged` subscription notifies your application whenever the virtual DAA (Difficulty Adjustment Algorithm) score changes. The DAA score is a monotonically increasing value that is tied to the passage of real time and is used for difficulty adjustment, time-based lock conditions, and coinbase maturity tracking.
+
+## Subscribe
+
+```typescript
+await rpc.subscribeVirtualDaaScoreChanged();
+```
+
+**RPC request:**
+
+```json
+{
+  "method": "notifyVirtualDaaScoreChanged",
+  "params": {}
+}
+```
+
+## Unsubscribe
+
+```typescript
+await rpc.unsubscribeVirtualDaaScoreChanged();
+```
+
+## Notification Format
+
+```json
+{
+  "virtualDaaScore": 52345680
+}
+```
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `virtualDaaScore` | integer | The current virtual DAA score |
+
+## Event Handling
+
+```typescript
+rpc.addEventListener("virtual-daa-score-changed", (event) => {
+  const daaScore = event.data.virtualDaaScore;
+  console.log(`DAA score: ${daaScore}`);
+});
+```
+
+## What the DAA Score Represents
+
+The DAA score is designed to correlate with real-world time. Unlike the blue score (which simply counts chain blocks), the DAA score accounts for the actual timestamps of blocks and the difficulty adjustments that maintain Kaspa's target block rate.
+
+Key properties:
+
+- **Monotonically increasing** -- The DAA score never decreases.
+- **Time-correlated** -- Approximately 1 DAA score increment per second under stable network conditions.
+- **Used for lock times** -- Transaction `lockTime` values below 500,000,000,000 are interpreted as DAA scores.
+- **Used for coinbase maturity** -- Coinbase transaction outputs cannot be spent until a certain DAA score depth is reached.
+
+## Use Cases
+
+- **Heartbeat / liveness check** -- If the DAA score stops increasing, the node may be disconnected or the network may be stalled.
+- **Time estimation** -- Estimate real-world time from DAA score changes without relying on block timestamps.
+- **Lock time monitoring** -- Track when time-locked transactions become spendable.
+- **UI progress display** -- Show a real-time ticker of network progression.
+
+<Callout>
+The DAA score is the most common "clock" used in Kaspa applications. It is a lightweight subscription that fires frequently (approximately once per second) and provides a reliable indicator of network liveness and time passage.
+</Callout>

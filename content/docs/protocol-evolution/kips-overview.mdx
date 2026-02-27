@@ -1,0 +1,93 @@
+---
+title: "KIPs Overview"
+description: "Understanding Kaspa Improvement Proposals (KIPs) — the process for proposing and implementing protocol changes."
+---
+
+## What is a KIP?
+
+A **Kaspa Improvement Proposal (KIP)** is a formal document that describes a proposed change to the Kaspa protocol, its processes, or its ecosystem tooling. KIPs are the primary mechanism through which the Kaspa community discusses, evaluates, and coordinates protocol upgrades. The process is inspired by Bitcoin's BIP system and Ethereum's EIP system, adapted for Kaspa's governance model.
+
+Every significant protocol change — from consensus rule modifications to new transaction formats — is expected to go through the KIP process before implementation.
+
+<Callout>
+KIPs exist to ensure that protocol changes are thoroughly discussed, reviewed, and documented before being implemented. They provide a permanent record of the rationale behind design decisions and allow the broader community to participate in Kaspa's evolution.
+</Callout>
+
+## The KIP Lifecycle
+
+Each KIP progresses through a series of stages:
+
+### 1. Draft
+
+The author writes an initial proposal following the KIP template and submits it as a pull request to the KIPs repository. At this stage the proposal is open for initial community feedback and may undergo significant revisions. A KIP number is assigned upon submission.
+
+### 2. Review
+
+The proposal enters active community review. Developers, researchers, and community members discuss the technical merits, security implications, and tradeoffs. The author addresses feedback and revises the proposal as needed. Review typically takes place on GitHub and in community discussion channels.
+
+### 3. Accepted
+
+The proposal has achieved rough community consensus and is considered technically sound. Acceptance means the community agrees the change should be implemented, though the timeline and specific implementation details may still be refined.
+
+### 4. Implemented
+
+The change described in the KIP has been coded, tested, and merged into the reference node implementation. For consensus-level changes, this means the code is present in a released version of `rusty-kaspa` and is awaiting activation.
+
+### 5. Active / Final
+
+For consensus changes, the KIP becomes **Active** once it has been activated on mainnet (typically through a hardfork). For informational or process KIPs, the status becomes **Final** once the document is considered complete and stable.
+
+<Callout type="info">
+Not all KIPs reach the Active stage. Proposals may be **Withdrawn** by the author, **Rejected** by community consensus, or **Superseded** by a later proposal that takes a different approach to the same problem.
+</Callout>
+
+## Types of KIPs
+
+KIPs fall into three categories:
+
+**Protocol KIPs** propose changes to the consensus rules, network protocol, transaction format, or other aspects that affect the operation of Kaspa nodes. These are the most consequential type and always require a hardfork or softfork for activation. Examples include KIP-9 (storage mass), KIP-10 (opcode reactivation), and KIP-14 (Crescendo).
+
+**Informational KIPs** describe design issues, best practices, or general guidelines for the Kaspa ecosystem. They do not propose protocol changes and do not require a fork. They serve as reference documents for developers and users.
+
+**Process KIPs** define or modify the processes and governance structures used by the Kaspa community. KIP-1, which defines the KIP process itself, is the canonical example.
+
+## How to Submit a KIP
+
+1. **Discuss the idea.** Before writing a formal KIP, discuss your proposal in the Kaspa community channels (Discord, forums, or GitHub Discussions) to gauge interest and get early feedback.
+2. **Write the proposal.** Follow the KIP template defined in KIP-1. Include a clear abstract, motivation, detailed specification, rationale, and (where applicable) backward compatibility analysis.
+3. **Submit a pull request.** Open a PR against the [KIPs repository on GitHub](https://github.com/kaspanet/kips). A KIP editor will review the formatting and assign a number.
+4. **Engage with reviewers.** Respond to feedback, update the proposal, and build consensus among stakeholders.
+
+## Relationship to Hardforks and Softforks
+
+Protocol KIPs that change consensus rules require a **hardfork** to activate on mainnet. A hardfork means that nodes running older software will not recognize blocks produced under the new rules, so network-wide coordination is essential.
+
+Kaspa's hardfork activation mechanism relies on a **DAA score threshold**: when the network's DAA score reaches a predetermined value, the new consensus rules take effect. This provides a deterministic activation point that all upgraded nodes agree on.
+
+<Callout type="warn">
+Hardfork activations require all node operators, miners, wallets, and exchanges to upgrade their software before the activation DAA score. Failure to upgrade means a node will fall out of consensus and may follow an invalid chain.
+</Callout>
+
+Softforks (backward-compatible rule tightenings) are also possible but less common in Kaspa's history. Most significant changes have been delivered through hardforks.
+
+## Notable KIPs
+
+| KIP | Title | Status | Significance |
+|---|---|---|---|
+| KIP-1 | KIP Process | Active | Defines the governance process for all subsequent KIPs |
+| KIP-9 | Storage Mass | Active | Introduces a mass component that accounts for long-term UTXO storage costs, preventing UTXO bloat attacks |
+| KIP-10 | Opcode Reactivation | In Review | Proposes re-enabling disabled opcodes to support more expressive scripting capabilities |
+| KIP-13 | Transient Mass | In Review | Refines the transaction mass model to distinguish transient costs from persistent storage costs |
+| KIP-14 | Crescendo | Active | The hardfork that increased block rate from 1 BPS to 10 BPS with all associated parameter changes |
+
+## Where KIPs Are Discussed
+
+- **GitHub**: The [KIPs repository](https://github.com/kaspanet/kips) hosts all proposals and their revision history. Pull request discussions are the primary review venue.
+- **Discord**: The Kaspa Discord server has dedicated channels for technical discussion and KIP review.
+- **Community calls**: Periodic community calls provide an opportunity to discuss active proposals in real time.
+
+## Further Reading
+
+- [KIP Index](/docs/protocol-evolution/kip-index) — Complete listing of all KIPs with their current status.
+- [Crescendo](/docs/protocol-evolution/crescendo) — Detailed look at KIP-14, the most impactful KIP to date.
+- [Roadmap](/docs/protocol-evolution/roadmap) — How upcoming KIPs fit into Kaspa's technical roadmap.

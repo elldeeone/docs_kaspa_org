@@ -1,4 +1,4 @@
 {
   "title": "Reference",
-  "pages": ["api-reference", "specifications", "network-params", "glossary"]
+  "pages": ["network-params", "emission-schedule", "research-papers", "api-reference", "specifications", "glossary"]
 }

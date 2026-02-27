@@ -1,4 +1,4 @@
 {
   "title": "Developer Guide",
-  "pages": ["rpc-api", "grpc", "wasm-sdk", "building-apps", "integration"]
+  "pages": ["building-apps", "integration"]
 }

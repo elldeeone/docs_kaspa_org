@@ -1,0 +1,11 @@
+{
+  "title": "Wallets",
+  "pages": [
+    "overview",
+    "web-wallet",
+    "cli-wallet",
+    "hardware-wallets",
+    "hd-derivation",
+    "wallet-sdk"
+  ]
+}

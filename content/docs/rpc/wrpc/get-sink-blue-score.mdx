@@ -1,0 +1,36 @@
+---
+title: "GetSinkBlueScore"
+description: "Get the blue score of the current sink block."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `blueScore` | u64 | The blue score of the current sink block. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getSinkBlueScore",
+  "params": {}
+}
+
+// Response
+{
+  "blueScore": 48000000
+}
+```
+
+## Notes
+
+- The blue score is the number of blue blocks in the selected parent chain up to and including the sink.
+- Blue score increases monotonically and can be used as a rough measure of chain progress.
+- At 10 BPS, the blue score increases by approximately 10 per second under normal conditions.
+- This is a lightweight call suitable for frequent polling.

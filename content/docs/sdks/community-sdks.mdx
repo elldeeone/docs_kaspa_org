@@ -1,0 +1,107 @@
+---
+title: Community SDKs
+description: "Community-maintained Kaspa SDKs and libraries in Go, C#, and other languages."
+---
+
+## Community Ecosystem
+
+Beyond the official Rust, WASM, and Python SDKs, the Kaspa community maintains libraries and tools in additional languages. These projects are developed independently and vary in scope, maturity, and maintenance status. They provide valuable options for developers who work primarily in Go, C#, or other ecosystems where the official SDKs are not a natural fit.
+
+<Callout type="warn">
+Community SDKs are not maintained by the core Kaspa development team. Before using a community SDK in a production application, review its source code, verify its compatibility with the current network protocol, and assess its maintenance status. Bugs in transaction construction or signing can result in lost funds.
+</Callout>
+
+## Go Libraries
+
+The Go ecosystem has several Kaspa-related projects:
+
+### kaspad (Legacy Go Node)
+
+The original Kaspa node was written in Go ([kaspanet/kaspad](https://github.com/kaspanet/kaspad)). While the active node implementation has moved to Rust (`rusty-kaspa`), the Go codebase remains a reference for understanding Kaspa's protocol and message formats. Some community tools still depend on packages from this repository.
+
+<Callout type="info">
+The Go `kaspad` node is no longer actively maintained for production use. The Rust `rusty-kaspa` implementation is the canonical node. However, Go packages from the kaspad repository (RPC types, address handling, serialization) may still be useful as library dependencies.
+</Callout>
+
+### kaspa-graph-inspector
+
+The [kaspa-graph-inspector](https://github.com/kaspanet/kaspa-graph-inspector) is a Go-based visualization tool for exploring the Kaspa BlockDAG. It connects to a node and renders the DAG structure graphically, making it useful for debugging, education, and network analysis. While not an SDK in the traditional sense, its codebase demonstrates how to interact with Kaspa nodes from Go.
+
+### Community Go Modules
+
+Independent developers have published Go modules that wrap Kaspa's gRPC interface:
+
+- **gRPC client wrappers** — Generated Go code from Kaspa's protobuf definitions, providing type-safe RPC calls.
+- **Address utilities** — Go implementations of Bech32 encoding for Kaspa addresses.
+- **Transaction builders** — Libraries for constructing and signing Kaspa transactions in Go.
+
+Search for `kaspa` on [pkg.go.dev](https://pkg.go.dev) for the latest community packages.
+
+## C# Libraries
+
+Community members have developed C# libraries for integrating Kaspa into .NET applications:
+
+- **RPC clients** — C# wrappers around Kaspa's gRPC or wRPC protocols, suitable for desktop applications, game engines (Unity), and enterprise backends.
+- **Address and key management** — Implementations of Kaspa's Bech32 address encoding and secp256k1 key operations using .NET cryptography libraries.
+- **Transaction construction** — Builders for creating and signing Kaspa transactions within the .NET ecosystem.
+
+These libraries are typically found on NuGet or GitHub. Check community forums and the Kaspa Discord for current recommendations.
+
+## Other Languages
+
+Community members have explored Kaspa integrations in several additional languages:
+
+| Language | Status | Typical Approach |
+|---|---|---|
+| Java / Kotlin | Experimental | gRPC client from protobuf definitions |
+| Swift | Experimental | Wrapping the WASM SDK or using gRPC |
+| PHP | Experimental | RPC client via HTTP/WebSocket |
+| Ruby | Minimal | JSON-RPC or gRPC wrappers |
+
+Most of these are thin RPC clients rather than full SDKs. They connect to a running Kaspa node and issue RPC calls without reimplementing consensus logic locally.
+
+## Evaluating Community SDKs
+
+Before adopting a community SDK, consider the following criteria:
+
+**Protocol compatibility.** The Kaspa network evolves through hardforks (e.g., the Crescendo upgrade to 10 BPS). Verify that the library supports the current network protocol version. An outdated SDK may construct invalid transactions or misinterpret block data.
+
+**Maintenance status.** Check the repository's commit history, open issues, and release cadence. An SDK with no commits in the past six months may be abandoned or incompatible with recent protocol changes.
+
+**Test coverage.** Look for unit tests that validate address derivation, transaction signing, and RPC serialization against known test vectors. SDKs without tests are risky for production use.
+
+**Security review.** Transaction signing and key management are security-critical. Prefer libraries that have been reviewed by multiple developers or that delegate cryptographic operations to well-audited libraries (e.g., `libsecp256k1`).
+
+**Community adoption.** Check whether other projects depend on the library. Wide adoption increases the likelihood that bugs are found and fixed quickly.
+
+<Callout>
+When in doubt, use the official WASM SDK (for JavaScript/TypeScript), Rust crates (for native applications), or Python SDK (for scripting). These are maintained by the core team and guaranteed to track protocol changes.
+</Callout>
+
+## Contributing to the Ecosystem
+
+If you want to build a Kaspa SDK for a new language, here is the recommended approach:
+
+1. **Start with the RPC layer.** Implement a client that speaks wRPC (WebSocket with Borsh or JSON encoding) or gRPC. The protobuf definitions in the rusty-kaspa repository define the full message schema.
+2. **Implement address handling.** Kaspa uses Bech32 encoding with the `kaspa:` prefix and a pay-to-public-key script model. Test against known address vectors.
+3. **Add transaction construction.** Build the `Transaction` structure (version, inputs, outputs, lock time, subnetwork ID), compute the signing hash using Kaspa's SigHash scheme, and sign with Schnorr over secp256k1.
+4. **Test against testnet.** Deploy your SDK against `testnet-10` or `testnet-11` and verify end-to-end transaction flow before targeting mainnet.
+5. **Publish and document.** Share your SDK on the language's package registry and announce it in the Kaspa community channels.
+
+## Building Your Own RPC Client
+
+At minimum, a custom RPC client needs to handle:
+
+- **WebSocket connection** to the node's wRPC endpoint (default port 16110 for mainnet).
+- **Borsh or JSON serialization** of request and response messages. Borsh is more compact and faster; JSON is easier to debug.
+- **Request/response correlation** — each RPC call has an ID that matches the response.
+- **Subscription management** — the node pushes notifications for subscribed events (block-added, utxos-changed, virtual-daa-score-changed, etc.) over the same WebSocket connection.
+
+The protobuf and Borsh schemas are defined in `kaspa-rpc-core` within the rusty-kaspa repository. Use these as the authoritative source for message formats.
+
+## Further Reading
+
+- [SDK Overview](/docs/sdks/overview) — Compare all available Kaspa SDKs and choose the right one.
+- [RPC API Reference](/docs/developer-guide/rpc-api) — Full listing of RPC methods for building custom clients.
+- [gRPC Protocol](/docs/developer-guide/grpc) — Details on the gRPC transport used by some community tools.
+- [Building Applications](/docs/developer-guide/building-apps) — Architecture patterns for Kaspa applications.

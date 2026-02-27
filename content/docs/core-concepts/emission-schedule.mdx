@@ -1,0 +1,140 @@
+---
+title: Emission Schedule
+description: Kaspa's chromatic monetary emission — a smooth, musically-inspired halvening schedule that reduces block rewards monthly toward a capped total supply.
+---
+
+## Overview
+
+Kaspa's emission schedule controls how new KAS coins are created over time. Called the **chromatic emission**, it is named after the chromatic scale in music — a twelve-tone scale where each note is a half-step apart. Analogously, Kaspa's block reward decreases in twelve equal phases per halving cycle, producing a smooth reduction curve rather than the abrupt 50% drops seen in Bitcoin.
+
+<Callout>
+The chromatic emission replaces Bitcoin's sharp halving events with a smooth monthly reduction. Instead of the block reward suddenly dropping by half every four years, it decreases by a small, predictable amount each month.
+</Callout>
+
+## Monthly Reduction
+
+The block reward decreases by a factor of **(1/2)^(1/12)** approximately once per month:
+
+```
+reduction_factor = (1/2)^(1/12) ≈ 0.9439
+```
+
+This means each month's block reward is approximately **94.39%** of the previous month's reward — a reduction of about **5.61%** per month.
+
+After 12 such reductions (one year), the cumulative effect is:
+
+```
+(0.9439)^12 ≈ 0.5
+```
+
+So after 12 months, the reward has halved — matching the same total reduction as a Bitcoin-style halving, but distributed smoothly across the year.
+
+## Comparison with Bitcoin's Halving
+
+| Property | Kaspa (Chromatic) | Bitcoin (Halving) |
+|---|---|---|
+| Reduction frequency | Monthly | Every ~4 years |
+| Reduction per step | ~5.61% (factor of 0.9439) | 50% (factor of 0.5) |
+| Steps per halving | 12 | 1 |
+| Miner revenue shock | Gradual, predictable | Sudden 50% drop |
+| Supply curve | Smooth exponential decay | Step function |
+
+The smooth reduction has practical benefits:
+
+- **Miner stability**: Miners experience gradual, predictable changes in revenue rather than sudden 50% drops that can cause hash rate instability and network disruption.
+- **Market predictability**: The emission rate changes continuously and predictably, reducing the speculative pressure that Bitcoin halving events can create.
+- **Mathematical elegance**: The continuous decay function is a closer approximation of the theoretical ideal of exponential emission reduction.
+
+## Total Supply
+
+Kaspa's emission schedule converges to a **total supply cap of approximately 28.7 billion KAS** (28,700,000,000 KAS). This is a hard cap — no more than this amount will ever be created.
+
+The total supply is the sum of the geometric series defined by the chromatic emission:
+
+```
+total_supply = initial_annual_emission × (1 / (1 - 0.5)) = 2 × initial_annual_emission
+```
+
+The supply approaches the cap asymptotically — block rewards become vanishingly small but never technically reach zero. In practice, the reward eventually rounds down to zero sompi, at which point emission ceases entirely.
+
+<Callout type="info">
+The 28.7 billion KAS total supply was determined by the initial block reward and the chromatic reduction schedule. It is a fixed parameter of the protocol that cannot be changed without a consensus-breaking hard fork.
+</Callout>
+
+## Block Reward Calculation
+
+The block reward for a given block is determined by the block's **DAA score**. The DAA score serves as a monotonically increasing logical clock that advances with the selected parent chain.
+
+The reward calculation follows this structure:
+
+1. **Determine the emission phase**: Divide the DAA score by the number of blocks per phase (approximately one month's worth of blocks at the target BPS rate).
+2. **Compute the reduction**: Apply the reduction factor `(1/2)^(1/12)` raised to the power of the current phase number.
+3. **Calculate the reward**: Multiply the initial base reward by the cumulative reduction factor.
+
+```
+phase = daa_score / blocks_per_phase
+reward = base_reward × (1/2)^(phase/12)
+```
+
+The `blocks_per_phase` constant is calibrated so that each phase lasts approximately one month at the target block rate. The DAA score (not wall-clock time) determines the phase, ensuring that the emission schedule is tied to actual block production rather than elapsed time.
+
+## Pre-Deflationary Phase
+
+During Kaspa's launch, there was a brief **pre-deflationary phase** where the block reward was constant before the chromatic reduction schedule began. This provided a stable initial reward during the network's early operation while hash rate was still ramping up.
+
+After the pre-deflationary phase ended, the chromatic schedule took effect and the reward began its smooth monthly reduction.
+
+## Coinbase Transaction Structure
+
+New KAS enters circulation through **coinbase transactions** — special transactions included in each block that mint the block reward. A coinbase transaction has the following characteristics:
+
+- **No inputs**: Unlike regular transactions, coinbase transactions have no inputs (since they create new coins rather than spending existing ones).
+- **Subnetwork ID**: Uses the coinbase subnetwork ID (`0x0100000000000000000000000000000000000000`).
+- **Outputs**: One or more outputs distributing the block reward to the miner's address(es).
+- **Payload**: May contain arbitrary data (commonly used by mining pools for identification).
+
+The coinbase transaction's output value must exactly match the allowed block reward for the block's DAA score. Nodes reject blocks where the coinbase output exceeds the calculated reward.
+
+## Coinbase Maturity
+
+Coinbase outputs cannot be spent immediately. They require a **maturity period of 100 confirmations** (measured in blue score) before they become spendable. This means that the KAS created in a coinbase transaction is locked for approximately 10 seconds at 10 BPS.
+
+```
+coinbase_maturity = 100 blue score
+```
+
+The maturity requirement exists to handle potential DAG reorganizations. If a block is reorganized out of the blue set, its coinbase reward would become invalid. By requiring maturity, the protocol ensures that coinbase outputs are only spent after the block is deeply enough embedded in the DAG that reorganization is extremely unlikely.
+
+<Callout>
+Coinbase maturity protects against spending rewards from blocks that might later be reorganized. At 10 BPS, the 100-block maturity period corresponds to roughly 10 seconds of wall-clock time.
+</Callout>
+
+## Rewards in the DAG Context
+
+In a BlockDAG, multiple miners produce blocks in parallel, and GHOSTDAG classifies these blocks as blue or red. This classification affects reward distribution:
+
+### Blue Block Rewards
+
+A **blue block** receives its full block reward — the subsidy (newly minted KAS) determined by the emission schedule for that block's DAA score. The miner who produced the blue block receives this reward in the coinbase transaction.
+
+### Red Block Rewards
+
+A **red block** does not pay its reward to the red block's miner. Instead, the reward from a red block is **collected by the miner of the merging block** — the blue block that merges the red block into the DAG ordering.
+
+This design has important consequences:
+
+- **Miners are incentivized to follow the protocol**: Producing blocks that will be classified as blue (by building on the highest blue work tip and referencing available DAG tips) maximizes reward.
+- **Honest miners benefit from red blocks**: When an honest miner's block merges red blocks, the honest miner collects those red blocks' rewards as additional income.
+- **Attackers are penalized**: Blocks produced by attackers (which are more likely to be red due to their adversarial timing) lose their rewards to honest miners.
+
+| Block Classification | Subsidy Recipient | Fees Recipient |
+|---|---|---|
+| Blue block | Miner of the blue block | Miner of the blue block |
+| Red block | Miner of the merging blue block | Miner of the merging blue block |
+
+## Further Reading
+
+- [Difficulty Adjustment](/docs/core-concepts/difficulty-adjustment) — How the DAA score that drives emission is calculated.
+- [Transactions](/docs/core-concepts/transactions) — Coinbase transaction structure and general transaction format.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — How blue/red classification determines reward distribution.
+- [BlockDAG Architecture](/docs/core-concepts/blockdag) — The parallel block production context for reward distribution.

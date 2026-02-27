@@ -1,0 +1,150 @@
+---
+title: Fees & Mass
+description: How Kaspa calculates transaction fees using a multi-dimensional mass system that accounts for compute, bandwidth, and UTXO set storage costs.
+---
+
+## Overview
+
+Kaspa uses a **mass system** to measure the resource cost of transactions. Rather than relying on a simple byte-size metric, transaction mass captures multiple dimensions of cost — computation, bandwidth, and long-term storage impact. Fees are then calculated as a function of mass, aligning economic incentives with actual resource consumption.
+
+<Callout>
+Transaction mass is Kaspa's way of ensuring that transactions which are expensive for the network to process — whether due to complex scripts, large size, or UTXO set growth — pay proportionally higher fees.
+</Callout>
+
+## What Is Transaction Mass?
+
+Transaction mass is a single number that represents the total resource cost of a transaction. It is computed as the **maximum** of three independent mass components:
+
+```
+transaction_mass = max(compute_mass, transactional_mass, storage_mass)
+```
+
+Each component measures a different dimension of cost. A transaction is limited by whichever dimension is most expensive.
+
+## Mass Components
+
+### 1. Compute Mass
+
+Compute mass reflects the CPU cost of validating a transaction, primarily driven by signature verification operations:
+
+```
+compute_mass = sig_op_count × 1000
+```
+
+Each signature operation (sigop) costs **1000 mass units**. A standard single-input P2PK transaction has one sigop and therefore a compute mass of 1,000.
+
+Transactions with many inputs (each requiring a signature check) or complex scripts with multiple signature operations will have higher compute mass.
+
+### 2. Transactional Mass (Bandwidth)
+
+Transactional mass reflects the network bandwidth cost of propagating and storing the transaction:
+
+```
+transactional_mass = serialized_size_in_bytes × 1
+```
+
+Each byte of the serialized transaction costs **1 mass unit**. A typical single-input, two-output transaction is roughly 300-400 bytes, giving a transactional mass of 300-400.
+
+### 3. Storage Mass (KIP-9)
+
+Storage mass addresses a critical long-term concern: **UTXO set growth**. Every UTXO created must be stored by every full node indefinitely until it is spent. Transactions that create many small UTXOs impose an ongoing cost on the entire network.
+
+KIP-9 introduces a storage mass formula that penalizes transactions which expand the UTXO set, especially when creating outputs with small values:
+
+```
+storage_mass = C × |outputs| / (sum of input values in sompi)
+```
+
+Where:
+- **C** is a calibration constant that sets the cost scale
+- **|outputs|** is the number of outputs the transaction creates
+- **sum of input values** is the total value of all inputs being consumed
+
+<Callout type="info">
+Storage mass is inversely proportional to input values. Consolidating many small UTXOs into one large UTXO has zero or minimal storage mass, while splitting a UTXO into many small pieces incurs high storage mass. This creates a natural economic incentive to keep the UTXO set compact.
+</Callout>
+
+The key properties of the storage mass formula:
+
+| Transaction Type | Storage Mass Impact |
+|---|---|
+| Consolidation (many inputs → few outputs) | Low or zero — reduces UTXO set |
+| Simple transfer (1 input → 2 outputs) | Moderate — slight UTXO growth |
+| Fan-out (1 input → many small outputs) | High — significant UTXO growth |
+| Dust creation (outputs with tiny values) | Very high — penalized by inverse relationship |
+
+## Transient Mass (KIP-13)
+
+**KIP-13** introduces the concept of **transient mass** for UTXOs that are ephemeral — created and spent within a short time window. The rationale is that a UTXO that exists only briefly imposes a much lower storage burden than one that persists for months or years.
+
+Under KIP-13, when a transaction spends recently created UTXOs, the effective storage mass may be reduced because those UTXOs had a short lifespan and therefore a smaller long-term impact on UTXO set size. This benefits common use patterns like:
+
+- **Payment forwarding**: Receiving a payment and immediately forwarding it.
+- **Transaction chaining**: Building sequences of dependent transactions.
+- **Atomic operations**: Multi-step operations that create and consume intermediate UTXOs.
+
+## Block and Transaction Mass Limits
+
+The mass system enforces hard limits at both the transaction and block level:
+
+| Limit | Value | Description |
+|---|---|---|
+| Maximum transaction mass | 100,000 | No single transaction can exceed this mass |
+| Maximum block mass | 500,000 | Total mass of all transactions in a block |
+
+These limits ensure that blocks can be validated within a bounded time. Miners select transactions to maximize fee revenue within the block mass budget.
+
+<Callout>
+With 10 BPS and a maximum block mass of 500,000, the network has an aggregate mass budget of 5,000,000 mass units per second across all blocks. This provides substantial throughput for normal transaction loads.
+</Callout>
+
+## Fee Calculation
+
+Transaction fees are calculated as the product of the fee rate and the transaction mass:
+
+```
+fee = fee_rate × transaction_mass
+```
+
+Where:
+- **fee_rate** is specified in **sompi per mass unit**, chosen by the transaction sender.
+- **transaction_mass** is the computed mass of the transaction.
+
+Miners prioritize transactions by their **fee-to-mass ratio** (fee per unit of mass), selecting the most profitable transactions to include in their blocks. During periods of low demand, the minimum fee rate is sufficient. During congestion, users can increase their fee rate for faster inclusion.
+
+### Minimum Relay Fee
+
+Every transaction must meet a **minimum relay fee** to be propagated by nodes. Transactions below this threshold are rejected by the mempool and not forwarded to other nodes. The minimum relay fee prevents spam attacks and ensures that even low-priority transactions cover a baseline cost.
+
+### Priority Fees
+
+When the mempool is congested and blocks are full, users can attach higher fees to prioritize their transactions. Since miners optimize for fee revenue, transactions with higher fee-to-mass ratios are included first.
+
+## Fee Estimation
+
+Kaspa nodes provide RPC methods to help wallets estimate appropriate fee rates:
+
+- **`getFeeEstimate`**: Returns fee rate estimates based on current mempool conditions.
+- **`getFeeEstimateExperimental`**: Returns more detailed fee estimates with additional bucket information for fine-grained priority selection.
+
+Wallets should use these endpoints to suggest appropriate fees to users rather than hardcoding fee rates, since optimal fees vary with network conditions.
+
+## Practical Example
+
+Consider a standard transaction with 1 input and 2 outputs:
+
+```
+Compute mass:       1 sigop × 1000         = 1,000
+Transactional mass: 350 bytes × 1          = 350
+Storage mass:       C × 2 / input_value    = (depends on value)
+
+Transaction mass = max(1,000, 350, storage_mass)
+```
+
+For a transaction spending a large UTXO (say, 1000 KAS), the storage mass will be negligible and the transaction mass will be 1,000 (dominated by compute mass). With a fee rate of 1 sompi per mass unit, the fee is just `1,000 sompi = 0.00001 KAS` — demonstrating that standard Kaspa transactions have extremely low fees.
+
+## Further Reading
+
+- [Transactions](/docs/core-concepts/transactions) — Transaction structure, signing, and the full transaction lifecycle.
+- [UTXO Model](/docs/core-concepts/utxo-model) — How UTXOs work and why UTXO set management matters.
+- [Scripting](/docs/core-concepts/scripting) — How script complexity contributes to compute mass.

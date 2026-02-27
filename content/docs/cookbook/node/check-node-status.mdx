@@ -1,0 +1,98 @@
+---
+title: Check Node Status
+description: "Query a Kaspa node for sync status, DAG info, peer connections, and mempool health."
+---
+
+## Prerequisites
+
+- **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
+- **Connection to a Kaspa node** via wRPC
+
+<Callout type="info">
+Checking node status is useful for monitoring dashboards, health checks in deployment
+pipelines, and verifying that a node is fully synced before submitting transactions.
+</Callout>
+
+## Code
+
+```typescript
+import { RpcClient, Resolver, Encoding } from "kaspa-wasm";
+
+async function checkNodeStatus() {
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+
+  // Gather status from multiple RPC calls
+  const dagInfo = await rpc.getBlockDagInfo();
+  const info = await rpc.getInfo();
+  const syncStatus = await rpc.getSyncStatus();
+  const peerInfo = await rpc.getConnectedPeerInfo();
+
+  console.log("=== Node Status ===");
+  console.log(`Network: ${dagInfo.networkName}`);
+  console.log(`Synced: ${syncStatus.isSynced}`);
+  console.log(`DAA Score: ${dagInfo.virtualDaaScore}`);
+  console.log(`Peers: ${peerInfo.infos.length}`);
+  console.log(`Mempool: ${info.mempoolSize} transactions`);
+  console.log(`Block Count: ${dagInfo.blockCount}`);
+  console.log(`Header Count: ${dagInfo.headerCount}`);
+  console.log(`Difficulty: ${dagInfo.difficulty}`);
+
+  // Basic health assessment
+  const isHealthy = syncStatus.isSynced && peerInfo.infos.length > 0;
+  console.log(`\nHealth: ${isHealthy ? "OK" : "DEGRADED"}`);
+
+  if (!syncStatus.isSynced) {
+    console.log("  Warning: Node is not synced. Queries may return stale data.");
+  }
+  if (peerInfo.infos.length === 0) {
+    console.log("  Warning: No connected peers. Node may be isolated.");
+  }
+
+  await rpc.disconnect();
+  return isHealthy;
+}
+
+checkNodeStatus().catch(console.error);
+```
+
+## Explanation
+
+### RPC calls used
+
+| Method | Returns |
+|---|---|
+| `getBlockDagInfo()` | Network name, block/header counts, DAA score, difficulty |
+| `getInfo()` | Mempool size, server version, and general node info |
+| `getSyncStatus()` | Whether the node has completed initial block download |
+| `getConnectedPeerInfo()` | List of connected peers with address and latency data |
+
+### Health check patterns
+
+A healthy node should satisfy these conditions:
+
+- **`isSynced` is true** -- The node has completed initial block download and is tracking the DAG tip.
+- **Peer count is greater than zero** -- The node is connected to the network.
+- **DAA score is advancing** -- Poll periodically and verify the score is increasing.
+
+<Callout type="warn">
+Do not submit transactions to a node that is not fully synced. The node may reject
+them or build on an outdated view of the UTXO set, leading to double-spend conflicts.
+</Callout>
+
+### Periodic monitoring
+
+For production systems, call `checkNodeStatus` on a timer (for example, every 30 seconds)
+and alert when the node falls out of sync or loses all peers. You can also subscribe to
+[Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) for a
+real-time liveness signal without polling.
+
+## Further Reading
+
+- [Connect via wRPC](/docs/cookbook/node/connect-wrpc) -- Establish the connection used by these status calls.
+- [Node Monitoring](/docs/node-operations/monitoring) -- Operational best practices for running a Kaspa node.
+- [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) -- Real-time DAA score subscription as a liveness heartbeat.

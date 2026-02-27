@@ -1,0 +1,43 @@
+---
+title: "GetInfo"
+description: "Get general information about the node's state and capabilities."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `p2pId` | string | The unique P2P identifier of the node. |
+| `mempoolSize` | u64 | Number of transactions currently in the mempool. |
+| `serverVersion` | string | The node software version string. |
+| `isUtxoIndexed` | boolean | Whether the UTXO index is enabled on this node. |
+| `isSynced` | boolean | Whether the node is fully synced with the network. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getInfo",
+  "params": {}
+}
+
+// Response
+{
+  "p2pId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "mempoolSize": 42,
+  "serverVersion": "0.15.0",
+  "isUtxoIndexed": true,
+  "isSynced": true
+}
+```
+
+## Notes
+
+- Check `isSynced` before relying on data from the node. An unsynced node may return stale or incomplete information.
+- Check `isUtxoIndexed` before calling UTXO-dependent methods like `GetUtxosByAddresses` or `GetBalanceByAddress`.
+- This is a lightweight call suitable for health checks and monitoring.

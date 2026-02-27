@@ -1,0 +1,61 @@
+---
+title: "GetMempoolEntriesByAddresses"
+description: "Retrieve mempool transactions that involve specific addresses."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `addresses` | string[] | Yes | List of Kaspa addresses to filter mempool entries by. |
+| `includeOrphanPool` | boolean | No | Whether to include entries from the orphan pool. Defaults to `false`. |
+| `filterTransactionPool` | boolean | No | If `true`, excludes the main transaction pool. Defaults to `false`. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entries` | object[] | Array of objects, each containing an address and its associated mempool entries. |
+| `entries[].address` | string | The queried address. |
+| `entries[].sending` | object[] | Mempool entries where this address is an input (spending). |
+| `entries[].receiving` | object[] | Mempool entries where this address is an output (receiving). |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getMempoolEntriesByAddresses",
+  "params": {
+    "addresses": [
+      "kaspa:qr0l4g5untavmz2mn5yd4e6qpsh7tg2hfqlfsle8xhncpgy5qxuq9kdarzy4"
+    ],
+    "includeOrphanPool": false,
+    "filterTransactionPool": false
+  }
+}
+
+// Response
+{
+  "entries": [
+    {
+      "address": "kaspa:qr0l4g5untavmz2mn5yd4e6qpsh7tg2hfqlfsle8xhncpgy5qxuq9kdarzy4",
+      "sending": [],
+      "receiving": [
+        {
+          "fee": 5000,
+          "mass": 2345,
+          "transaction": { "version": 0, "inputs": [], "outputs": [] },
+          "isOrphan": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Notes
+
+- This method is useful for detecting pending incoming or outgoing transactions for a wallet's addresses.
+- Requires the UTXO index to be enabled.
+- Transactions are categorized as `sending` (the address appears in an input) or `receiving` (the address appears in an output).

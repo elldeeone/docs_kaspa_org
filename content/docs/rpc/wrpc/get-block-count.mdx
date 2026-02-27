@@ -1,0 +1,37 @@
+---
+title: "GetBlockCount"
+description: "Get the total number of blocks and headers known to the node."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `headerCount` | u64 | Total number of block headers the node has received. |
+| `blockCount` | u64 | Total number of full blocks (with body data) the node holds. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getBlockCount",
+  "params": {}
+}
+
+// Response
+{
+  "headerCount": 52340000,
+  "blockCount": 52340000
+}
+```
+
+## Notes
+
+- `headerCount` may be greater than `blockCount` during initial block download (IBD), when the node has received headers but has not yet downloaded all block bodies.
+- Once the node is fully synced, these values are typically equal.
+- This method is useful for monitoring sync progress.

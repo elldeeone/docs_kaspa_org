@@ -1,0 +1,102 @@
+---
+title: Finality Conflict
+description: "NotifyFinalityConflict — subscribe to finality conflict events in the Kaspa network."
+---
+
+## Overview
+
+The `notifyFinalityConflict` subscription notifies your application when a finality conflict is detected in the network. A finality conflict occurs when the GHOSTDAG selected chain diverges from the finality point -- meaning a block that was previously considered final is no longer on the selected chain.
+
+Finality conflicts are extremely rare under normal network conditions. They would indicate an extraordinary event such as a deep chain reorganization or a significant network partition.
+
+<Callout>
+Finality conflicts are exceptional events that should never occur under normal network operation. If your application receives a finality conflict notification, it likely indicates a major network issue. Log the event, alert operators, and consider pausing transaction processing until the conflict resolves.
+</Callout>
+
+## Subscribe
+
+```typescript
+await rpc.subscribeFinalityConflict();
+```
+
+**RPC request:**
+
+```json
+{
+  "method": "notifyFinalityConflict",
+  "params": {}
+}
+```
+
+## Unsubscribe
+
+```typescript
+await rpc.unsubscribeFinalityConflict();
+```
+
+## Notification Format
+
+When a finality conflict is detected:
+
+```json
+{
+  "violatingBlockHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+}
+```
+
+When a finality conflict is resolved:
+
+```json
+{
+  "finalityBlockHash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3"
+}
+```
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `violatingBlockHash` | string | Hash of the block causing the finality violation |
+| `finalityBlockHash` | string | Hash of the finality point block when the conflict resolves |
+
+## What Triggers a Finality Conflict
+
+Kaspa defines a finality depth based on the DAA score. Once a block's depth exceeds this threshold, it is considered final. A finality conflict occurs when:
+
+1. A block has reached the finality depth and is on the selected chain.
+2. A competing chain emerges that does not include this finalized block.
+3. The competing chain has more accumulated blue work than the current chain.
+
+This scenario requires an attacker (or a severe network partition) to produce an alternative chain with more proof-of-work than the honest chain over a very deep window.
+
+## Event Handling
+
+```typescript
+rpc.addEventListener("finality-conflict", (event) => {
+  if (event.data.violatingBlockHash) {
+    console.error(
+      `FINALITY CONFLICT: violating block ${event.data.violatingBlockHash}`
+    );
+    // Alert operators, pause processing
+  }
+});
+
+rpc.addEventListener("finality-conflict-resolved", (event) => {
+  if (event.data.finalityBlockHash) {
+    console.log(
+      `Finality conflict resolved at block ${event.data.finalityBlockHash}`
+    );
+    // Resume normal operation
+  }
+});
+```
+
+## Use Cases
+
+- **Security monitoring** -- Alert node operators and exchange administrators when network finality is threatened.
+- **Exchange safety** -- Halt deposits and withdrawals during a finality conflict.
+- **Network health dashboards** -- Display finality conflict events as critical alerts.
+
+<Callout type="info">
+For most applications, subscribing to finality conflicts is a safety measure. You should implement the handler even if you never expect to receive a notification. Think of it as a circuit breaker for your application's interaction with the Kaspa network.
+</Callout>

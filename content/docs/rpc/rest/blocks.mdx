@@ -1,0 +1,194 @@
+---
+title: Block Endpoints
+description: "REST API endpoints for querying Kaspa blocks — by hash, by blue score range, and DAG tips."
+---
+
+## Base URL
+
+```
+https://api.kaspa.org
+```
+
+## GET /blocks/\{blockHash\}
+
+Retrieves a specific block by its hash, including header data, transactions, and verbose metadata.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/blocks/8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2
+```
+
+**Response:**
+
+```json
+{
+  "header": {
+    "version": 1,
+    "hashMerkleRoot": "a1b2c3d4...",
+    "acceptedIdMerkleRoot": "e5f6a7b8...",
+    "utxoCommitment": "c9d0e1f2...",
+    "timestamp": 1700000000000,
+    "bits": 486604799,
+    "nonce": 12345678,
+    "daaScore": 52345678,
+    "blueWork": "1a2b3c4d...",
+    "blueScore": 48234567,
+    "pruningPoint": "d4e5f6a7...",
+    "parents": [
+      {
+        "parentHashes": [
+          "f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8"
+        ]
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "version": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "amount": 50000000000,
+          "scriptPublicKey": {
+            "version": 0,
+            "scriptPublicKey": "2011a7215f..."
+          },
+          "verboseData": {
+            "scriptPublicKeyType": "pubkey",
+            "scriptPublicKeyAddress": "kaspa:qr35enn..."
+          }
+        }
+      ],
+      "subnetworkId": "0100000000000000000000000000000000000000",
+      "verboseData": {
+        "transactionId": "abcdef...",
+        "hash": "abcdef...",
+        "mass": "0",
+        "blockHash": "8d3f2e1a...",
+        "blockTime": 1700000000000
+      }
+    }
+  ],
+  "verboseData": {
+    "hash": "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2",
+    "difficulty": 1.234567890123e+15,
+    "selectedParentHash": "f8a9b0c1...",
+    "transactionIds": ["abcdef..."],
+    "isHeaderOnly": false,
+    "blueScore": 48234567,
+    "childrenHashes": ["1a2b3c..."],
+    "mergeSetBluesHashes": ["4d5e6f..."],
+    "mergeSetRedsHashes": [],
+    "isChainBlock": true
+  }
+}
+```
+
+<Callout type="info">
+The `verboseData` object includes derived information such as the block's position in the virtual chain (`isChainBlock`), its merge set (blue and red blocks), and its children in the DAG. This data is computed by the node and is not part of the serialized block.
+</Callout>
+
+## GET /blocks
+
+Retrieves a range of blocks starting from a given low hash. This is useful for iterating through the DAG in order.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/blocks?lowHash=8d3f2e1a...&includeBlocks=true&includeTransactions=true
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `lowHash` | string | Starting block hash (exclusive -- blocks after this hash are returned) |
+| `includeBlocks` | boolean | Whether to include full block data (default: `true`) |
+| `includeTransactions` | boolean | Whether to include transaction data within blocks (default: `false`) |
+
+**Response:**
+
+```json
+{
+  "blockHashes": [
+    "1a2b3c4d5e6f...",
+    "7a8b9c0d1e2f..."
+  ],
+  "blocks": [
+    {
+      "header": { "..." : "..." },
+      "transactions": [],
+      "verboseData": { "..." : "..." }
+    }
+  ]
+}
+```
+
+<Callout>
+When iterating through large ranges of blocks, use the last block hash from the previous response as the `lowHash` for the next request. This provides efficient forward pagination through the DAG.
+</Callout>
+
+## GET /blocks/tip
+
+Returns the current DAG tip blocks -- the most recent blocks that have no children yet.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/blocks/tip
+```
+
+**Response:**
+
+```json
+{
+  "tipHashes": [
+    "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2",
+    "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
+  ]
+}
+```
+
+In Kaspa's BlockDAG, there are typically multiple tip blocks at any given moment because blocks are produced in parallel by different miners at a rate of 10 blocks per second.
+
+## Response Field Reference
+
+### Block Header Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `version` | integer | Block version number |
+| `hashMerkleRoot` | string | Merkle root of all transactions in the block |
+| `acceptedIdMerkleRoot` | string | Merkle root of accepted transaction IDs from merged blocks |
+| `utxoCommitment` | string | Commitment to the UTXO set state |
+| `timestamp` | integer | Block creation time (Unix milliseconds) |
+| `bits` | integer | Compact representation of the target difficulty |
+| `nonce` | integer | Mining nonce |
+| `daaScore` | integer | Difficulty Adjustment Algorithm score |
+| `blueWork` | string | Accumulated blue work (hex-encoded) |
+| `blueScore` | integer | Number of blue blocks in the selected parent chain |
+| `pruningPoint` | string | Hash of the current pruning point block |
+| `parents` | array | Parent block hashes organized by DAG level |
+
+### Verbose Data Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `hash` | string | Block hash |
+| `difficulty` | number | Block difficulty as a floating-point value |
+| `selectedParentHash` | string | Hash of the selected parent in the GHOSTDAG ordering |
+| `isHeaderOnly` | boolean | Whether the node only has the header (body pruned) |
+| `isChainBlock` | boolean | Whether this block is on the virtual selected parent chain |
+| `mergeSetBluesHashes` | array | Blue blocks in this block's merge set |
+| `mergeSetRedsHashes` | array | Red blocks in this block's merge set |
+| `childrenHashes` | array | Hashes of blocks that reference this block as a parent |
+
+## Error Responses
+
+| Status Code | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Invalid block hash format |
+| `404` | Block not found |
+| `500` | Internal server error |

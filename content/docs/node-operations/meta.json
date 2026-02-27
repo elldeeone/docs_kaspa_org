@@ -1,0 +1,13 @@
+{
+  "title": "Node Operations",
+  "pages": [
+    "running-a-node",
+    "configuration",
+    "testnet",
+    "simnet",
+    "docker",
+    "monitoring",
+    "troubleshooting",
+    "upgrading"
+  ]
+}

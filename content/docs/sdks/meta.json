@@ -1,0 +1,10 @@
+{
+  "title": "SDKs",
+  "pages": [
+    "overview",
+    "wasm-sdk",
+    "rust-crates",
+    "python-sdk",
+    "community-sdks"
+  ]
+}

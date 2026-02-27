@@ -1,0 +1,44 @@
+---
+title: "GetDaaScoreTimestampEstimate"
+description: "Estimate timestamps corresponding to specific DAA scores."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `daaScores` | u64[] | Yes | Array of DAA scores to estimate timestamps for. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamps` | u64[] | Array of estimated timestamps (milliseconds since epoch) corresponding to each input DAA score. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getDaaScoreTimestampEstimate",
+  "params": {
+    "daaScores": [50000000, 50001000, 50002000]
+  }
+}
+
+// Response
+{
+  "timestamps": [
+    1700000000000,
+    1700000100000,
+    1700000200000
+  ]
+}
+```
+
+## Notes
+
+- DAA scores increase monotonically and serve as a logical clock in Kaspa. This method maps them to approximate wall-clock times.
+- The estimates are based on the observed relationship between DAA scores and timestamps in the existing DAG. Future DAA scores are extrapolated.
+- At 10 BPS, the DAA score increases by approximately 10 per second, so 1000 DAA score units equals roughly 100 seconds.
+- Timestamps are estimates and may not match exact block timestamps due to variance in block production.

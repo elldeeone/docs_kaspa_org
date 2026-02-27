@@ -1,0 +1,69 @@
+---
+title: "GetBlock"
+description: "Retrieve a specific block by its hash, optionally including full transaction data."
+---
+
+## Request
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `hash` | string | Yes | The hash of the block to retrieve. |
+| `includeTransactions` | boolean | No | Whether to include full transaction data in the response. Defaults to `false`. |
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `block` | object | The block object containing header and optionally transactions. |
+| `block.header` | object | Block header with version, parentsByLevel, hashMerkleRoot, acceptedIdMerkleRoot, utxoCommitment, timestamp, bits, nonce, daaScore, blueWork, blueScore, pruningPoint. |
+| `block.transactions` | array | Transaction objects (only present if `includeTransactions` was `true`). |
+| `block.verboseData` | object | Additional metadata: hash, difficulty, selectedParentHash, transactionIds, isHeaderOnly, blueScore, childrenHashes, mergeSetBluesHashes, mergeSetRedsHashes, isChainBlock. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getBlock",
+  "params": {
+    "hash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5",
+    "includeTransactions": true
+  }
+}
+
+// Response
+{
+  "block": {
+    "header": {
+      "version": 1,
+      "parentsByLevel": [["..."]],
+      "hashMerkleRoot": "aabb...",
+      "timestamp": 1700000000000,
+      "bits": 1234567890,
+      "nonce": 98765,
+      "daaScore": 50000000,
+      "blueScore": 48000000,
+      "blueWork": "1a2b3c..."
+    },
+    "transactions": [
+      {
+        "inputs": [],
+        "outputs": [{ "value": 50000000000, "scriptPublicKey": "..." }],
+        "subnetworkId": "0100000000000000000000000000000000000000",
+        "verboseData": { "transactionId": "abc123...", "blockHash": "6ef191..." }
+      }
+    ],
+    "verboseData": {
+      "hash": "6ef1913d30d5063e040839fcc67cbf02e8e0ae6e4a3cb774c7777043399697f5",
+      "isChainBlock": true,
+      "blueScore": 48000000
+    }
+  }
+}
+```
+
+## Notes
+
+- If the block has been pruned and is no longer available, the call returns an error.
+- The `verboseData` field provides computed metadata that is not part of the raw block structure.
+- Transaction data can be large; omit `includeTransactions` when you only need header information.

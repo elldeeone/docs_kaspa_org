@@ -1,0 +1,38 @@
+---
+title: "GetCoinSupply"
+description: "Get the maximum and current circulating supply of Kaspa."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `maxSompi` | u64 | The maximum total supply of Kaspa in sompi. |
+| `circulatingSompi` | u64 | The current circulating supply in sompi. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getCoinSupply",
+  "params": {}
+}
+
+// Response
+{
+  "maxSompi": 2880000000000000000,
+  "circulatingSompi": 2150000000000000000
+}
+```
+
+## Notes
+
+- Values are in **sompi** (1 KAS = 100,000,000 sompi).
+- The maximum supply of Kaspa is 28.7 billion KAS.
+- Circulating supply increases with each block's coinbase reward and follows Kaspa's emission schedule with chromatic phase-based halvings.
+- To convert to KAS, divide by 100,000,000.

@@ -1,0 +1,161 @@
+---
+title: Virtual Chain Endpoints
+description: "REST API endpoints for querying Kaspa's virtual chain — selected parent chain and chain changes."
+---
+
+## Base URL
+
+```
+https://api.kaspa.org
+```
+
+## What is the Virtual Chain?
+
+In Kaspa's BlockDAG, the **virtual chain** (also called the virtual selected parent chain) is the canonical ordering of blocks determined by the GHOSTDAG protocol. Starting from the genesis block, GHOSTDAG selects a "selected parent" for each block, forming a chain through the DAG. This chain is analogous to the "longest chain" in traditional blockchains and determines transaction ordering and acceptance.
+
+When the DAG grows or reorganizes, the virtual chain can change. Blocks that were previously not on the selected chain may be added, and blocks that were on the chain may be removed. Understanding these changes is essential for applications that need to track confirmations, detect reorganizations, or maintain a synchronized view of the ledger.
+
+## GET /virtual-chain-from-block/\{startHash\}
+
+Returns the chain changes from a given starting block hash to the current virtual chain tip. This endpoint tells you which blocks were added to and removed from the virtual selected parent chain since `startHash`.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/virtual-chain-from-block/8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `includeAcceptedTransactionIds` | boolean | Include accepted transaction IDs for each added chain block (default: `false`) |
+
+**Response:**
+
+```json
+{
+  "removedChainBlockHashes": [],
+  "addedChainBlockHashes": [
+    "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+    "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
+    "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4"
+  ],
+  "acceptedTransactionIds": [
+    {
+      "acceptingBlockHash": "a1b2c3d4...",
+      "acceptedTransactionIds": ["tx1...", "tx2..."]
+    }
+  ]
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `removedChainBlockHashes` | array | Block hashes removed from the chain since `startHash` (indicates a reorg) |
+| `addedChainBlockHashes` | array | Block hashes added to the chain since `startHash`, in order |
+| `acceptedTransactionIds` | array | Transaction IDs accepted by each added chain block (only if requested) |
+
+<Callout type="info">
+If `removedChainBlockHashes` is empty, no reorganization occurred -- blocks were simply appended to the chain. If it contains hashes, those blocks were removed from the selected parent chain (reorg), and the blocks in `addedChainBlockHashes` replaced them.
+</Callout>
+
+## Understanding Chain Changes
+
+### No Reorganization (Normal Growth)
+
+In the common case, the DAG grows linearly from the client's perspective. The `startHash` is still on the chain, and new blocks have been added after it:
+
+```json
+{
+  "removedChainBlockHashes": [],
+  "addedChainBlockHashes": ["block_N+1", "block_N+2", "block_N+3"]
+}
+```
+
+### Reorganization
+
+If the virtual chain has reorganized since `startHash`, some blocks are removed and replaced with new ones:
+
+```json
+{
+  "removedChainBlockHashes": ["old_block_A", "old_block_B"],
+  "addedChainBlockHashes": ["new_block_X", "new_block_Y", "new_block_Z"]
+}
+```
+
+<Callout>
+Reorganizations in Kaspa's DAG are typically shallow (1-2 blocks) due to the high block rate and GHOSTDAG's convergence properties. Deep reorganizations are extremely rare under normal network conditions. However, your application should always handle both the added and removed arrays.
+</Callout>
+
+## Pagination for Large Responses
+
+When querying a large range of chain changes (e.g., catching up after extended downtime), the response may be paginated. The API returns a limited number of chain block hashes per response.
+
+To paginate through the full chain:
+
+1. Call `/virtual-chain-from-block/\{startHash\}`.
+2. Take the last hash in `addedChainBlockHashes`.
+3. Use that hash as the `startHash` for the next request.
+4. Repeat until `addedChainBlockHashes` is empty or shorter than the page size.
+
+```python
+# Example: Iterating through the virtual chain
+import requests
+
+current_hash = "8d3f2e1a..."  # Your last known chain block hash
+base_url = "https://api.kaspa.org"
+
+while True:
+    resp = requests.get(f"{base_url}/virtual-chain-from-block/{current_hash}")
+    data = resp.json()
+
+    added = data.get("addedChainBlockHashes", [])
+    removed = data.get("removedChainBlockHashes", [])
+
+    if removed:
+        print(f"Reorg detected: {len(removed)} blocks removed")
+
+    for block_hash in added:
+        print(f"Processing chain block: {block_hash}")
+        # Process the block...
+
+    if not added:
+        break  # Caught up to the tip
+
+    current_hash = added[-1]
+```
+
+## Use Cases
+
+### Syncing an External Database
+
+Applications that maintain their own view of the Kaspa ledger (e.g., block explorers, analytics platforms) can use this endpoint to incrementally sync:
+
+1. Store the last processed chain block hash.
+2. Periodically poll `/virtual-chain-from-block/\{lastHash\}`.
+3. Process `removedChainBlockHashes` by rolling back any state derived from those blocks.
+4. Process `addedChainBlockHashes` by applying the new chain blocks in order.
+
+### Building a Block Explorer
+
+Explorers need to display the canonical chain and handle reorganizations gracefully. Use the `includeAcceptedTransactionIds` parameter to also track which transactions were accepted by each chain block.
+
+### Tracking Transaction Confirmations
+
+To determine how many confirmations a transaction has, find its accepting block in the chain and count the number of chain blocks after it. Use this endpoint to monitor how the chain grows relative to the accepting block.
+
+## Error Responses
+
+| Status Code | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Invalid block hash format |
+| `404` | Starting block hash not found (may have been pruned) |
+| `500` | Internal server error |
+
+<Callout>
+If the starting block hash has been pruned, the endpoint returns a `404` error. In this case, use the current pruning point hash (available from `/info/blockdag`) as your new starting point and rebuild your local state from there.
+</Callout>

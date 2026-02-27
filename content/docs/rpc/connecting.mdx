@@ -1,0 +1,159 @@
+---
+title: "Connecting"
+description: "How to connect to Kaspa nodes — endpoints, ports, and network configuration for wRPC, gRPC, and REST."
+---
+
+## Port Reference
+
+Each Kaspa network uses a distinct set of ports for its various interfaces. The port scheme follows a pattern based on a network suffix.
+
+| Network | P2P | gRPC | wRPC Borsh | wRPC JSON |
+|---------|-----|------|------------|-----------|
+| **Mainnet** | 16111 | 16110 | 17110 | 18110 |
+| **Testnet-10** | 16211 | 16210 | 17210 | 18210 |
+| **Testnet-11** | 16311 | 16310 | 17310 | 18310 |
+| **Simnet** | 16511 | 16510 | 17510 | 18510 |
+| **Devnet** | 16611 | 16610 | 17610 | 18610 |
+
+<Callout type="info">
+The P2P port is for node-to-node communication and is not used by RPC clients. Your application connects to the gRPC or wRPC ports.
+</Callout>
+
+## Connection URLs
+
+### wRPC (WebSocket)
+
+```
+ws://<host>:<port>
+```
+
+For mainnet with JSON encoding:
+```
+ws://127.0.0.1:18110
+```
+
+For mainnet with Borsh encoding:
+```
+ws://127.0.0.1:17110
+```
+
+For TLS-secured connections:
+```
+wss://<host>:<port>
+```
+
+### gRPC
+
+```
+grpc://<host>:<port>
+```
+
+For mainnet:
+```
+grpc://127.0.0.1:16110
+```
+
+### REST
+
+```
+https://api.kaspa.org
+```
+
+The REST API is a public service and does not require running your own node.
+
+## Public Node Infrastructure
+
+### Resolver
+
+The Kaspa ecosystem provides a **Resolver** service that enables automatic node discovery. Instead of hardcoding a node address, your application can query the Resolver to find available public wRPC endpoints.
+
+The Resolver returns a list of healthy public nodes and handles load balancing across them. This is the recommended approach for applications that do not run their own node.
+
+<Callout>
+Public nodes discovered via the Resolver are community-operated and best-effort. For production applications handling significant value, run your own node for reliability and trust.
+</Callout>
+
+## Connecting to a Local Node
+
+If you run your own `kaspad` or `rusty-kaspa` node, RPC is enabled by default on localhost. Ensure the node is fully synced before relying on RPC responses — use `GetSyncStatus` or `GetInfo` to verify.
+
+Start `kaspad` with custom RPC listen address:
+```bash
+kaspad --rpclisten=0.0.0.0:16110
+```
+
+## TLS Considerations
+
+Kaspa's RPC does not natively support TLS. For encrypted connections:
+
+1. Use a reverse proxy (nginx, caddy, HAProxy) that terminates TLS and forwards to the local RPC port.
+2. Use an SSH tunnel for remote development.
+3. Use a VPN between your application and the node.
+
+When using `wss://` through a reverse proxy, ensure the proxy supports WebSocket upgrade headers.
+
+## Connection Examples
+
+### JavaScript (WASM SDK)
+
+```javascript
+import { RpcClient, Resolver } from "@aspect-build/kaspa-wasm";
+
+// Using Resolver for automatic node discovery
+const rpc = new RpcClient({
+  resolver: new Resolver(),
+  networkId: "mainnet",
+  encoding: "borsh",
+});
+await rpc.connect();
+
+const info = await rpc.getInfo();
+console.log("Connected to node:", info.serverVersion);
+```
+
+```javascript
+// Direct connection to a known node
+const rpc = new RpcClient({
+  url: "ws://127.0.0.1:17110",
+  encoding: "borsh",
+});
+await rpc.connect();
+```
+
+### Rust (kaspa-wrpc-client)
+
+```rust
+use kaspa_wrpc_client::prelude::*;
+
+// Using Resolver
+let rpc = RpcClient::new(
+    WrpcEncoding::Borsh,
+    Some("ws://127.0.0.1:17110"),
+    None,
+    None,
+    None,
+)?;
+rpc.connect(None).await?;
+
+let info = rpc.get_info().await?;
+println!("Connected: {}", info.server_version);
+```
+
+### curl (REST)
+
+```bash
+# Get current coin supply
+curl https://api.kaspa.org/info/coinsupply
+
+# Get balance for an address
+curl https://api.kaspa.org/addresses/<address>/balance
+```
+
+## Connection Lifecycle
+
+1. **Connect**: Establish a WebSocket or gRPC connection to the node.
+2. **Handshake**: The connection is ready immediately — no authentication handshake is required.
+3. **Request/Response**: Send RPC method calls and receive responses.
+4. **Subscribe**: Optionally subscribe to notifications for real-time updates.
+5. **Keepalive**: Use `Ping` periodically to keep the connection alive through proxies and firewalls.
+6. **Disconnect**: Close the connection gracefully when done.

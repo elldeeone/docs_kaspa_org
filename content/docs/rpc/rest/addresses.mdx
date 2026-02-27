@@ -1,0 +1,216 @@
+---
+title: Address Endpoints
+description: "REST API endpoints for querying Kaspa address data — balances, UTXOs, and transaction history."
+---
+
+## Base URL
+
+All REST API endpoints are served from the public Kaspa API:
+
+```
+https://api.kaspa.org
+```
+
+<Callout type="info">
+The public REST API at `api.kaspa.org` is provided for development and light usage. For production applications that process real value or require high availability, run your own instance of the [kaspa-rest-server](https://github.com/aspect-build/kaspa-rest-server) connected to your own node.
+</Callout>
+
+## GET /addresses/\{address\}/balance
+
+Returns the total balance for a single address, calculated by summing all of its unspent transaction outputs.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/balance
+```
+
+**Response:**
+
+```json
+{
+  "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+  "balance": 500000000000
+}
+```
+
+<Callout>
+Balances are returned in **sompi** (the smallest unit of KAS). 1 KAS = 100,000,000 sompi. Divide by 10^8 to convert to KAS.
+</Callout>
+
+## GET /addresses/\{address\}/utxos
+
+Returns all unspent transaction outputs (UTXOs) for the given address.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/utxos
+```
+
+**Response:**
+
+```json
+[
+  {
+    "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+    "outpoint": {
+      "transactionId": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+      "index": 0
+    },
+    "utxoEntry": {
+      "amount": "500000000000",
+      "scriptPublicKey": {
+        "scriptPublicKey": "2011a7215f668e921013eb7aac9b7e64b9ec6e757c1b648a89f32cb449a084850aac"
+      },
+      "blockDaaScore": 52345000,
+      "isCoinbase": false
+    }
+  }
+]
+```
+
+## GET /addresses/\{address\}/full-transactions
+
+Returns the full transaction history for an address, including both inputs and outputs with complete transaction details.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/full-transactions
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `limit` | integer | Maximum number of transactions to return (default: 50) |
+| `offset` | integer | Number of transactions to skip for pagination |
+| `resolve_previous_outpoints` | string | Set to `light` or `full` to include previous outpoint data |
+
+**Response:**
+
+```json
+[
+  {
+    "subnetwork_id": "0000000000000000000000000000000000000000",
+    "transaction_id": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "hash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "mass": "2254",
+    "block_hash": [
+      "aabbccdd..."
+    ],
+    "block_time": 1700000000000,
+    "is_accepted": true,
+    "accepting_block_hash": "aabbccdd...",
+    "accepting_block_blue_score": 48234567,
+    "inputs": [
+      {
+        "transaction_id": "abcdef...",
+        "index": 0,
+        "previous_outpoint_hash": "fedcba...",
+        "previous_outpoint_index": "0",
+        "signature_script": "41...",
+        "sig_op_count": "1"
+      }
+    ],
+    "outputs": [
+      {
+        "amount": 100000000,
+        "script_public_key": "2011a7...",
+        "script_public_key_address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+        "script_public_key_type": "pubkey"
+      }
+    ]
+  }
+]
+```
+
+## GET /addresses/\{address\}/full-transactions-page
+
+Returns a paginated view of full transactions for an address, designed for building explorer-style interfaces with page-based navigation.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/addresses/kaspa:qr35enn.../full-transactions-page?page=0&limit=25&resolve_previous_outpoints=light
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `page` | integer | Page number (0-indexed) |
+| `limit` | integer | Number of transactions per page (default: 25, max: 500) |
+| `resolve_previous_outpoints` | string | `light` or `full` for previous outpoint resolution |
+
+**Response:**
+
+The response includes the same transaction format as `/full-transactions` but is wrapped with pagination metadata.
+
+## GET /addresses/\{address\}/transactions-count
+
+Returns the total number of transactions associated with an address.
+
+**Request:**
+
+```
+GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/transactions-count
+```
+
+**Response:**
+
+```json
+{
+  "total": 1523
+}
+```
+
+## Querying Multiple Addresses
+
+Some address endpoints support querying multiple addresses in a single request by passing a comma-separated list:
+
+```
+GET https://api.kaspa.org/addresses/kaspa:addr1,kaspa:addr2,kaspa:addr3/balance
+```
+
+**Response:**
+
+```json
+{
+  "address": "kaspa:addr1,kaspa:addr2,kaspa:addr3",
+  "balance": 750000000000
+}
+```
+
+## Rate Limits
+
+The public API enforces rate limits to ensure fair usage:
+
+- Requests are rate-limited per IP address.
+- Exceeding the rate limit returns HTTP `429 Too Many Requests`.
+- Include appropriate backoff and retry logic in your application.
+
+<Callout type="info">
+For high-volume use cases such as exchange integrations, wallet backends, or analytics platforms, deploy your own REST API server. This eliminates rate limit concerns and gives you full control over availability and performance.
+</Callout>
+
+## Error Responses
+
+Errors are returned with appropriate HTTP status codes:
+
+| Status Code | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Bad request (e.g., invalid address format) |
+| `404` | Address not found or no data available |
+| `429` | Rate limit exceeded |
+| `500` | Internal server error |
+
+Error bodies include a descriptive message:
+
+```json
+{
+  "error": "Invalid address format"
+}
+```

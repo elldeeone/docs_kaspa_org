@@ -1,0 +1,45 @@
+---
+title: "GetServerInfo"
+description: "Get detailed server information including RPC API version and network details."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rpcApiVersion` | u32[] | The RPC API version as an array (e.g., `[0, 15, 0]`). |
+| `serverVersion` | string | The node software version string. |
+| `networkId` | string | The full network identifier (e.g., `kaspa-mainnet`). |
+| `hasUtxoIndex` | boolean | Whether the UTXO index is enabled. |
+| `isSynced` | boolean | Whether the node is fully synced. |
+| `virtualDaaScore` | u64 | The current virtual DAA score. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getServerInfo",
+  "params": {}
+}
+
+// Response
+{
+  "rpcApiVersion": [0, 15, 0],
+  "serverVersion": "0.15.0",
+  "networkId": "kaspa-mainnet",
+  "hasUtxoIndex": true,
+  "isSynced": true,
+  "virtualDaaScore": 50000000
+}
+```
+
+## Notes
+
+- Use `rpcApiVersion` to check compatibility between your client and the node. Breaking changes increment the major version.
+- The `networkId` combines the network name and suffix into a single string.
+- `virtualDaaScore` provides the same value as `GetBlockDagInfo` but with a simpler call.

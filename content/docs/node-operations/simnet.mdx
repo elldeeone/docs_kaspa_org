@@ -1,0 +1,101 @@
+---
+title: Simnet
+description: How to run a Kaspa simulation network for local development, including instant mining, isolated testing, and rapid development iteration.
+---
+
+## What Is Simnet
+
+Simnet (simulation network) is a local, self-contained Kaspa network designed for development and testing. Unlike testnet, simnet does not connect to any external peers. You have full control over the network, including block production, which makes it ideal for unit testing, integration testing, and rapid prototyping.
+
+Simnet operates with relaxed difficulty rules, allowing you to mine blocks instantly without significant hash power. This means you can produce blocks on demand and test transaction flows without waiting for real network propagation.
+
+<Callout type="info">
+Simnet is completely isolated. It has its own genesis block, its own DAG, and no connection to mainnet or testnet. Nothing that happens on simnet affects any other network.
+</Callout>
+
+## Starting a Simnet Node
+
+Launch kaspad with the `--simnet` flag:
+
+```bash
+kaspad --simnet --utxoindex --rpclisten=0.0.0.0:16510
+```
+
+The node starts immediately with an empty DAG. Since there are no external peers, the node is ready to use as soon as it initializes.
+
+## Simnet Ports
+
+Simnet uses its own set of default ports, distinct from both mainnet and testnet:
+
+| Service | Simnet Port |
+|---|---|
+| P2P | 16511 |
+| gRPC | 16510 |
+| wRPC Borsh | 17510 |
+| wRPC JSON | 18510 |
+
+Because each network uses different ports and data directories, you can run mainnet, testnet, and simnet nodes simultaneously on the same machine.
+
+## Simnet Address Prefix
+
+Simnet addresses use the `kaspasim:` prefix:
+
+- **Mainnet**: `kaspa:qr...`
+- **Testnet**: `kaspatest:qr...`
+- **Simnet**: `kaspasim:qr...`
+
+Wallet software connected to a simnet node will automatically generate addresses with the `kaspasim:` prefix.
+
+## Mining Blocks on Simnet
+
+Simnet uses a minimal mining difficulty, allowing blocks to be mined nearly instantly with CPU mining. To mine blocks on simnet:
+
+1. Start kaspad with `--simnet`, `--utxoindex`, and a `--miningaddr` flag pointing to your simnet address.
+2. Connect a miner to the node's gRPC endpoint, or use the built-in mining capabilities.
+
+```bash
+kaspad --simnet --utxoindex --miningaddr=kaspasim:qr...your_address
+```
+
+<Callout>
+On simnet, blocks are mined almost instantly because the difficulty target is set extremely low. This allows you to generate blocks as fast as your CPU can produce them, which is ideal for testing transaction confirmation flows and DAG behavior.
+</Callout>
+
+## Use Cases
+
+### Unit Testing
+
+Simnet is perfect for automated test suites. You can start a fresh simnet node for each test run, mine blocks to generate coinbase rewards, create transactions, and verify behavior, all without external dependencies.
+
+### Application Development
+
+When building applications that interact with the Kaspa RPC, simnet provides a predictable local environment. You can test wallet operations, transaction construction, and RPC calls without needing testnet coins or a network connection.
+
+### Protocol Experimentation
+
+Developers working on the Kaspa protocol can use simnet to test changes in isolation before deploying to testnet. Since you control all nodes on simnet, you can simulate various network conditions and edge cases.
+
+<Callout type="warn">
+Simnet data is ephemeral by nature. While the data directory persists between restarts, simnet DAGs are typically small and can be reset freely using `--reset-db`. Do not use simnet for any data you need to preserve.
+</Callout>
+
+## Multiple Simnet Nodes
+
+You can run multiple simnet nodes on the same machine to simulate a multi-node network. Connect them using the `--connect` flag:
+
+```bash
+# Node 1
+kaspad --simnet --utxoindex --rpclisten=127.0.0.1:16510 --listen=127.0.0.1:16511
+
+# Node 2 (connects to Node 1)
+kaspad --simnet --utxoindex --rpclisten=127.0.0.1:16520 --listen=127.0.0.1:16521 \
+  --connect=127.0.0.1:16511 --appdir=~/.kaspad-sim2
+```
+
+This setup allows you to test peer-to-peer propagation, DAG convergence, and multi-node scenarios locally.
+
+## Further Reading
+
+- [Testnet](/docs/node-operations/testnet) — Using the public test network for broader integration testing.
+- [Configuration](/docs/node-operations/configuration) — All kaspad CLI flags including `--simnet` and `--connect`.
+- [Running a Node](/docs/node-operations/running-a-node) — General node setup guide.

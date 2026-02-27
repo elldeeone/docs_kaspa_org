@@ -1,0 +1,125 @@
+---
+title: "Block Explorers"
+description: "Kaspa block explorers and how to build one — querying blocks, transactions, and addresses from the DAG."
+---
+
+## Overview
+
+Block explorers provide a web interface for browsing the Kaspa DAG — viewing blocks, transactions, addresses, and network statistics. Because Kaspa uses a BlockDAG rather than a linear blockchain, explorers must handle concepts like parallel blocks, merge sets, and blue/red block classification that do not exist in traditional blockchain explorers.
+
+## Available Block Explorers
+
+### explorer.kaspa.org
+
+The official Kaspa block explorer at [explorer.kaspa.org](https://explorer.kaspa.org) provides:
+
+- Block details (hash, timestamp, parents, blue score, DAA score).
+- Transaction details (inputs, outputs, amounts, fees).
+- Address balance and transaction history lookup.
+- Network statistics (hashrate, difficulty, block rate).
+- DAG visualization showing the structure of recent blocks.
+
+### kas.fyi
+
+[kas.fyi](https://kas.fyi) is a community-run explorer and analytics platform that offers:
+
+- Real-time block and transaction monitoring.
+- Rich charts and statistics (hashrate trends, emission tracking, supply data).
+- Address lookup and UTXO inspection.
+- API access for programmatic queries.
+
+## What Block Explorers Show in a DAG Context
+
+A Kaspa block explorer differs from a Bitcoin block explorer in several important ways:
+
+### Multiple Parents
+
+Each Kaspa block references **multiple parent blocks** rather than a single previous block. The explorer shows the list of parents for each block, with the **selected parent** highlighted. The selected parent is the parent with the highest blue score and defines the block's position on the selected parent chain.
+
+### Blue and Red Blocks
+
+GHOSTDAG classifies each block as **blue** (honest, well-connected) or **red** (late, potentially adversarial). Explorers typically color-code blocks:
+
+- **Blue blocks** are part of the honest majority and their miners receive the full block reward.
+- **Red blocks** arrived too late or are disconnected from the main DAG. Their coinbase reward is transferred to the merging blue block's miner.
+
+### Merge Sets
+
+When a block is added to the DAG, it "merges" all blocks in its past that have not yet been merged. The explorer can show a block's **merge set** — the set of blocks that this block newly brings into the selected parent chain's view.
+
+### Selected Parent Chain
+
+The selected parent chain is the equivalent of Bitcoin's "longest chain." It is determined by GHOSTDAG and represents the canonical ordering of blocks. Explorers use the selected parent chain to define block ordering, DAA scores, and blue scores.
+
+<Callout type="info">
+In a DAG, multiple blocks exist at the same "height." The selected parent chain provides a linear ordering, but many blocks exist in parallel at any given blue score. Explorers must present this parallel structure clearly.
+</Callout>
+
+## Building a Block Explorer
+
+### Requirements
+
+To build a Kaspa block explorer, you need:
+
+1. **An archival node**: A Kaspa node running with `--utxoindex` to enable address-based UTXO lookups. For full historical queries, you may also need to disable pruning or run additional indexing infrastructure.
+2. **RPC access**: The explorer queries the node via wRPC (WebSocket RPC) or gRPC.
+3. **A database**: Index blocks, transactions, and addresses in a database for fast lookups and search.
+4. **A web frontend**: Display the data with DAG-aware visualizations.
+
+### Key RPC Methods
+
+| Method | Purpose |
+|---|---|
+| `getBlock` | Retrieve a single block by hash, including its transactions |
+| `getBlocks` | Retrieve a range of blocks by low hash and include count |
+| `getVirtualChainFromBlock` | Get the selected parent chain from a given block to the virtual |
+| `getBlockDagInfo` | Get DAG metadata (tip hashes, blue score, difficulty) |
+| `getUtxosByAddresses` | Look up UTXOs for specific addresses |
+| `notifyBlockAdded` | Subscribe to new block notifications |
+| `notifyVirtualChainChanged` | Subscribe to selected parent chain changes |
+
+### Indexing Strategy
+
+A practical indexing approach:
+
+1. **Subscribe to new blocks** using `notifyBlockAdded`. For each new block, store it in your database with its hash, parents, timestamp, blue score, DAA score, and transactions.
+2. **Index transactions**: For each transaction in a block, index the inputs (spent UTXOs) and outputs (created UTXOs) by address.
+3. **Track the selected parent chain**: Subscribe to `notifyVirtualChainChanged` to know which blocks are on the chain and update blue/red classifications accordingly.
+4. **Backfill historical data**: On startup, use `getBlocks` to walk backward through the DAG and populate your database with historical blocks.
+
+<Callout type="warn">
+The Kaspa DAG produces approximately 864,000 blocks per day at 10 BPS. Your database and indexing pipeline must handle this throughput. Use batch inserts and efficient indexing to keep up with the block rate.
+</Callout>
+
+## REST API (api.kaspa.org)
+
+The Kaspa project provides a REST API at [api.kaspa.org](https://api.kaspa.org) that wraps common RPC queries in HTTP endpoints. This is useful for lightweight integrations that do not need a direct node connection:
+
+- `GET /blocks/\{blockHash\}` — Retrieve block details.
+- `GET /transactions/\{txId\}` — Retrieve transaction details.
+- `GET /addresses/\{address\}/utxos` — Get UTXOs for an address.
+- `GET /addresses/\{address\}/balance` — Get the balance for an address.
+- `GET /info` — Network information (blue score, hashrate, etc.).
+
+<Callout>
+The REST API is rate-limited and intended for light use. For production block explorers or high-volume applications, run your own node and use the wRPC interface directly.
+</Callout>
+
+## DAG Visualization Challenges
+
+Visualizing a DAG is significantly harder than visualizing a linear chain:
+
+- **Layout**: Blocks have multiple parents and children, creating a graph structure that requires force-directed or layered graph layout algorithms.
+- **Scale**: At 10 BPS, the DAG grows rapidly. Visualizations must limit the displayed window to a manageable number of blocks.
+- **Blue/red coloring**: Visual distinction between blue and red blocks helps users understand consensus state.
+- **Selected parent chain**: Highlighting the selected parent chain within the DAG provides an anchor for navigation.
+
+Most explorers show a simplified view — either a linear view following the selected parent chain (similar to a blockchain explorer) or a small DAG window showing the most recent blocks and their parent relationships.
+
+## Further Reading
+
+- [BlockDAG](/docs/core-concepts/blockdag) — How the BlockDAG structure works.
+- [GHOSTDAG](/docs/core-concepts/ghostdag) — Blue/red block classification and selected parent chain.
+- [RPC API](/docs/developer-guide/rpc-api) — Full wRPC method reference.
+- [Exchange Integration](/docs/integrations/exchange-integration) — Using RPC methods for deposit detection.
+- [Payment Processing](/docs/integrations/payment-processing) — Monitoring addresses for payments.

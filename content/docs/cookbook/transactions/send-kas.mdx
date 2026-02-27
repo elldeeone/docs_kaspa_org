@@ -1,0 +1,131 @@
+---
+title: Send KAS
+description: "Send a basic KAS transaction using the Kaspa WASM SDK."
+---
+
+## Prerequisites
+
+Before sending a KAS transaction, ensure you have the following:
+
+- **Kaspa WASM SDK** installed in your project (`npm install kaspa-wasm`)
+- **A funded wallet** with enough KAS to cover the amount plus transaction fees
+- **Access to a Kaspa node** (either your own or via the public Resolver)
+
+<Callout type="info">
+All amounts in the Kaspa protocol are denominated in **sompi** (1 KAS = 100,000,000 sompi). The SDK provides `kaspaToSompi` and `sompiToKas` helpers for convenient conversion.
+</Callout>
+
+## Code
+
+The following example creates a connection to a Kaspa node, loads a wallet from a mnemonic, constructs a transaction, signs it, and submits it to the network:
+
+```typescript
+import {
+  RpcClient,
+  Resolver,
+  Encoding,
+  Mnemonic,
+  XPrv,
+  UtxoProcessor,
+  UtxoContext,
+  createTransactions,
+  kaspaToSompi,
+} from "kaspa-wasm";
+
+async function sendKas() {
+  // 1. Connect to a Kaspa node
+  const rpc = new RpcClient({
+    resolver: new Resolver(),
+    encoding: Encoding.Borsh,
+    networkId: "mainnet",
+  });
+  await rpc.connect();
+  console.log("Connected to Kaspa node");
+
+  // 2. Restore wallet from mnemonic
+  const mnemonic = new Mnemonic(
+    "your twenty four word mnemonic phrase goes here ..."
+  );
+  const seed = mnemonic.toSeed("");
+  const xprv = new XPrv(seed);
+  const account = xprv.derivePath("m/44'/111111'/0'");
+  const privateKey = account.derivePath("0/0").toPrivateKey();
+  const senderAddress = privateKey
+    .toPublicKey()
+    .toAddress("mainnet")
+    .toString();
+  console.log("Sender address:", senderAddress);
+
+  // 3. Set up UTXO tracking for the sender address
+  const processor = new UtxoProcessor({ rpc, networkId: "mainnet" });
+  const context = new UtxoContext({ processor });
+  await processor.start();
+  await context.trackAddresses([senderAddress]);
+
+  // Wait briefly for UTXO data to populate
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // 4. Build the transaction
+  const recipientAddress = "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0";
+  const amountInSompi = kaspaToSompi(1.5); // Send 1.5 KAS
+
+  const { transactions, summary } = await createTransactions({
+    entries: context,
+    outputs: [
+      {
+        address: recipientAddress,
+        amount: amountInSompi,
+      },
+    ],
+    changeAddress: senderAddress,
+    priorityFee: 0n,
+  });
+
+  console.log("Transaction summary:", summary);
+
+  // 5. Sign and submit each transaction
+  for (const tx of transactions) {
+    tx.sign([privateKey]);
+    const txId = await tx.submit(rpc);
+    console.log("Submitted transaction:", txId);
+  }
+
+  // 6. Clean up
+  await processor.stop();
+  await rpc.disconnect();
+}
+
+sendKas().catch(console.error);
+```
+
+## Explanation
+
+### Step 1: Connect to a node
+
+The `RpcClient` establishes a WebSocket (wRPC) connection to a Kaspa node. Using `Resolver` causes the SDK to automatically discover a public node on the specified network. For production use, replace the Resolver with a direct URL to your own node.
+
+### Step 2: Restore the wallet
+
+A `Mnemonic` is used to derive the HD wallet seed. The derivation path `m/44'/111111'/0'` is Kaspa's standard BIP-44 path, where `111111` is Kaspa's registered coin type. The first receive key is derived at index `0/0`.
+
+### Step 3: Track UTXOs
+
+The `UtxoProcessor` and `UtxoContext` work together to monitor the blockchain for unspent outputs belonging to the sender address. The context automatically caches UTXO entries and keeps them up to date via node subscriptions.
+
+### Step 4: Build the transaction
+
+`createTransactions` is the high-level transaction builder. It automatically selects UTXOs from the context, calculates fees based on the transaction's mass, and produces change outputs. If the wallet contains many small UTXOs, it may produce multiple compound transactions that must be submitted in sequence.
+
+### Step 5: Sign and submit
+
+Each transaction in the returned array is signed with the sender's private key and submitted to the node via RPC. The node validates the transaction and broadcasts it to the network. The returned `txId` is the transaction hash that can be used for tracking.
+
+<Callout>
+If `createTransactions` returns more than one transaction, the earlier transactions are compound (consolidation) transactions that combine small UTXOs. You must sign and submit them in order, as each subsequent transaction depends on the outputs of the previous one.
+</Callout>
+
+## Further Reading
+
+- [Estimate Fees](/docs/cookbook/transactions/estimate-fees) -- Calculate fees before sending.
+- [Track Confirmation](/docs/cookbook/transactions/track-confirmation) -- Monitor confirmation depth after sending.
+- [Transactions](/docs/core-concepts/transactions) -- Protocol-level transaction structure.

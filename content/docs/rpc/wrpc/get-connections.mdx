@@ -1,0 +1,40 @@
+---
+title: "GetConnections"
+description: "Get the number of active peer and client connections to the node."
+---
+
+## Request
+
+No parameters required.
+
+## Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `clients` | u32 | Number of RPC clients currently connected. |
+| `peers` | u32 | Number of P2P peers currently connected. |
+| `profileName` | string | The active connection profile name. |
+
+## Example
+
+```json
+// Request
+{
+  "method": "getConnections",
+  "params": {}
+}
+
+// Response
+{
+  "clients": 3,
+  "peers": 48,
+  "profileName": "default"
+}
+```
+
+## Notes
+
+- `peers` reflects P2P connections to other Kaspa nodes for block and transaction propagation.
+- `clients` reflects RPC connections (wRPC or gRPC) from applications querying the node.
+- A healthy mainnet node typically maintains 30-50+ peer connections.
+- Use this for monitoring node health and connectivity.
