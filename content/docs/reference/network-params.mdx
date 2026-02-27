@@ -7,7 +7,11 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 # Network Parameters
 
-This page provides a comprehensive reference of all configurable and fixed parameters that define the Kaspa network's behavior. Parameters are listed for mainnet unless otherwise noted.
+This page provides a comprehensive reference of all configurable and fixed parameters that define the Kaspa network's behavior. Parameters are listed for mainnet post-Crescendo (10 BPS) unless otherwise noted.
+
+<Callout type="info">
+Values on this page are derived directly from the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) reference implementation. Where a parameter is computed from constants (for example, `finality_depth = BPS * FINALITY_DURATION`), the formula is shown alongside the result.
+</Callout>
 
 ---
 
@@ -16,8 +20,11 @@ This page provides a comprehensive reference of all configurable and fixed param
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | Block rate | **10 BPS** (blocks per second) | Target rate of block production across the network |
-| Block time target | **100 ms** | Target interval between consecutive blocks |
-| Timestamp deviation tolerance | 132 seconds | Maximum allowed deviation of a block's timestamp from the network's past median time |
+| Block time target | **100 ms** | Target interval between consecutive blocks (`1000 / BPS`) |
+| Timestamp deviation tolerance | **132 seconds** | Maximum allowed deviation of a block's timestamp from the network's past median time |
+| Past median time sample interval | **10 seconds** | Desired interval between sampled blocks for the median time window |
+| Past median time sampled window size | **27 blocks** | Number of sampled blocks used to calculate the past median time |
+| Past median time sample rate | **100 blocks** | Sample 1 in every 100 blocks for the median time window (`BPS * 10`) |
 
 <Callout type="info">
 Kaspa's 10 BPS rate makes it one of the fastest proof-of-work blockchains. At this rate, the network produces approximately 864,000 blocks per day. The high block rate is enabled by the GHOSTDAG protocol, which resolves conflicts between concurrent blocks without orphaning them.
@@ -25,24 +32,61 @@ Kaspa's 10 BPS rate makes it one of the fastest proof-of-work blockchains. At th
 
 ---
 
-## Block Constraints
+## GHOSTDAG and Block Structure
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Maximum block mass | **500,000** | Maximum total transaction mass allowed in a single block |
-| Maximum block parents | **10** | Maximum number of direct (level-0) parent blocks |
-| Merge set size limit | **Bounded by GHOSTDAG K** | Maximum number of blocks in a block's merge set |
-| GHOSTDAG K | **18** | Upper bound on the anticone size for blocks to be considered "blue" |
-| Mergeset size limit | **180** | Maximum number of blocks allowed in a block's merge set |
+| GHOSTDAG K | **124** | Upper bound on the expected anticone size for honest blocks. Computed such that the probability of a larger anticone is less than 1% given a 5-second network delay bound at 10 BPS |
+| Network delay bound (D) | **5 seconds** | Estimated upper bound on network propagation delay |
+| Anticone probability (delta) | **0.01** (1%) | Target upper bound on the probability of anticones larger than K |
+| Maximum block parents | **16** | Maximum number of direct (level-0) parent blocks. Clamped to `min(max(K/2, 10), 16)` to balance DAG coverage with processing performance |
+| Mergeset size limit | **248** | Maximum number of blocks in a block's merge set. Computed as `max(min(K * 2, 512), 180)` |
+| Block version | **1** | Current block header version |
+| Maximum block level | **225** | Maximum multi-level header level for the block DAG |
 
-### Transaction Mass Limits
+<Callout type="info">
+The GHOSTDAG K parameter is derived from a Poisson analysis: given `x = 2 * D * BPS = 2 * 5 * 10 = 100`, K = 124 is the smallest value such that the cumulative Poisson probability with mean 100 exceeds 0.99. This ensures that honest blocks are overwhelmingly likely to have anticones smaller than K.
+</Callout>
+
+---
+
+## Block Mass and Transaction Limits
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Maximum transaction mass | **100,000** | Maximum mass for a single transaction |
-| Mass per transaction byte | **1** | Mass contribution per byte of serialized transaction data |
-| Mass per script public key byte | **10** | Mass contribution per byte of script public key data |
-| Mass per sig op | **1,000** | Mass contribution per signature operation |
+| Maximum block mass | **500,000 grams** | Maximum total transaction mass allowed in a single block |
+| Maximum transaction mass | **100,000 grams** | Maximum mass for a single standard transaction |
+| Mass per transaction byte | **1** | Mass contribution per byte of serialized transaction data (compute mass) |
+| Mass per script public key byte | **10** | Mass contribution per byte of script public key data (compute mass) |
+| Mass per sig op | **1,000** | Mass contribution per signature operation (compute mass) |
+| Transient byte-to-mass factor | **4** | Mass multiplier per byte for transient storage mass (KIP-0013), limiting block body size to ~125 KB |
+| Storage mass parameter (C) | **10^12** (1,000,000,000,000) | Parameter for scaling inverse KAS value to mass units (KIP-0009). Equal to `SOMPI_PER_KASPA * 10,000` |
+
+### Mass Types
+
+Kaspa uses a multi-dimensional mass system where the effective mass of a transaction is the maximum across three independently computed mass values:
+
+| Mass Type | Description |
+|-----------|-------------|
+| **Compute mass** | Based on serialized size, script public key bytes, and signature operations. Limits computational cost of block validation |
+| **Transient mass** | Based on serialized size multiplied by the transient factor (4x). Limits the byte size of data propagated per block to ~125 KB |
+| **Storage mass** | Context-dependent mass based on UTXO creation vs. consumption (KIP-0009). Penalizes UTXO set bloat by charging more for creating small or numerous outputs |
+
+<Callout type="warn">
+The effective mass of a transaction is `max(compute_mass, transient_mass, storage_mass)`. A transaction that is lightweight in compute terms can still have high mass if it fragments UTXOs into many small outputs.
+</Callout>
+
+### Transaction Constraints
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Transaction version | **0** | Current supported transaction version |
+| Maximum inputs per transaction | **1,000** | Hard protocol limit on input count (practical limit is lower due to mass) |
+| Maximum outputs per transaction | **1,000** | Hard protocol limit on output count (practical limit is lower due to mass) |
+| Maximum signature script length | **10,000 bytes** | Maximum length of an input's signature script |
+| Maximum script public key length | **10,000 bytes** | Maximum length of an output's script public key |
+| Subnetwork ID length | **20 bytes** | Size of the subnetwork identifier field |
+| Maximum sequence number | **2^64 - 1** | Maximum value for the transaction input sequence field |
 
 ---
 
@@ -50,10 +94,13 @@ Kaspa's 10 BPS rate makes it one of the fastest proof-of-work blockchains. At th
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| DAA window size | **2,641 blocks** | Number of blocks in the DAA sampling window |
+| DAA window duration | **2,641 seconds** (~44 minutes) | Time span over which the DAA samples blocks |
+| DAA sample interval | **4 seconds** | Desired interval between sampled blocks for difficulty calculation |
+| DAA sampled window size | **661 blocks** | Number of sampled blocks in the DAA window (`ceil(2641 / 4)`) |
+| DAA sample rate | **40 blocks** | Sample 1 in every 40 blocks (`BPS * 4`) |
+| Minimum difficulty window size | **150** | Minimum number of samples before DAA activates. At 4-second intervals, this represents ~10 minutes of fixed difficulty at startup |
 | DAA target time per block | **100 ms** | Target block interval the DAA adjusts toward |
-| Minimum difficulty | Network-defined | Floor difficulty to prevent the chain from stalling |
-| DAA score | Monotonically increasing | Counts blocks on the selected parent chain; used as a logical clock |
+| Maximum difficulty target | **2^255 - 1** | Highest allowed proof-of-work difficulty target (lowest difficulty) |
 
 The DAA continuously adjusts the mining difficulty to maintain the target block rate. It samples the timestamps and difficulty of blocks within the DAA window and computes the new target based on the observed rate versus the expected rate.
 
@@ -63,25 +110,30 @@ The DAA score serves as Kaspa's logical clock. It is analogous to Bitcoin's bloc
 
 ---
 
-## Consensus and Finality
+## Consensus Depths and Finality
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Coinbase maturity | **100 blue score** | Number of blue score increments before coinbase outputs become spendable |
-| Finality depth | **86,400 blue score** (~2.4 hours) | Depth after which blocks are considered final and cannot be reorganized |
-| Pruning depth | **185,798 blue score** | Depth after which block data may be pruned from non-archival nodes |
-| Merge depth | **3,600 blue score** | Depth at which the merge set of a block is considered settled |
+| Parameter | Value | Formula | Wall-clock equivalent |
+|-----------|-------|---------|----------------------|
+| Coinbase maturity | **1,000** DAA score | `BPS * 100s` | ~100 seconds |
+| Merge depth | **36,000** blue score | `BPS * 3,600s` | ~1 hour |
+| Finality depth | **432,000** blue score | `BPS * 43,200s` | ~12 hours |
+| Pruning depth | **1,080,000** blue score | `max(lower_bound, BPS * 108,000s)` | ~30 hours |
+| Pruning proof M | **1,000** | Pruning proof security parameter | -- |
+
+<Callout type="warn">
+The finality and pruning depths listed here reflect the Crescendo (10 BPS) parameters derived from time-based durations in the rusty-kaspa source code. The finality duration is 43,200 seconds (12 hours), and the pruning duration is 108,000 seconds (30 hours). These are multiplied by BPS to produce the depth in blue score units.
+</Callout>
 
 ### Finality
 
-Kaspa's finality window is set at **86,400 blue score**, which corresponds to approximately **2.4 hours** at the current 10 BPS rate. Once a block's blue score is more than 86,400 behind the virtual selected parent's blue score, it is considered final:
+Kaspa's finality window is set to a duration of **43,200 seconds (12 hours)**, which at 10 BPS produces a finality depth of **432,000 blue score**. Once a block's blue score is more than 432,000 behind the virtual selected parent's blue score, it is considered final:
 
 - The block cannot be removed from the selected chain by any reorganization.
 - All transactions accepted in that block are irreversibly confirmed.
 - The finality point serves as a checkpoint that new nodes can trust during initial sync.
 
-<Callout type="warn">
-While practical irreversibility is achieved much sooner (within seconds for typical transactions), the 86,400 blue score finality window provides a mathematically guaranteed security bound against all possible attacks.
+<Callout type="info">
+While practical irreversibility is achieved much sooner (within seconds for typical transactions), the finality depth provides a mathematically guaranteed security bound against all possible attacks.
 </Callout>
 
 ### Pruning
@@ -91,6 +143,7 @@ Pruning allows nodes to discard old block body data while retaining headers. Thi
 - **Pruned nodes** store only block headers and UTXO state beyond the pruning depth.
 - **Archival nodes** retain complete block data including all transaction bodies.
 - The pruning point advances as the chain grows, keeping the required data window constant.
+- The pruning depth has a lower bound computed as `finality_depth + 2 * merge_depth + 4 * mergeset_size_limit * K + 2 * K + 2`, ensuring that pruning never occurs before finalization.
 
 ---
 
@@ -98,12 +151,14 @@ Pruning allows nodes to discard old block body data while retaining headers. Thi
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Maximum supply | **28.7 billion KAS** | Hard cap on total KAS that will ever be minted |
-| Base unit | **sompi** | 1 KAS = 100,000,000 sompi |
-| Initial block reward | **500 KAS** per block (pre-10 BPS) | Initial reward before the BPS increase |
+| Maximum sompi | **29 billion KAS** (2,900,000,000,000,000,000 sompi) | Hard cap encoded as `MAX_SOMPI` in the protocol |
+| Base unit | **sompi** | 1 KAS = 100,000,000 sompi (10^8) |
+| Pre-deflationary base subsidy | **50 KAS** per block at 10 BPS | `50,000,000,000 / BPS` sompi per block |
 | Emission schedule | **Chromatic** | Named after the 12 semitones in a musical chromatic scale |
 | Halving interval | **~1 year** (by chromatic phases) | Reward halves approximately once per year |
 | Monthly reduction factor | **(1/2)^(1/12)** ~= 0.9439 | Reward reduces by this factor each month |
+| Pre-mine | **None** | No tokens were pre-mined or allocated before launch |
+| Deflationary phase DAA score | **15,519,600** | DAA score at which mainnet switched from fixed to deflationary subsidy (at original 1 BPS) |
 
 ### Chromatic Emission Schedule
 
@@ -132,6 +187,40 @@ The chromatic schedule means miners never experience a sudden 50% revenue drop. 
 
 ---
 
+## Transaction Fee Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Minimum relay transaction fee | **1,000 sompi** per gram of mass | Minimum fee rate for a transaction to be relayed by nodes |
+| Minimum fee calculation | `(mass * 1000) / 1000` | Fee is computed per-gram, with a floor of the base relay fee |
+| Lock time threshold | **500,000,000,000** | Values below this threshold are interpreted as DAA scores; values at or above are interpreted as Unix timestamps (milliseconds) |
+
+<Callout type="info">
+The fee market in Kaspa is mass-based rather than byte-based. This means fees account for computational cost (signature verification), transient bandwidth, and persistent UTXO storage impact -- not just raw transaction size.
+</Callout>
+
+---
+
+## Address and Key Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Address encoding | **Bech32** | Same encoding scheme as used in Bitcoin SegWit addresses |
+| Key type | **Schnorr (secp256k1)** | Default signature scheme for Kaspa transactions |
+| BIP-44 coin type | **111111** | Coin type index for HD wallet derivation paths |
+| Max script public key version | **0** | Current supported script public key version |
+
+### Address Prefixes by Network
+
+| Network | Prefix | Example |
+|---------|--------|---------|
+| Mainnet | `kaspa:` | `kaspa:qr...` |
+| Testnet | `kaspatest:` | `kaspatest:qr...` |
+| Simnet | `kaspasim:` | `kaspasim:qr...` |
+| Devnet | `kaspadev:` | `kaspadev:qr...` |
+
+---
+
 ## Network Ports and Configuration
 
 | Parameter | Mainnet | Testnet-10 | Testnet-11 | Simnet | Devnet |
@@ -149,8 +238,8 @@ The chromatic schedule means miners never experience a sudden 50% revenue drop. 
 | **Mainnet** | 10 | Production | The live Kaspa network with real value |
 | **Testnet-10** | 10 | Testing | Public test network mirroring mainnet BPS for realistic testing |
 | **Testnet-11** | 10 | Testing | Secondary public test network for parallel testing |
-| **Simnet** | 1 | Development | Simulated network for local development with instant mining |
-| **Devnet** | 1 | Development | Developer network for testing protocol changes |
+| **Simnet** | 10 | Development | Simulated network for local development with instant mining (PoW skipped by default) |
+| **Devnet** | 10 | Development | Developer network for testing protocol changes |
 
 <Callout type="info">
 For development purposes, **simnet** is recommended as it allows instant block generation and does not require connecting to external peers. Use testnet-10 or testnet-11 when you need a realistic multi-node environment.
@@ -190,3 +279,44 @@ This construction is designed to be efficient for optical computing hardware whi
 | Maximum inbound connections | **128** | Default maximum inbound peer connections |
 | IBD batch size | **99** | Number of blocks requested per batch during Initial Block Download |
 | Ping interval | **120 seconds** | Interval between keepalive ping messages |
+
+---
+
+## GHOSTDAG K Values by BPS
+
+For reference, the following table shows the pre-computed GHOSTDAG K values for different blocks-per-second rates. These are computed such that the probability of an anticone larger than K is below 1%, given a 5-second network delay bound.
+
+| BPS | K | BPS | K | BPS | K | BPS | K |
+|-----|---|-----|---|-----|---|-----|---|
+| 1 | 18 | 9 | 113 | 17 | 201 | 25 | 288 |
+| 2 | 31 | 10 | **124** | 18 | 212 | 26 | 298 |
+| 3 | 43 | 11 | 135 | 19 | 223 | 27 | 309 |
+| 4 | 55 | 12 | 146 | 20 | 234 | 28 | 320 |
+| 5 | 67 | 13 | 157 | 21 | 244 | 29 | 330 |
+| 6 | 79 | 14 | 168 | 22 | 255 | 30 | 341 |
+| 7 | 90 | 15 | 179 | 23 | 266 | 31 | 352 |
+| 8 | 102 | 16 | 190 | 24 | 277 | 32 | 362 |
+
+---
+
+## Crescendo Hardfork
+
+The Crescendo hardfork transitioned mainnet from 1 BPS to 10 BPS. The following parameters changed at activation:
+
+| Parameter | Pre-Crescendo (1 BPS) | Post-Crescendo (10 BPS) |
+|-----------|----------------------|------------------------|
+| Target time per block | 1,000 ms | 100 ms |
+| GHOSTDAG K | 18 | 124 |
+| Max block parents | 10 | 16 |
+| Mergeset size limit | 180 | 248 |
+| Merge depth | 3,600 | 36,000 |
+| Finality depth | 43,200 | 432,000 |
+| Pruning depth | 108,000 | 1,080,000 |
+| Coinbase maturity | 100 | 1,000 |
+| DAA sample rate | 4 blocks | 40 blocks |
+
+| Network | Activation DAA Score |
+|---------|---------------------|
+| Mainnet | 110,165,000 (~May 5, 2025) |
+| Testnet-10 | 88,657,000 (~March 6, 2025) |
+| Simnet | Always active (since inception) |

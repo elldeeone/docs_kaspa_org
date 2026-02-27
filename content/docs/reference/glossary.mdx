@@ -11,143 +11,179 @@ A comprehensive reference of terms and concepts used in the Kaspa protocol and e
 
 ---
 
-## A
-
-### Archival Node
-
-A node that retains complete block data (headers and transaction bodies) for the entire history of the BlockDAG, without pruning. Archival nodes are required for block explorers, historical analysis, and serving full chain data to new nodes. Most users do not need to run an archival node; pruned nodes are sufficient for normal operation.
-
----
-
-## B
+## DAG Structure & Topology
 
 ### BlockDAG
 
 A **Block Directed Acyclic Graph** is the fundamental data structure underlying Kaspa. Unlike a blockchain where each block has exactly one parent (forming a linear chain), a BlockDAG allows each block to reference **multiple parent blocks**. This means blocks created concurrently by different miners are all included in the structure rather than being orphaned. The GHOSTDAG protocol determines ordering and conflict resolution within the DAG.
 
-### Blue Score
+### DAG (Directed Acyclic Graph)
 
-The **blue score** of a block is the number of **blue blocks** on the selected parent chain from the genesis block to that block. Blue blocks are those determined by the GHOSTDAG protocol to be part of the honest majority chain. The blue score serves as a measure of confirmation depth: the higher a transaction's blue score relative to the current tip, the more confirmed it is. Blue score is used for coinbase maturity and finality thresholds.
+A graph data structure where edges have direction (parent to child) and no cycles exist — a block cannot be its own ancestor. In Kaspa, the DAG is the set of all blocks and their parent-child relationships. The "directed" property means edges point from child blocks to their parents (backward in time), and the "acyclic" property guarantees a consistent temporal ordering.
 
-### Blue Work
+### Anticone
 
-The cumulative proof-of-work represented by all **blue blocks** from the genesis block to a given block, measured along the selected parent chain. Blue work is used to determine the "heaviest" chain when comparing competing DAG states. The chain (selected parent path) with the most blue work is considered the canonical chain, analogous to how Bitcoin selects the chain with the most total work.
+The **anticone** of a block is the set of all blocks in the DAG that are neither in its **past** (ancestors) nor in its **future** (descendants). Anticone blocks are those that were created concurrently — they have no causal relationship with the given block. The size of a block's anticone relative to the `k` parameter determines whether the block is classified as blue or red by GHOSTDAG.
 
----
+### Past
 
-## C
+The **past** of a block is the set of all blocks that are reachable by following parent edges from that block — in other words, all of its ancestors. A block's past represents every block that was known (directly or indirectly) to the miner who created it.
 
-### Chromatic
+### Future
 
-The name given to Kaspa's **emission schedule**, inspired by the 12 semitones of a musical chromatic scale. Instead of halving the block reward abruptly every fixed interval (as Bitcoin does), Kaspa reduces the reward by a factor of (1/2)^(1/12) each month. Over the course of 12 months, this produces a smooth halving. The result is a more predictable and gradual decrease in new coin issuance.
-
-### Compound Transaction
-
-A transaction that spends UTXOs from multiple addresses or combines many small UTXOs into fewer larger ones. Compound transactions are common in wallets that accumulate many small UTXOs (for example, from mining rewards) and need to consolidate them. These transactions tend to have higher mass due to their large number of inputs, and may need to be split across multiple transactions if they exceed the maximum transaction mass.
-
----
-
-## D
-
-### DAA Score
-
-The **Difficulty Adjustment Algorithm score** is a monotonically increasing counter that tracks the number of blocks along the selected parent chain from genesis. It functions as Kaspa's logical clock, replacing wall-clock time for protocol rules. Lock times, coinbase maturity, emission schedule phases, and finality thresholds are all defined in terms of DAA score rather than timestamps. The DAA score increments by one for each block added to the selected parent chain.
-
-<Callout type="info">
-DAA score is conceptually similar to "block height" in linear blockchains, but in a DAG context, many blocks may share the same DAA score if they are not on the selected parent chain.
-</Callout>
-
----
-
-## F
-
-### Finality
-
-A block achieves **finality** when its blue score is more than 86,400 behind the current virtual selected parent's blue score (approximately 2.4 hours at 10 BPS). Once finalized, a block cannot be removed from the selected chain by any reorganization, regardless of an attacker's hash power. Finality provides a hard security guarantee: transactions in finalized blocks are irreversible. In practice, transactions are considered safe much sooner, but the finality depth provides the mathematically proven bound.
-
----
-
-## G
-
-### GHOSTDAG
-
-**Greedy Heaviest-Observed Sub-Tree Directed Acyclic Graph** is the consensus protocol that powers Kaspa. GHOSTDAG is a generalization of Satoshi Nakamoto's longest-chain rule to work on DAG structures. It classifies blocks as either **blue** (honest) or **red** (potentially adversarial) based on their connectivity within the DAG. A parameter **K** bounds the expected number of concurrent honest blocks; blocks whose anticone exceeds K are classified as red. GHOSTDAG provides a total ordering of all blocks in the DAG, enabling consistent transaction conflict resolution.
-
----
-
-## K
-
-### kHeavyHash
-
-The proof-of-work mining algorithm used by Kaspa. kHeavyHash involves a matrix multiplication step sandwiched between two standard hash operations (Blake3). The algorithm multiplies the pre-hashed block header by a 64x64 matrix over GF(2^4), then XORs the result with the original hash before a final hashing step. This construction is designed to be amenable to optical computing implementations while maintaining resistance to traditional ASIC optimization advantages.
-
-### KIP (Kaspa Improvement Proposal)
-
-A formal process for proposing, discussing, and adopting changes to the Kaspa protocol, similar to Bitcoin's BIP (Bitcoin Improvement Proposal) process. KIPs document protocol specifications, feature proposals, and process guidelines. They provide a structured way for the community and developers to evaluate and implement network upgrades. Each KIP is assigned a number and goes through stages of draft, review, and acceptance.
-
----
-
-## M
-
-### Mass (Transaction Mass)
-
-A measure of the resources a transaction consumes when included in a block. Mass is calculated from three components: **compute mass** (based on signature operations), **transactional mass** (based on serialized byte size), and **storage mass** (based on the ratio of outputs to inputs, penalizing UTXO set growth). The total mass is the maximum of these three values. Each block has a maximum mass of 500,000, and individual transactions are limited to a mass of 100,000. Transactions with higher mass require higher fees to be prioritized.
-
-### Merging Block
-
-In GHOSTDAG, a block that includes previously unordered blocks in its merge set. When a new block is added to the DAG, it "merges" the views of its parent blocks, establishing ordering for any transactions that were previously in parallel branches. The merging process is what allows the DAG to achieve a consistent total ordering of transactions despite concurrent block production.
-
----
-
-## P
-
-### Pruned Node
-
-A node that discards block body data (transaction details) beyond the pruning depth while retaining all block headers and the current UTXO set. Pruned nodes can fully validate new blocks and transactions but cannot serve historical transaction data to other nodes. Pruning significantly reduces storage requirements, making it feasible to run a node with limited disk space. The pruning depth is set at 185,798 blue score.
-
-### Pruning Point
-
-The **pruning point** is a specific block in the DAG beyond which a pruned node is not required to store full block data. The pruning point advances as the chain grows, maintaining a roughly constant window of fully stored blocks. New nodes syncing from the network begin from the current pruning point rather than from genesis, significantly reducing initial sync time. The pruning point hash is included in every block header.
-
----
-
-## S
+The **future** of a block is the set of all blocks that have that block in their past — in other words, all of its descendants. A block's future represents every block created after it that is aware of its existence.
 
 ### Selected Parent
 
 Each block in the DAG designates one of its parents as the **selected parent**, which is the parent with the most **blue work**. The chain of selected parents from any block back to genesis forms the **selected parent chain**, which serves as the backbone of the DAG's ordering. The selected parent chain is analogous to the "longest chain" in Bitcoin and determines the DAA score progression.
 
-### Sompi
-
-The smallest indivisible unit of KAS, the native currency of Kaspa. One KAS equals **100,000,000 sompi** (10^8). All internal calculations, RPC values, and transaction amounts are denominated in sompi to avoid floating-point precision issues. The name is an homage, similar to how Bitcoin's smallest unit is called a "satoshi."
-
-### SPV (Simplified Payment Verification)
-
-A method for verifying transactions without downloading the full BlockDAG. SPV clients download only block headers and request Merkle proofs for specific transactions. Kaspa's multi-level parent structure enables efficient SPV proofs by providing skip-list-like pointers through the DAG, allowing SPV clients to verify transactions with logarithmic proof sizes relative to the chain length.
-
----
-
-## U
-
-### UTXO
-
-**Unspent Transaction Output.** Kaspa uses the UTXO model (as opposed to an account model) for tracking ownership of funds. Each transaction consumes one or more existing UTXOs as inputs and creates new UTXOs as outputs. The complete set of all unspent outputs at any point in time is called the **UTXO set**, and it represents the current state of all fund ownership on the network. Each UTXO is uniquely identified by the combination of the transaction ID that created it and its output index.
-
----
-
-## V
-
 ### Virtual Block
 
 A conceptual block maintained by each node that sits at the tip of the DAG. The virtual block has all current DAG tips as its parents and represents the "latest state" of the network as seen by that node. The virtual block's selected parent is the tip with the most blue work, and its blue score and DAA score represent the current consensus state. When a node processes a new block, it updates the virtual block accordingly. The virtual block is never actually mined or broadcast; it exists only as a local construct for determining the current UTXO set and DAG state.
 
+### Sink
+
+The **sink** is the selected parent of the virtual block — the tip of the virtual's selected parent chain. It represents the most recent block on the "main" chain as determined by GHOSTDAG. The sink changes frequently at 10 BPS and is sometimes referred to as the "virtual selected parent" in older documentation. The `getSink` RPC method returns its hash.
+
+### Merge Set (Blues and Reds)
+
+When a new block is added to the DAG, its **merge set** consists of all blocks in the anticone of its selected parent that are reachable from the new block's other parents. The merge set is partitioned into **mergeset blues** (blocks that satisfy the k-cluster constraint) and **mergeset reds** (blocks that violate it). The merging process establishes ordering for blocks that were previously in parallel branches. The merge set size is bounded by the protocol (e.g., 180 blocks on mainnet).
+
+### Chain Block
+
+A block that lies on the **selected parent chain** of the virtual block. Chain blocks form the backbone of the DAG's linear ordering. Each chain block "accepts" transactions from its merge set — when a block enters the selected parent chain, its merge set's non-conflicting transactions are considered confirmed. The `isChainBlock` flag in RPC responses indicates whether a block is on the selected chain.
+
 ---
 
-## W
+## Consensus
+
+### GHOSTDAG
+
+**Greedy Heaviest-Observed Sub-Tree Directed Acyclic Graph** is the consensus protocol that powers Kaspa. GHOSTDAG is a generalization of Satoshi Nakamoto's longest-chain rule to work on DAG structures. It classifies blocks as either **blue** (honest) or **red** (potentially adversarial) based on their connectivity within the DAG. A parameter **K** bounds the expected number of concurrent honest blocks; blocks whose anticone exceeds K are classified as red. GHOSTDAG provides a total ordering of all blocks in the DAG, enabling consistent transaction conflict resolution.
+
+### PHANTOM
+
+**PHANTOM** is the foundational academic protocol (Sompolinsky and Zohar, 2018) that introduced block ordering in a BlockDAG by classifying blocks as blue or red using a k-cluster coloring rule. PHANTOM's optimal coloring is NP-hard to compute; **GHOSTDAG** is its practical, greedy approximation that achieves equivalent security guarantees in polynomial time. PHANTOM provides the theoretical underpinning and security proofs for Kaspa's consensus.
+
+### DAGKnight
+
+**DAGKnight** is a parameterless consensus protocol designed as the successor to GHOSTDAG (Sompolinsky and Zohar, 2022). Its defining innovation is that it does not require a predetermined `k` value — instead, it dynamically adapts to actual network conditions, achieving **asymptotically optimal** confirmation times without making assumptions about network propagation delay. DAGKnight is planned as a future upgrade to Kaspa's consensus layer.
+
+### Blue Block
+
+A block classified by GHOSTDAG as part of the honest majority. A block is blue if its blue anticone size does not exceed the `k` parameter. Blue blocks contribute to the blue score and blue work calculations. Blue block miners receive the full block reward (subsidy and fees) for their block.
+
+### Red Block
+
+A block classified by GHOSTDAG as potentially adversarial because its blue anticone size exceeds the `k` parameter. Red blocks are still included in the DAG and their non-conflicting transactions are processed, but they do not contribute to blue score or blue work. Red block coinbase rewards (subsidy and fees) are not paid to the red block's miner — instead, they are collected by the merging blue block's miner.
+
+### Blue Score
+
+The **blue score** of a block is the number of **blue blocks** on the selected parent chain from the genesis block to that block. Blue score serves as a measure of confirmation depth: the higher a transaction's blue score relative to the current tip, the more confirmed it is. Blue score is used for coinbase maturity and finality thresholds. At 10 BPS, blue score increments by approximately 10 per second.
+
+### Blue Work
+
+The cumulative proof-of-work represented by all **blue blocks** from the genesis block to a given block, measured along the selected parent chain. Blue work is used to determine the "heaviest" chain when comparing competing DAG states. The chain (selected parent path) with the most blue work is considered the canonical chain, analogous to how Bitcoin selects the chain with the most total work.
+
+### k Parameter
+
+The parameter `k` is central to GHOSTDAG's security and performance. It represents the **maximum blue anticone size** that the protocol tolerates for blue blocks. The value is calculated from the PHANTOM paper's formula using `x = 2Dλ` where `D` is the network delay bound (5 seconds) and `λ` is the block rate, with a probability threshold `δ = 0.01`. For Kaspa mainnet at 10 BPS, `k = 124`. Higher `k` tolerates more parallelism but requires more computation; lower `k` provides tighter anticone bounds but limits the sustainable block rate.
+
+### Finality
+
+A block achieves **finality** when its blue score depth exceeds the finality threshold (86,400 blue score, approximately 2.4 hours at 10 BPS). Once finalized, a block cannot be removed from the selected chain by any reorganization, regardless of an attacker's hash power. Finality provides a hard security guarantee: transactions in finalized blocks are irreversible. In practice, transactions are considered safe much sooner, but the finality depth provides the mathematically proven bound.
+
+### Accepted Transaction
+
+A transaction is **accepted** when the chain block that merges it into the DAG ordering includes it in its set of processed, non-conflicting transactions. Accepted transactions update the UTXO set. The `acceptedTransactionIds` field in the virtual chain RPC response indicates which transactions were accepted by each chain block. If a chain reorganization occurs, previously accepted transactions may become unaccepted until they are re-accepted by a different chain block.
+
+---
+
+## Transactions
+
+### UTXO (Unspent Transaction Output)
+
+**Unspent Transaction Output.** Kaspa uses the UTXO model (as opposed to an account model) for tracking ownership of funds. Each transaction consumes one or more existing UTXOs as inputs and creates new UTXOs as outputs. The complete set of all unspent outputs at any point in time is called the **UTXO set**, and it represents the current state of all fund ownership on the network. Each UTXO is uniquely identified by the combination of the transaction ID that created it and its output index.
+
+### UTXO Commitment
+
+A cryptographic hash included in every block header that commits to the entire UTXO set at that point in the DAG. Kaspa uses **MuHash** (Multiplicative Hash), an incremental hashing scheme that can be updated efficiently as UTXOs are added or removed, without recomputing over the entire set. UTXO commitments allow new nodes to download and verify the UTXO set from peers during sync, and they enable SPV clients to verify the existence of specific UTXOs.
+
+### Sompi
+
+The smallest indivisible unit of KAS, the native currency of Kaspa. One KAS equals **100,000,000 sompi** (10^8). All internal calculations, RPC values, and transaction amounts are denominated in sompi to avoid floating-point precision issues. The name is an homage, similar to how Bitcoin's smallest unit is called a "satoshi."
+
+### Transaction Mass
+
+A measure of the resources a transaction consumes when included in a block. Mass is computed as the **maximum** of three components: **compute mass**, **transactional mass** (bandwidth), and **storage mass**. Each block has a maximum mass of 500,000, and individual transactions are limited to a mass of 100,000. Transactions with higher mass require higher fees to be prioritized by miners.
+
+### Compute Mass
+
+The component of transaction mass that reflects the CPU cost of verifying signatures and scripts. Each signature operation (sigop) costs **1,000 mass units**. A standard single-input P2PK transaction has a compute mass of 1,000. Transactions with many inputs or complex scripts incur higher compute mass.
+
+### Storage Mass
+
+The component of transaction mass (introduced by **KIP-9**) that penalizes transactions which expand the UTXO set. Storage mass is inversely proportional to input values and proportional to the number of outputs created. Consolidating many small UTXOs into one large UTXO has minimal storage mass, while splitting a UTXO into many small outputs incurs high storage mass. This creates an economic incentive to keep the UTXO set compact.
+
+### Coinbase
+
+A special transaction included in each block that mints new KAS as a block reward. Coinbase transactions have no inputs (since they create new coins) and their outputs distribute the block reward to the miner. The coinbase transaction uses a dedicated subnetwork ID (`0x01...00`). Its output value must exactly match the allowed block reward for the block's DAA score.
+
+### Coinbase Maturity
+
+Coinbase outputs cannot be spent immediately. They require a maturity period of **100 blue score** before they become spendable. At 10 BPS, this corresponds to approximately 10 seconds of wall-clock time. The maturity requirement protects against spending rewards from blocks that might later be reorganized out of the blue set.
+
+### Script Public Key
+
+The locking script attached to a transaction output that defines the conditions under which the output can be spent. In the most common case (P2PK), the script public key contains a 32-byte Schnorr public key and an `OP_CHECKSIG` opcode. The spender must provide a signature script (unlocking script) that satisfies the conditions in the script public key.
+
+### P2PK (Pay-to-Public-Key)
+
+The standard transaction type in Kaspa. A P2PK output locks funds directly to a 32-byte x-only Schnorr public key. The locking script is `OP_DATA_32 <pubkey> OP_CHECKSIG`, and spending requires providing a valid 64-byte Schnorr signature. P2PK is simpler and more efficient than Bitcoin's P2PKH (Pay-to-Public-Key-Hash) because Kaspa uses x-only public keys natively.
+
+### Subnetwork
+
+A 20-byte identifier associated with each transaction that allows specialized transaction types to operate within the Kaspa framework. Standard KAS transfers use the native subnetwork ID (`0x00...00`), and coinbase transactions use a dedicated subnetwork ID (`0x01...00`). Subnetworks are a forward-looking feature designed to support layer-2 protocols and other extensions.
+
+### Schnorr Signature
+
+Kaspa uses **Schnorr signatures** over the secp256k1 elliptic curve for transaction signing. Schnorr signatures offer linearity (enabling signature aggregation for multi-sig), provable security under the random oracle model, simpler implementation than ECDSA, and more efficient batch verification. A standard Kaspa signature is 64 bytes.
+
+---
+
+## Mining
+
+### kHeavyHash
+
+The proof-of-work mining algorithm used by Kaspa. kHeavyHash involves a matrix multiplication step sandwiched between two standard hash operations (Blake3). The algorithm multiplies the pre-hashed block header by a 64x64 matrix over GF(2^4), then XORs the result with the original hash before a final hashing step. This construction is designed to be amenable to optical computing implementations while maintaining resistance to traditional ASIC optimization advantages.
+
+### BPS (Blocks Per Second)
+
+The target rate at which blocks are produced across the network. Kaspa currently operates at **10 BPS** (10 blocks per second), producing approximately 864,000 blocks per day. The BPS rate is maintained by the Difficulty Adjustment Algorithm. Higher BPS provides faster first-confirmation latency and greater aggregate throughput, enabled by the BlockDAG architecture which includes all parallel blocks rather than orphaning them.
+
+### DAA (Difficulty Adjustment Algorithm)
+
+Kaspa's difficulty adjustment mechanism that maintains a consistent target block rate despite fluctuations in total network hash power. Unlike Bitcoin, which adjusts every 2,016 blocks, Kaspa adjusts difficulty **every single block** using a sampling window of **2,641 blocks** (~4.4 minutes at 10 BPS). The DAA computes new difficulty based on the ratio of expected time to actual time within the window, using median timestamps from the selected parent chain for manipulation resistance.
+
+### DAA Score
+
+The **Difficulty Adjustment Algorithm score** is a monotonically increasing counter that tracks the number of blocks along the selected parent chain from genesis. It functions as Kaspa's logical clock, replacing wall-clock time for protocol rules. Lock times, coinbase maturity, emission schedule phases, and finality thresholds are all defined in terms of DAA score rather than timestamps. The DAA score increments by the mergeset size for each block added to the selected parent chain.
+
+<Callout type="info">
+DAA score is conceptually similar to "block height" in linear blockchains, but in a DAG context, many blocks may share the same DAA score if they are not on the selected parent chain.
+</Callout>
+
+### Chromatic Emission Schedule
+
+The name given to Kaspa's **monetary emission schedule**, inspired by the 12 semitones of a musical chromatic scale. Instead of halving the block reward abruptly every fixed interval (as Bitcoin does), Kaspa reduces the reward by a factor of **(1/2)^(1/12) (~0.9439)** approximately once per month. Over the course of 12 months, this produces a smooth halving. The total supply cap is approximately **28.7 billion KAS**. The result is a more predictable and gradual decrease in new coin issuance, avoiding sudden miner revenue shocks.
+
+---
+
+## Network & RPC
 
 ### wRPC
 
-**WebSocket RPC**, the RPC transport protocol used by `rusty-kaspa` (the Rust implementation of Kaspa). wRPC supports two encoding modes:
+**WebSocket RPC**, the primary RPC transport protocol used by `rusty-kaspa` (the Rust implementation of Kaspa). wRPC supports two encoding modes:
 
 - **Borsh** (Binary Object Representation Serializer for Hashing): A compact binary encoding that is efficient for node-to-node and high-performance application communication.
 - **JSON**: A human-readable encoding suitable for web applications and debugging.
@@ -157,3 +193,87 @@ wRPC enables full-duplex communication, making it well-suited for subscription-b
 <Callout type="info">
 wRPC replaced the original gRPC interface in the Rust implementation. While the Go implementation (`kaspad`) still uses gRPC, most new development targets wRPC via `rusty-kaspa`.
 </Callout>
+
+### gRPC
+
+**gRPC** (Google Remote Procedure Call) is an RPC framework using HTTP/2 and Protocol Buffers for strongly-typed, high-performance communication. It was the original RPC interface for the Go implementation of Kaspa (`kaspad`) and remains available in `rusty-kaspa`. gRPC is well-suited for server-to-server integrations where both ends can share `.proto` definitions. It provides binary encoding via Protocol Buffers for efficient serialization.
+
+### Borsh Encoding
+
+**Binary Object Representation Serializer for Hashing** — a compact, deterministic binary serialization format used as one of the two encoding modes for wRPC communication. Borsh is faster to serialize and deserialize than JSON, making it the preferred encoding for performance-sensitive applications and high-throughput pipelines. Both Borsh and JSON wRPC endpoints expose identical methods and return identical logical data; only the wire format differs.
+
+### Resolver
+
+A public service in the Kaspa ecosystem that enables **automatic node discovery**. Instead of hardcoding a node address, applications can query the Resolver to find available public wRPC endpoints. The Resolver returns a list of healthy public nodes and handles load balancing across them. This is the recommended approach for applications that do not run their own node, though production applications handling significant value should run their own node for reliability.
+
+### Mainnet
+
+The live, production Kaspa network where KAS has real economic value. Mainnet operates at 10 BPS with `k = 124`, uses the `kaspa:` address prefix, and connects on default P2P port 16111. All protocol parameters on mainnet are set for maximum security and stability.
+
+### Testnet
+
+A public Kaspa test network that mirrors mainnet functionality but uses **valueless coins** (tKAS). Kaspa maintains testnet-10 and testnet-11, both running at 10 BPS. Testnet uses the `kaspatest:` address prefix and separate ports (P2P 16211/16311). Testnet is used for development, integration testing, and trialing pre-release features before mainnet deployment. Testnet data may be reset during major protocol upgrades.
+
+### Simnet
+
+A local, self-contained **simulation network** designed for development and testing. Simnet does not connect to any external peers and operates with relaxed difficulty rules, allowing blocks to be mined instantly without significant hash power. It uses the `kaspasim:` address prefix and its own ports. Simnet is ideal for unit testing, integration testing, and rapid prototyping without needing testnet coins or a network connection.
+
+---
+
+## Pruning & Data Management
+
+### Pruning
+
+The process of discarding historical block body data (transaction details, signature scripts) beyond the pruning depth while retaining all block headers, the current UTXO set, and UTXO commitments. Pruning is essential to Kaspa's scalability at 10 BPS, keeping storage requirements bounded. Pruned nodes can still fully validate new blocks and transactions. The pruning depth on mainnet is **185,798 blue score**.
+
+### Pruning Point
+
+A specific block in the DAG beyond which a pruned node is not required to store full block data. The pruning point advances as the chain grows, maintaining a roughly constant window of fully stored blocks. New nodes syncing from the network begin from the current pruning point rather than from genesis, significantly reducing initial sync time. The pruning point hash is included in every block header.
+
+### Archival Node
+
+A node that retains complete block data (headers and transaction bodies) for the entire history of the BlockDAG, without pruning. Archival nodes are required for block explorers, historical analysis, and serving full chain data to new nodes. Most users do not need to run an archival node; pruned nodes are sufficient for normal operation.
+
+### SPV (Simplified Payment Verification)
+
+A method for verifying transactions without downloading the full BlockDAG. SPV clients download only block headers and request Merkle proofs for specific transactions. Kaspa's multi-level parent structure enables efficient SPV proofs by providing skip-list-like pointers through the DAG, allowing SPV clients to verify transactions with logarithmic proof sizes relative to the chain length.
+
+---
+
+## Wallet & Keys
+
+### HD Wallet
+
+A **Hierarchical Deterministic** wallet that uses the BIP-32 standard to derive an entire tree of key pairs from a single seed. HD wallets allow unlimited address generation from one backup (the seed phrase) and support account separation, receive/change address branches, and cross-wallet recovery. All standard Kaspa wallets implement HD derivation.
+
+### BIP-32
+
+**Bitcoin Improvement Proposal 32** — the standard for hierarchical deterministic key derivation. BIP-32 defines how a master key (derived from a seed) can produce a tree of child keys using HMAC-SHA512. Each derivation step combines the parent key with an index number, producing both a child key and a chain code for further derivation. Hardened derivation (indicated by `'`) uses the parent's private key, preventing child public key derivation from the parent public key alone.
+
+### BIP-39
+
+**Bitcoin Improvement Proposal 39** — the standard for generating a human-readable **mnemonic seed phrase** from cryptographic entropy. In Kaspa, the wallet generates 256 bits of entropy, appends an 8-bit SHA-256 checksum, and maps the resulting 264 bits to **24 words** from the BIP-39 English wordlist (2,048 words). The mnemonic is then passed through PBKDF2-HMAC-SHA512 to produce a 512-bit seed for key derivation.
+
+### BIP-44
+
+**Bitcoin Improvement Proposal 44** — the standard for multi-coin HD wallet derivation paths. Kaspa's derivation path is `m / 44' / 111111' / account' / change / index`, where `111111` is Kaspa's registered coin type in the SLIP-44 registry. The path separates purpose, coin type, account, receive/change branches, and sequential address index, ensuring Kaspa addresses do not collide with other cryptocurrencies.
+
+### Mnemonic (Seed Phrase)
+
+A human-readable sequence of words (typically **24 words** in Kaspa) generated from cryptographic entropy following the BIP-39 standard. The mnemonic encodes the root secret from which all wallet keys and addresses are deterministically derived. It serves as the sole backup for an HD wallet — anyone with the mnemonic can reconstruct all keys and access all funds. It must be stored securely offline and never shared.
+
+---
+
+## Protocol Evolution
+
+### KIP (Kaspa Improvement Proposal)
+
+A formal process for proposing, discussing, and adopting changes to the Kaspa protocol, similar to Bitcoin's BIP (Bitcoin Improvement Proposal) process. KIPs document protocol specifications, feature proposals, and process guidelines. They provide a structured way for the community and developers to evaluate and implement network upgrades. Each KIP is assigned a number and goes through stages of draft, review, and acceptance. Notable KIPs include KIP-9 (storage mass), KIP-10 (opcode reactivation), and KIP-14 (Crescendo).
+
+### Crescendo
+
+The name of the **hardfork** that transitioned the Kaspa network from 1 BPS to **10 BPS**, formally defined in KIP-14 and activated on mainnet in May 2025. Crescendo increased GHOSTDAG K from 18 to 124, adjusted max block parents from 10 to 16, and recalibrated over a dozen interdependent consensus parameters. The per-block subsidy was adjusted so that the total emission rate remained consistent with the chromatic schedule. The name reflects a musical term meaning a gradual increase in volume.
+
+### Compound Transaction
+
+A transaction that spends UTXOs from multiple addresses or combines many small UTXOs into fewer larger ones. Compound transactions are common in wallets that accumulate many small UTXOs (for example, from mining rewards) and need to consolidate them. These transactions tend to have higher mass due to their large number of inputs, and may need to be split across multiple transactions if they exceed the maximum transaction mass.
