@@ -22,7 +22,7 @@ Every block in Kaspa's BlockDAG contains a header with the following fields. Unl
 | `hashMerkleRoot` | `Hash` | 32 bytes | Merkle root of all transaction hashes in the block |
 | `acceptedIdMerkleRoot` | `Hash` | 32 bytes | Merkle root of the accepted transaction IDs from the block's merge set |
 | `utxoCommitment` | `Hash` | 32 bytes | Commitment to the UTXO set state after applying this block |
-| `timestamp` | `int64` | 8 bytes | Block creation time in milliseconds since Unix epoch |
+| `timestamp` | `uint64` | 8 bytes | Block creation time in milliseconds since Unix epoch |
 | `bits` | `uint32` | 4 bytes | Compact representation of the target difficulty |
 | `nonce` | `uint64` | 8 bytes | Nonce used for proof-of-work mining |
 | `daaScore` | `uint64` | 8 bytes | Difficulty Adjustment Algorithm score, monotonically increasing count of blocks in the DAG's selected chain |
@@ -34,7 +34,7 @@ Every block in Kaspa's BlockDAG contains a header with the following fields. Unl
 
 The `parents` field is a two-dimensional array structured by **block level**. Each block has a level determined by the number of leading zeros beyond the required difficulty target in its hash:
 
-- **Level 0**: Direct parent blocks in the DAG. A block must reference all current DAG tips as level-0 parents.
+- **Level 0**: Direct parent blocks in the DAG. A block references up to `maxBlockParents` current tips (16 on mainnet post-Crescendo).
 - **Level N (N > 0)**: Contains the selected parent from the block's level-N merge set. Higher-level parents enable efficient SPV proof construction by providing skip-list-like pointers through the DAG.
 
 <Callout type="info">
@@ -43,13 +43,13 @@ The multi-level parent structure is a key innovation enabling compact proofs of 
 
 ### Block Hash Computation
 
-The block hash is computed as:
+The block hash is computed from the canonical serialized header using Kaspa's domain-separated `BlockHash` hasher:
 
 ```
-blockHash = HASH(serialized_header)
+blockHash = BlockHash(serialized_header)
 ```
 
-Where `HASH` is the **Blake2b** hash function with a 256-bit output. The serialized header includes all fields listed above in their canonical byte-order representation.
+The serialization includes all header fields in canonical order. Kaspa uses domain separation for protocol hashers rather than a single undifferentiated hash call.
 
 ### Proof-of-Work
 
@@ -59,7 +59,7 @@ Kaspa uses the **kHeavyHash** algorithm for proof-of-work. The mining process re
 kHeavyHash(serialized_header) < target
 ```
 
-The `target` is derived from the `bits` field using the standard compact target representation. kHeavyHash is an optical-mining-friendly algorithm based on matrix multiplication over a heavy hash matrix, followed by a standard hash.
+The `target` is derived from the `bits` field using the standard compact target representation. kHeavyHash applies `ProofOfWorkHash` cSHAKE, a matrix-generated heavy-mixing step, XOR with the pre-hash, and a final `HeavyHash` cSHAKE.
 
 ---
 
@@ -119,7 +119,7 @@ Kaspa supports subnetwork-specific transactions through the `subnetworkId` field
 |---------------|-------------|
 | `0x00...00` (all zeros) | Native subnetwork (standard KAS transfers) |
 | `0x01...00` | Coinbase subnetwork (block reward transactions) |
-| Other | Reserved for future Layer 2 subnetwork protocols |
+| Other | Reserved for future protocol extensions and non-native subnetworks |
 
 ### Transaction ID Computation
 
@@ -137,19 +137,25 @@ Kaspa's transaction ID computation excludes signature data by design, inherently
 
 ### Transaction Mass
 
-Every transaction has a **mass** that determines how much block capacity it consumes. Mass is calculated from three components:
+Kaspa tracks transaction/resource usage with three mass dimensions:
 
 | Component | Calculation |
 |-----------|-------------|
 | Compute mass | Based on the number of signature operations (`sigOpCount` across all inputs) |
-| Transactional mass | Based on the serialized size of the transaction in bytes |
-| Storage mass | Based on the ratio of outputs to inputs, penalizing UTXO set growth |
+| Transient mass | Based on serialized transaction size (bandwidth-oriented) |
+| Storage mass | Contextual mass commitment related to UTXO-state impact |
 
-```
-totalMass = max(computeMass, transactionalMass, storageMass)
-```
+Consensus does **not** assign protocol meaning to a single `max(...)` transaction mass value.  
+`max(compute, transient, storage)` is used as a mempool/template-selection simplification, while block validation enforces limits per dimension.
+([source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/core/src/mass/mod.rs#L163-L166), [source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/core/src/mass/mod.rs#L188-L191))
 
-A block's total mass (sum of all transaction masses) must not exceed the **maximum block mass** of 500,000.
+At block-validation time, totals are accumulated separately and each must stay within the block bound (`500,000`):
+
+- total compute mass <= max block mass
+- total transient mass <= max block mass
+- total storage mass <= max block mass
+
+([source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/src/pipeline/body_processor/body_validation_in_isolation.rs#L63-L90))
 
 ---
 
@@ -196,7 +202,9 @@ Kaspa supports a subset of Bitcoin script opcodes. The following categories are 
 
 | Opcode | Hex | Description |
 |--------|-----|-------------|
-| `OP_BLAKE2B` | `0xaa` | Hash the top item with Blake2b (replaces Bitcoin's SHA-256/RIPEMD-160) |
+| `OP_SHA256` | `0xa8` | Hash the top item with SHA-256 |
+| `OP_BLAKE2B` | `0xaa` | Hash the top item with Blake2b-256 |
+| `OP_CHECKSIGECDSA` | `0xab` | Verify an ECDSA signature against a compressed public key |
 | `OP_CHECKSIG` | `0xac` | Verify a Schnorr signature against a public key |
 | `OP_CHECKMULTISIG` | `0xae` | Verify M-of-N multisignature |
 | `OP_CHECKSIGVERIFY` | `0xad` | `OP_CHECKSIG` followed by `OP_VERIFY` |
@@ -211,7 +219,7 @@ Kaspa supports a subset of Bitcoin script opcodes. The following categories are 
 | `OP_VERIFY` | `0x69` | Remove top item and fail if false |
 
 <Callout type="warn">
-Kaspa uses **Blake2b** instead of SHA-256 and RIPEMD-160. The `OP_BLAKE2B` opcode replaces Bitcoin's `OP_HASH160` and `OP_HASH256`. Code ported from Bitcoin must account for this difference.
+Kaspa provides both `OP_SHA256` and `OP_BLAKE2B`, with Blake2b used by many Kaspa-specific script patterns. Code ported from Bitcoin should verify opcode semantics instead of assuming one-to-one replacements.
 </Callout>
 
 ### Standard Script Types
@@ -239,7 +247,7 @@ SignatureScript: <signatures...> <serialized-redeem-script>
 An alternative script type using ECDSA signatures for compatibility with existing tooling.
 
 ```
-ScriptPublicKey: <33-byte-compressed-ecdsa-pubkey> OP_CHECKSIG
+ScriptPublicKey: <33-byte-compressed-ecdsa-pubkey> OP_CHECKSIGECDSA
 SignatureScript: <der-encoded-ecdsa-signature>
 ```
 
@@ -275,7 +283,7 @@ Kaspa's default signature scheme uses Schnorr signatures following a scheme comp
 |------|-------|-------------|
 | `SIGHASH_ALL` | `0x01` | Sign all inputs and outputs (default) |
 | `SIGHASH_NONE` | `0x02` | Sign all inputs, no outputs |
-| `SIGHASH_SINGLE` | `0x03` | Sign all inputs, only the output at the same index |
+| `SIGHASH_SINGLE` | `0x04` | Sign all inputs, only the output at the same index |
 | `SIGHASH_ANYONECANPAY` | `0x80` | Can be combined with above; only sign the current input |
 
 <Callout type="info">

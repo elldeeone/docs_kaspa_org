@@ -5,7 +5,7 @@ description: "Complete index of all Kaspa Improvement Proposals with their statu
 
 ## Kaspa Improvement Proposals
 
-This page provides a complete index of all Kaspa Improvement Proposals (KIPs). Each KIP goes through the lifecycle described in the [KIPs Overview](/docs/protocol-evolution/kips-overview): Draft, Review, Accepted, Implemented, and Active/Final.
+This page provides a complete index of Kaspa Improvement Proposals (KIPs). Status labels on this page follow the canonical labels in the [KIPs repository](https://github.com/kaspanet/kips): `Draft`, `Proposed`, `Active`, `Implemented`, and `Rejected`.
 
 <Callout type="info">
 The canonical source for all KIP documents is the [KIPs repository on GitHub](https://github.com/kaspanet/kips). This index is a convenience reference. Always consult the GitHub repository for the latest status and full text of each proposal.
@@ -24,7 +24,7 @@ These KIPs have been implemented and are active on the Kaspa network.
 | KIP-10 | New Transaction Opcodes for Enhanced Script Functionality | Active | Proposes new opcodes for transaction introspection, enabling scripts to inspect their own transaction context. This opens the door to advanced smart contract functionality such as covenants and conditional spending logic on Kaspa. |
 | KIP-13 | Transient Storage Handling | Active | Refines the mass model to introduce transient mass, more accurately pricing the bandwidth dimension of transaction cost as a prerequisite for efficient smart contract execution. |
 | KIP-14 | The Crescendo Hardfork | Active | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
-| KIP-15 | Canonical Transaction Ordering and SelectedParent Accepted Transactions Commitment | Active | Defines a canonical ordering for transactions within blocks and commits to the set of accepted transactions from the selected parent, improving verification efficiency and enabling light client support. |
+| KIP-15 | Canonical Transaction Ordering and Sequencing Commitments | Active | Defines canonical ordering and sequencing commitments for accepted transactions, improving determinism and verification efficiency. |
 
 ## Proposed / Draft KIPs
 
@@ -34,6 +34,7 @@ These KIPs are in early stages of development or under community discussion.
 |---|---|---|---|
 | KIP-2 | Upgrade Consensus to Follow the DAGKNIGHT Protocol | Proposed | Proposes replacing GHOSTDAG with the DAGKnight consensus protocol, which achieves optimal Byzantine fault tolerance without requiring a predetermined `k` parameter. |
 | KIP-6 | Proof of Chain Membership (PoChM) | Draft | Defines a mechanism for proving that a block or transaction is a member of the selected chain, enabling efficient verification by light clients and external systems. |
+| KIP-16 | Two-Threshold Monopolistic Fee Mechanism (Delta/0.9*Delta) | Draft | Proposes a two-threshold fee mechanism spanning mempool, mining, and consensus-related fee policy behavior. |
 
 ## Rejected KIPs
 
@@ -55,18 +56,15 @@ The KIP numbering is not strictly sequential. Some numbers may be reserved, skip
 
 **Process** — Changes to the governance, workflow, or organizational processes of the Kaspa project.
 
-## KIP Status Definitions
+## KIP Status Definitions (Canonical Repository Labels)
 
 | Status | Meaning |
 |---|---|
-| Draft | Initial submission; open for early feedback |
-| Review | Under active community and technical review |
-| Accepted | Approved by rough consensus; awaiting implementation |
-| Implemented | Code merged into the reference implementation; awaiting activation |
-| Active | Activated on mainnet (for protocol KIPs) or considered complete (for process/informational KIPs) |
-| Withdrawn | Removed by the author |
-| Rejected | Rejected by community consensus |
-| Superseded | Replaced by a later KIP |
+| Draft | Early proposal state in the canonical KIPs index |
+| Proposed | Candidate change under active consideration |
+| Active | Proposal activated or in active effect according to the repository |
+| Implemented | Implemented in code according to the repository |
+| Rejected | Proposal was reviewed and rejected |
 
 ## Contributing
 

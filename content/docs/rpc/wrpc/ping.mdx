@@ -27,6 +27,6 @@ Empty response on success.
 ## Notes
 
 - Use `Ping` to keep WebSocket connections alive through firewalls, load balancers, and proxies that may close idle connections.
-- The round-trip time of a ping can be used to measure RPC latency.
-- A typical keepalive interval is 30-60 seconds, depending on your network infrastructure's idle timeout settings.
+- The round-trip time of a ping can be used as an application-level RPC latency signal.
+- Keepalive intervals are environment-dependent (proxy/load-balancer idle timeouts, network policy, and client behavior).
 - If the ping fails or times out, the connection is likely broken and should be re-established.

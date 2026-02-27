@@ -5,9 +5,9 @@ description: "NotifyPruningPointUtxoSetOverride — subscribe to pruning point c
 
 ## Overview
 
-The `notifyPruningPointUtxoSetOverride` subscription notifies your application when the node's pruning point UTXO set is replaced. This happens during initial block download (IBD) when a node syncs from a peer and receives a new pruning point UTXO set, or during certain rare reorganization scenarios.
+The pruning-point-utxo-set-override subscription notifies your application when the node's pruning point UTXO set is replaced. In current node flows, this is tied to IBD/reset paths where a pruning-point UTXO snapshot is applied.
 
-The pruning point is the deepest block in the DAG that the node considers immutable. When the pruning point advances and the UTXO set is replaced, it represents a significant state change that applications maintaining local UTXO state need to be aware of.
+This represents a significant state transition for applications that maintain local UTXO-derived state.
 
 ## Subscribe
 
@@ -15,14 +15,7 @@ The pruning point is the deepest block in the DAG that the node considers immuta
 await rpc.subscribePruningPointUtxoSetOverride();
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifyPruningPointUtxoSetOverride",
-  "params": {}
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `PruningPointUtxoSetOverride` scope payload. gRPC uses `NotifyPruningPointUtxoSetOverrideRequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 
@@ -56,9 +49,7 @@ rpc.addEventListener("pruning-point-utxo-set-override", async (event) => {
 
 ## When This Occurs
 
-- **Initial block download (IBD)** -- When a new node syncs for the first time, it receives the pruning point UTXO set from a peer. This notification fires once the set is loaded.
-- **Pruning point advancement** -- As the DAG grows, the pruning point periodically advances. When this happens and the UTXO commitment changes, this notification fires.
-- **Rare deep reorganizations** -- In extraordinary circumstances, a deep reorganization could cause the pruning point to shift.
+- **IBD / reset flow** -- When a node applies a pruning-point UTXO set snapshot while syncing from peers.
 
 <Callout type="info">
 This notification is primarily relevant for applications that maintain their own copy of the UTXO set or depend on the pruning point for state anchoring. Most applications that only track specific addresses via `notifyUtxosChanged` do not need this subscription.
@@ -67,5 +58,5 @@ This notification is primarily relevant for applications that maintain their own
 ## Use Cases
 
 - **Full UTXO set indexers** -- Rebuild the local UTXO index when the pruning point set is replaced.
-- **Node monitoring** -- Detect when a node completes IBD or advances its pruning point.
+- **Node monitoring** -- Detect pruning-point UTXO override events during sync/reset operations.
 - **State validation** -- Verify local state consistency after a pruning point change.

@@ -71,7 +71,7 @@ scrape_configs:
 ```
 
 <Callout type="info">
-A 15-second scrape interval is a good default. Kaspa produces blocks every 100 ms (10 BPS), but node-level metrics change on a slower timescale.
+A 15-second scrape interval is a practical starter default. Tune it for your own SLOs and infrastructure limits.
 </Callout>
 
 ```bash
@@ -117,6 +117,8 @@ groups:
 ```
 
 <Callout type="warn">
+Treat these alert thresholds as starting values, not protocol constants.
+
 Always include a `for` duration on alerts to avoid false positives. A node may briefly report `isSynced: false` during normal operation.
 </Callout>
 

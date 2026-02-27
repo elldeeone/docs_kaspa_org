@@ -1,0 +1,1 @@
+{"kaspadServers":[{"kaspadHost":"wrpc","serverVersion":"1.1.0-rc.3","isUtxoIndexed":true,"isSynced":true,"p2pId":"b9690595b7d47caa3ae878e1e056d38297b9ae789ece34088c12348c9b33cfa8","blueScore":365814033}],"database":{"isSynced":true,"blueScore":365814003,"blueScoreDiff":6,"acceptedTxBlockTime":1772184820172,"acceptedTxBlockTimeDiff":3}}

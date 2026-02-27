@@ -1,6 +1,6 @@
 ---
 title: "GetSubnetwork"
-description: "Retrieve information about a specific subnetwork by its ID."
+description: "Retrieve information about a specific subnetwork by its ID (currently unimplemented)."
 ---
 
 ## Request
@@ -11,9 +11,7 @@ description: "Retrieve information about a specific subnetwork by its ID."
 
 ## Response
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `gasLimit` | u64 | The gas limit for the specified subnetwork. |
+Current node behavior: this method returns a `NotImplemented` error.
 
 ## Example
 
@@ -28,12 +26,15 @@ description: "Retrieve information about a specific subnetwork by its ID."
 
 // Response
 {
-  "gasLimit": 0
+  "error": {
+    "message": "Not implemented"
+  }
 }
 ```
 
 ## Notes
 
+- The request/response schema exists in the RPC API surface, but current server implementations return `NotImplemented`.
 - Subnetworks are a Kaspa feature that allows partitioning transaction processing. The native Kaspa subnetwork and the coinbase subnetwork are built-in.
 - The coinbase subnetwork ID is `0100000000000000000000000000000000000000`.
 - The native (regular transaction) subnetwork ID is `0000000000000000000000000000000000000000`.

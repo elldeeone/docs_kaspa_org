@@ -8,8 +8,8 @@ description: "Get the virtual selected parent chain starting from a given block,
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `startHash` | string | Yes | The hash of the block to start the chain traversal from. |
-| `includeAcceptedTransactionIds` | boolean | No | Whether to include the IDs of accepted transactions for each chain block. |
-| `minConfirmationCount` | u64 | No | Minimum number of confirmations required. Only chain blocks with at least this many confirmations are included. |
+| `includeAcceptedTransactionIds` | boolean | Yes | Whether to include the IDs of accepted transactions for each chain block. |
+| `minConfirmationCount` | u64 | No | Minimum confirmation distance filter. Only chain blocks with confirmation distance strictly greater than this value are included. |
 
 ## Response
 
@@ -49,7 +49,7 @@ description: "Get the virtual selected parent chain starting from a given block,
 
 ## Notes
 
-- This method is essential for tracking confirmed transactions. A transaction is considered confirmed when it appears in the `acceptedTransactionIds` of a chain block.
+- `acceptedTransactionIds` indicates transactions accepted on the selected-parent chain path represented by this response.
 - The `removedChainBlockHashes` list is non-empty when a chain reorganization has occurred between the `startHash` and the current virtual.
 - Use this method in combination with subscriptions to `VirtualChainChanged` for real-time transaction confirmation tracking.
 

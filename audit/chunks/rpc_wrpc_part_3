@@ -1,0 +1,10 @@
+content/docs/rpc/wrpc/get-system-info.mdx
+content/docs/rpc/wrpc/get-utxos-by-addresses.mdx
+content/docs/rpc/wrpc/get-virtual-chain-from-block.mdx
+content/docs/rpc/wrpc/ping.mdx
+content/docs/rpc/wrpc/resolve-finality-conflict.mdx
+content/docs/rpc/wrpc/shutdown.mdx
+content/docs/rpc/wrpc/submit-block.mdx
+content/docs/rpc/wrpc/submit-transaction-replacement.mdx
+content/docs/rpc/wrpc/submit-transaction.mdx
+content/docs/rpc/wrpc/unban.mdx

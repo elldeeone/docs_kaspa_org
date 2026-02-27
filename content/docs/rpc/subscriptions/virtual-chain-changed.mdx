@@ -5,7 +5,7 @@ description: "NotifyVirtualChainChanged — subscribe to chain reorganizations a
 
 ## Overview
 
-The `notifyVirtualChainChanged` subscription notifies your application whenever the virtual selected parent chain changes. This includes both normal chain growth (new blocks appended) and reorganizations (blocks removed and replaced). It also optionally reports which transactions were accepted by each new chain block.
+The virtual-chain-changed subscription notifies your application whenever the virtual selected parent chain changes. This includes both normal chain growth (new blocks appended) and reorganizations (blocks removed and replaced). It also optionally reports which transactions were accepted by each new chain block.
 
 This is the primary subscription for applications that need to track transaction confirmations and detect chain reorganizations.
 
@@ -15,21 +15,12 @@ This is the primary subscription for applications that need to track transaction
 await rpc.subscribeVirtualChainChanged(true); // true = include accepted transaction IDs
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifyVirtualChainChanged",
-  "params": {
-    "includeAcceptedTransactionIds": true
-  }
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `VirtualChainChanged` scope payload (`includeAcceptedTransactionIds` flag). gRPC uses `NotifyVirtualChainChangedRequestMessage` with `includeAcceptedTransactionIds` and `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 
 ```typescript
-await rpc.unsubscribeVirtualChainChanged();
+await rpc.unsubscribeVirtualChainChanged(true); // use the same includeAcceptedTransactionIds value used when subscribing
 ```
 
 ## Notification Format
@@ -96,5 +87,5 @@ rpc.addEventListener("virtual-chain-changed", (event) => {
 - **Ledger synchronization** -- Keep an external database in sync with the virtual chain state.
 
 <Callout type="info">
-The `removedChainBlockHashes` array is empty during normal chain growth. Reorganizations in Kaspa are typically shallow (1-2 blocks) due to the high block rate and GHOSTDAG's convergence properties. However, your application must always handle the possibility of reorgs.
+The `removedChainBlockHashes` array is empty during normal chain growth. Your application should always handle both arrays to remain correct under reorg conditions.
 </Callout>

@@ -8,7 +8,7 @@ description: "Submit a solved block to the network for validation and inclusion 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `block` | object | Yes | The complete block with a solved header (valid nonce). |
-| `allowNonDAABlocks` | boolean | No | Whether to allow blocks that do not comply with DAA rules. Defaults to `false`. Only used in testing. |
+| `allowNonDAABlocks` | boolean | Yes | Whether to allow blocks that do not comply with DAA rules. Only used in testing. |
 
 ## Response
 
@@ -16,7 +16,7 @@ description: "Submit a solved block to the network for validation and inclusion 
 |-------|------|-------------|
 | `report` | object | The result of block submission as a tagged object. |
 | `report.type` | string | Either `"success"` or `"reject"`. |
-| `report.reason` | string | Only present when `type` is `"reject"`. The rejection reason (e.g., `"blockInvalid"`). |
+| `report.reason` | string | Only present when `type` is `"reject"`. One of `BlockInvalid`, `IsInIBD`, or `RouteIsFull`. |
 
 ## Example
 
@@ -53,7 +53,7 @@ description: "Submit a solved block to the network for validation and inclusion 
 {
   "report": {
     "type": "reject",
-    "reason": "blockInvalid"
+    "reason": "BlockInvalid"
   }
 }
 ```
@@ -61,6 +61,6 @@ description: "Submit a solved block to the network for validation and inclusion 
 ## Notes
 
 - A `"success"` report type means the block was accepted and will be propagated to peers.
-- A `"reject"` report type means the block failed validation (invalid PoW, bad timestamps, etc.) and includes a `reason` field.
+- A `"reject"` report type includes an enum reason: `BlockInvalid`, `IsInIBD`, or `RouteIsFull`.
 - The block object should be the template from `GetBlockTemplate` with the nonce field updated to the solved value.
 - Mining software typically calls `GetBlockTemplate`, solves the nonce, and calls `SubmitBlock` in a tight loop.

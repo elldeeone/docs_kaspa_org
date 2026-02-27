@@ -18,12 +18,13 @@ description: "Get comprehensive performance and resource metrics from the node."
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `processMetrics` | object | CPU usage, resident memory, virtual memory, file descriptors used. |
-| `connectionMetrics` | object | Active P2P and RPC connections, inbound/outbound counts. |
-| `bandwidthMetrics` | object | Network bandwidth usage (bytes sent/received). |
-| `consensusMetrics` | object | Consensus-related metrics: blocks processed, headers processed, DAG stats. |
-| `storageMetrics` | object | Database size and storage usage statistics. |
 | `serverTime` | u64 | The current server time in milliseconds since epoch. |
+| `processMetrics` | object \| null | Returned when `processMetrics=true`. Fields: `residentSetSize`, `virtualMemorySize`, `coreNum`, `cpuUsage`, `fdNum`, `diskIoReadBytes`, `diskIoWriteBytes`, `diskIoReadPerSec`, `diskIoWritePerSec`. |
+| `connectionMetrics` | object \| null | Returned when `connectionMetrics=true`. Fields: `borshLiveConnections`, `borshConnectionAttempts`, `borshHandshakeFailures`, `jsonLiveConnections`, `jsonConnectionAttempts`, `jsonHandshakeFailures`, `activePeers`. |
+| `bandwidthMetrics` | object \| null | Returned when `bandwidthMetrics=true`. Fields: `borshBytesTx`, `borshBytesRx`, `jsonBytesTx`, `jsonBytesRx`, `p2pBytesTx`, `p2pBytesRx`, `grpcBytesTx`, `grpcBytesRx`. |
+| `consensusMetrics` | object \| null | Returned when `consensusMetrics=true`. Fields: `nodeBlocksSubmittedCount`, `nodeHeadersProcessedCount`, `nodeDependenciesProcessedCount`, `nodeBodiesProcessedCount`, `nodeTransactionsProcessedCount`, `nodeChainBlocksProcessedCount`, `nodeMassProcessedCount`, `nodeDatabaseBlocksCount`, `nodeDatabaseHeadersCount`, `networkMempoolSize`, `networkTipHashesCount`, `networkDifficulty`, `networkPastMedianTime`, `networkVirtualParentHashesCount`, `networkVirtualDaaScore`. |
+| `storageMetrics` | object \| null | Returned when `storageMetrics=true`. Field: `storageSizeBytes`. |
+| `customMetrics` | object \| null | Returned when `customMetrics=true`; currently reserved/placeholder. |
 
 ## Example
 
@@ -43,28 +44,58 @@ description: "Get comprehensive performance and resource metrics from the node."
 
 // Response
 {
+  "serverTime": 1700000000000,
   "processMetrics": {
-    "residentMemory": 1073741824,
-    "virtualMemory": 2147483648,
+    "residentSetSize": 1073741824,
+    "virtualMemorySize": 2147483648,
+    "coreNum": 8,
     "cpuUsage": 15.5,
-    "fdCount": 256
+    "fdNum": 256,
+    "diskIoReadBytes": 123456789,
+    "diskIoWriteBytes": 987654321,
+    "diskIoReadPerSec": 1024.5,
+    "diskIoWritePerSec": 2048.25
   },
   "connectionMetrics": {
-    "p2pPeers": 48,
-    "rpcClients": 3
+    "borshLiveConnections": 2,
+    "borshConnectionAttempts": 150,
+    "borshHandshakeFailures": 1,
+    "jsonLiveConnections": 1,
+    "jsonConnectionAttempts": 80,
+    "jsonHandshakeFailures": 0,
+    "activePeers": 48
   },
   "bandwidthMetrics": {
-    "bytesSent": 1048576000,
-    "bytesReceived": 2097152000
+    "borshBytesTx": 1048576,
+    "borshBytesRx": 2097152,
+    "jsonBytesTx": 512000,
+    "jsonBytesRx": 1024000,
+    "p2pBytesTx": 50000000,
+    "p2pBytesRx": 70000000,
+    "grpcBytesTx": 0,
+    "grpcBytesRx": 0
   },
   "consensusMetrics": {
-    "blocksSubmitted": 52340000,
-    "headerCount": 52340000
+    "nodeBlocksSubmittedCount": 12345,
+    "nodeHeadersProcessedCount": 45678,
+    "nodeDependenciesProcessedCount": 23456,
+    "nodeBodiesProcessedCount": 34567,
+    "nodeTransactionsProcessedCount": 987654,
+    "nodeChainBlocksProcessedCount": 4567,
+    "nodeMassProcessedCount": 123456789,
+    "nodeDatabaseBlocksCount": 52340000,
+    "nodeDatabaseHeadersCount": 52350000,
+    "networkMempoolSize": 2500,
+    "networkTipHashesCount": 7,
+    "networkDifficulty": 3456789012345.67,
+    "networkPastMedianTime": 1700000000000,
+    "networkVirtualParentHashesCount": 3,
+    "networkVirtualDaaScore": 50000000
   },
   "storageMetrics": {
-    "dbSize": 53687091200
+    "storageSizeBytes": 0
   },
-  "serverTime": 1700000000000
+  "customMetrics": null
 }
 ```
 
@@ -72,5 +103,5 @@ description: "Get comprehensive performance and resource metrics from the node."
 
 - Metrics provide a comprehensive snapshot of the node's health and resource consumption.
 - Use this for building monitoring dashboards, alerting systems, or capacity planning.
-- The exact fields available may vary between node versions as new metrics are added.
+- Each metrics sub-object is conditional on the corresponding request flag.
 - This is a heavier call than `GetInfo` or `GetConnections`; avoid polling at very high frequencies.

@@ -1,13 +1,13 @@
 ---
 title: "RPC Overview"
-description: "Kaspa's RPC architecture — wRPC, gRPC, and REST interfaces, client libraries, public node infrastructure, and the Resolver load balancer."
+description: "Kaspa's RPC architecture — wRPC, gRPC, and REST interfaces, client libraries, public node infrastructure, and resolver-based endpoint discovery."
 ---
 
 ## RPC Architecture
 
 Kaspa nodes expose a Remote Procedure Call (RPC) interface that allows external applications to query blockchain state, submit transactions, monitor events via subscriptions, and manage node operations. The RPC layer sits between your application and the Kaspa node's consensus and mempool engines.
 
-Three protocols are available for interacting with a Kaspa node, each suited to different use cases: **wRPC** (the primary interface), **gRPC** (for server-to-server integrations), and a public **REST API** for simple read-only queries.
+Kaspa nodes expose **wRPC** (the primary interface) and **gRPC**. A separate public **REST API** service at `api.kaspa.org` provides HTTP endpoints backed by node data.
 
 ## Protocols
 
@@ -18,8 +18,8 @@ wRPC is a high-performance RPC protocol developed in Rust by the Kaspa team, bui
 - **Transport**: Standard WebSockets (`ws://` or `wss://`)
 - **Encoding**: Borsh (binary, compact) or JSON (human-readable, WebSocket-framed JSON-RPC-like protocol)
 - **Subscriptions**: Full support for real-time event notifications
-- **SDK integration**: Fully integrated with the Rust and WASM SDKs, including automatic load balancing via the Resolver
-- **Best for**: Most applications -- wallets, explorers, dApps, monitoring tools, browser-based apps
+- **SDK integration**: Fully integrated with the Rust and WASM SDKs, including resolver-based endpoint discovery
+- **Best for**: Often used for wallets, explorers, dApps, monitoring tools, and browser-based apps
 
 ### gRPC (Protocol Buffers)
 
@@ -28,7 +28,7 @@ gRPC is an open-source universal RPC framework that uses HTTP/2 and Protocol Buf
 - **Transport**: HTTP/2
 - **Encoding**: Protocol Buffers (binary)
 - **Subscriptions**: Supported via streaming gRPC
-- **Best for**: Server-to-server communication, infrastructure tooling, Go/Python/Java backends
+- **Best for**: Often preferred for server-to-server communication and environments that already use protobuf/gRPC tooling
 
 <Callout type="info">
 Rusty Kaspa implements streaming gRPC, which may be incompatible with certain routing systems and load balancers. Additionally, much Kaspa data is transmitted as hex or string-serialized formats over gRPC, which reduces the efficiency gains typically associated with protobuf encoding. gRPC has no integration with the Kaspa WASM SDK.
@@ -36,7 +36,7 @@ Rusty Kaspa implements streaming gRPC, which may be incompatible with certain ro
 
 ### REST (via api.kaspa.org)
 
-A public REST API is available at `api.kaspa.org` for simple read-only queries. It wraps a subset of RPC methods behind standard HTTP endpoints.
+A public REST API is available at `api.kaspa.org` for simple HTTP queries and selected operations (including transaction submission). It wraps a subset of RPC methods behind standard HTTP endpoints.
 
 - **Transport**: HTTPS
 - **Encoding**: JSON
@@ -48,22 +48,22 @@ A public REST API is available at `api.kaspa.org` for simple read-only queries. 
 |----------|---------------------|--------|
 | Wallet or dApp development | wRPC (JSON or Borsh) | Full SDK integration, subscriptions |
 | Real-time monitoring / subscriptions | wRPC | Full-duplex WebSocket push |
-| Browser-based applications | wRPC (JSON) or REST | WebSocket support in all browsers |
-| High-performance server integration | gRPC | Strong typing, HTTP/2 multiplexing |
-| Go / Python / Java backends | gRPC | Mature gRPC ecosystems, code generation |
+| Browser-based applications | wRPC (JSON) or REST | Supported by modern browsers and standard HTTP tooling |
+| High-performance server integration | gRPC | Strong typing, HTTP/2 transport, code generation |
+| Go / Python / Java backends | gRPC | Works well with standard protobuf/gRPC toolchains |
 | Simple balance or UTXO lookups | REST | No SDK needed, standard HTTP |
 | Mining software | wRPC or gRPC | Both support block template subscriptions |
 
 <Callout>
-wRPC is the recommended protocol for most applications. It provides access to all RPC methods, supports subscriptions for real-time updates, and works in both Node.js and browser environments via the Kaspa WASM SDK. The JSON encoding enables easy integration with third-party applications.
+wRPC is commonly used for application-facing integrations. It provides access to all RPC methods, supports subscriptions for real-time updates, and works in both Node.js and browser environments via the Kaspa WASM SDK. The JSON encoding enables straightforward third-party integration.
 </Callout>
 
 ## Encoding Options
 
 wRPC supports two encoding formats on separate ports:
 
-- **Borsh** (Binary Object Representation Serializer for Hashing): A compact binary format that is faster to serialize and deserialize. Preferred for performance-sensitive applications. Used natively by the Rust and WASM SDKs.
-- **JSON**: Human-readable format following a WebSocket-framed JSON-RPC-like protocol. Easier to debug and inspect. Preferred for development, browser-based applications, and third-party integrations.
+- **Borsh** (Binary Object Representation Serializer for Hashing): A compact binary format used natively by the Rust and WASM SDKs. It is often preferred for performance-sensitive applications.
+- **JSON**: Human-readable format following a WebSocket-framed JSON-RPC-like protocol. Easier to debug and inspect, and often convenient for browser development and third-party integrations.
 
 Both encodings expose identical methods and return identical logical data. The only difference is wire format and port number.
 
@@ -74,7 +74,7 @@ Both encodings expose identical methods and return identical logical data. The o
 The Kaspa WASM SDK compiles the core Rust codebase to WebAssembly with an idiomatic JavaScript/TypeScript API. It includes:
 
 - **`RpcClient`** -- Main RPC class for interacting with the node over wRPC
-- **`Resolver`** -- Automatic public node discovery against the Public Node Network
+- **`Resolver`** -- Endpoint discovery for resolver-backed deployments (including public-node setups)
 - Full wallet operations, transaction construction, and event subscriptions
 
 ```bash
@@ -90,7 +90,7 @@ The Rust SDK provides native access to wRPC and gRPC clients:
 - **`KaspaRpcClient`** (in `kaspa-wrpc-client`) -- wRPC client with Borsh and JSON encoding support
 - **`GrpcClient`** (in `kaspa-grpc-client`) -- gRPC client built on the `tonic` crate
 - **`RpcApi` trait** -- Defines all RPC methods, shared across both transports
-- **`Resolver`** -- Public node resolution against the PNN
+- **`Resolver`** -- Endpoint resolution for resolver-backed environments
 
 See the [Rust Crates documentation](/docs/sdks/rust-crates) for crate dependencies and usage.
 
@@ -102,18 +102,15 @@ See the [Python SDK documentation](/docs/sdks/python-sdk) for installation and u
 
 ### gRPC Code Generation
 
-The gRPC `.proto` files can be used to generate client code in any language with a protobuf compiler plugin. Protocol definition files (`messages.proto` and `rpc.proto`) are maintained in the [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto). This enables clients for Go, Java, C#, C++, and other languages.
+The gRPC `.proto` files can be used to generate client code in languages supported by protobuf/gRPC tooling. Protocol definition files (`messages.proto` and `rpc.proto`) are maintained in the [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto).
 
 ## Public Node Network (PNN)
 
-The Public Node Network is a contributor-driven initiative that provides public Kaspa nodes available for use by the community. PNN nodes are operated by independent contributors who coordinate via Telegram and Discord channels.
+The Public Node Network (PNN) refers to community-operated public Kaspa RPC infrastructure that can be used by applications that do not run their own node.
 
-### How it Works
-
-- PNN contributors run Kaspa nodes on dedicated VPS servers with stable internet connections, typically on Debian-compatible Linux distributions (Debian / Ubuntu)
-- Nodes are deployed and managed using the [kHOST](https://github.com/aspectron/khost) automation tool
-- The [Kaspa Resolver](#resolver-architecture) monitors all PNN nodes and distributes client connections based on current load
-- Real-time node status is available on the PNN Status Page at [pnn.kaspa.stream](https://pnn.kaspa.stream)
+<Callout type="info">
+Operational guidance (non-normative): PNN topology, routing policy, capacity management, and onboarding processes are service-level choices outside the node RPC protocol and can change over time.
+</Callout>
 
 ### Appropriate Use Cases
 
@@ -126,20 +123,15 @@ PNN nodes are well-suited for:
 PNN nodes are community-operated and best-effort. Exchanges, high-volume production systems, and applications handling significant value should run their own dedicated node rather than relying on PNN infrastructure.
 </Callout>
 
-### Contributing to PNN
-
-Prospective node operators can join the PNN contributor network by engaging with developers via the Kaspa Discord #development channel.
-
 ## Resolver Architecture
 
-The Kaspa Resolver is an application-level load balancer (ALB) that connects to a set of Kaspa nodes and can be queried for the node with the fewest active client connections. It serves as the foundational infrastructure for the Public Node Network.
+The Resolver is an SDK-facing endpoint discovery component used by Rust and WASM clients.
 
-### How the Resolver Works
+### Client-Side Behavior (Protocol-Backed)
 
-1. The Resolver maintains a registry of available public nodes
-2. It monitors node health and tracks active connection counts
-3. When a client queries the Resolver, it returns the endpoint of the node with the least load
-4. If a node becomes unavailable, connected clients are automatically directed to the next available node
+1. If no explicit URL is provided, the client asks the resolver for an endpoint.
+2. The client connects to the returned endpoint.
+3. On reconnect attempts, the client can resolve again and connect to another endpoint.
 
 ### SDK Integration
 
@@ -156,11 +148,13 @@ const rpc = new RpcClient({
 await rpc.connect();
 ```
 
-This approach provides automatic failover -- if the connected node goes down, the client re-queries the Resolver and connects to a different node.
+<Callout type="info">
+Operational guidance (non-normative): endpoint ranking and failover policy are resolver-service behaviors and may vary by deployment.
+</Callout>
 
 ### Private Clusters
 
-The Resolver can also be used to create private node clusters for your own infrastructure, distributing traffic across your own set of nodes.
+Resolver deployments can also be used to create private node clusters for your own infrastructure.
 
 The Resolver source code is available at [github.com/aspectron/kaspa-resolver](https://github.com/aspectron/kaspa-resolver).
 
@@ -171,17 +165,17 @@ HTTP proxies can be placed in front of Kaspa nodes to route traffic while mainta
 - Exposing wRPC endpoints to the public internet without direct node exposure
 - Mapping multiple nodes or networks to different subdomains or URL paths
 - Adding TLS termination for secure `wss://` connections
-- Load balancing across multiple nodes
+- Can be configured for load balancing across multiple nodes
 
 NGINX is commonly used as a reverse proxy for Kaspa nodes. It can be configured to route WebSocket traffic to different node instances based on URL path, enabling a single proxy to serve mainnet, testnet, and multiple encoding formats simultaneously.
 
 <Callout type="info">
-The default NGINX configuration allows for 768 simultaneous connections per CPU core. For high-traffic deployments, increase the `worker_connections` directive in nginx.conf.
+NGINX capacity depends on your `worker_connections` and worker process settings. For high-traffic deployments, tune `worker_connections` in `nginx.conf` and validate limits under realistic load.
 </Callout>
 
 ## kHOST
 
-[kHOST](https://github.com/aspectron/khost) is a Rust-based deployment automation tool used to deploy and manage Kaspa nodes. It is primarily used by PNN contributors to standardize and simplify node deployment and updates across the Public Node Network infrastructure.
+[kHOST](https://github.com/aspectron/khost) is a Rust-based deployment automation tool for deploying and managing Kaspa nodes. Adoption and operating patterns vary by environment.
 
 ## RPC Availability
 
@@ -226,7 +220,7 @@ Subscriptions are managed with paired `subscribe` and `unsubscribe` calls. See t
 ## Authentication and Security
 
 <Callout type="info">
-Kaspa's RPC interface has no built-in authentication mechanism. By default, any client that can reach the RPC port can issue any command, including administrative operations like `Shutdown`.
+Kaspa's RPC interface has no built-in authentication mechanism. Any client that can reach the RPC port can issue exposed RPC calls. State-changing administrative calls such as `Shutdown` require starting the node with `--unsaferpc`.
 </Callout>
 
 To secure your node's RPC interface:
@@ -238,4 +232,4 @@ To secure your node's RPC interface:
 
 ## Rate Limiting
 
-Kaspa nodes do not enforce rate limiting at the RPC layer. If you expose an RPC endpoint publicly, consider placing a rate-limiting reverse proxy in front of it to prevent abuse. Public infrastructure such as the Resolver service and `api.kaspa.org` may impose their own rate limits.
+Kaspa exposes RPC connection limits (for example, max client settings) but does not provide built-in request-per-second quota controls at the RPC layer. If you expose an RPC endpoint publicly, place a rate-limiting proxy in front of it. Public infrastructure such as the Resolver service and `api.kaspa.org` may apply their own service-level limits.

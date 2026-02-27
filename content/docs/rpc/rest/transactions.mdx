@@ -25,7 +25,7 @@ GET https://api.kaspa.org/transactions/1234567890abcdef1234567890abcdef123456789
 |---|---|---|
 | `inputs` | boolean | Include input details (default: `true`) |
 | `outputs` | boolean | Include output details (default: `true`) |
-| `resolve_previous_outpoints` | string | Set to `light` or `full` to resolve previous outpoints |
+| `resolve_previous_outpoints` | string | Previous outpoint lookup mode: `no` (default), `light`, or `full` |
 
 **Response:**
 
@@ -72,7 +72,7 @@ GET https://api.kaspa.org/transactions/1234567890abcdef1234567890abcdef123456789
 ```
 
 <Callout type="info">
-The `mass` field represents the transaction's computed mass, which combines compute, bandwidth, and UTXO storage costs. The fee is the difference between the sum of input amounts and the sum of output amounts.
+The `mass` field may be a string value or `null`, depending on transaction context. When present, it represents transaction mass used for fee-rate calculations.
 </Callout>
 
 ## POST /transactions
@@ -140,7 +140,7 @@ Transactions must be fully signed before submission. The REST API does not perfo
 
 ## Understanding Mass and Fees
 
-Every transaction response includes a `mass` field. Transaction mass is a multi-dimensional measure of the transaction's resource cost:
+Transaction responses include a `mass` field, which can be `null` for some transactions. Transaction mass is a multi-dimensional measure of resource cost:
 
 - **Compute mass** -- Cost of verifying signatures and evaluating scripts.
 - **Bandwidth mass** -- Serialized transaction size in bytes.
@@ -152,7 +152,7 @@ The total mass determines the minimum fee required:
 fee = fee_rate * mass
 ```
 
-To calculate the fee from a transaction response, subtract the total output amounts from the total input amounts:
+When inputs and outputs are both present, fee can be computed as:
 
 ```
 fee = sum(inputs.amount) - sum(outputs.amount)
@@ -164,7 +164,7 @@ fee = sum(inputs.amount) - sum(outputs.amount)
 |---|---|---|
 | `transaction_id` | string | Unique transaction identifier (hash) |
 | `hash` | string | Transaction hash |
-| `mass` | string | Computed transaction mass |
+| `mass` | string \| null | Transaction mass when available |
 | `block_hash` | array | Hashes of blocks containing this transaction |
 | `block_time` | integer | Timestamp of the accepting block (Unix milliseconds) |
 | `is_accepted` | boolean | Whether the transaction has been accepted in the virtual chain |
@@ -178,8 +178,6 @@ fee = sum(inputs.amount) - sum(outputs.amount)
 | Status Code | Meaning |
 |---|---|
 | `200` | Success |
-| `400` | Invalid request (malformed transaction, invalid ID format) |
+| `400` | Bad request (submission-specific errors such as invalid transaction payload) |
 | `404` | Transaction not found |
-| `422` | Transaction rejected (invalid signature, missing UTXOs, etc.) |
-| `429` | Rate limit exceeded |
-| `500` | Internal server error |
+| `422` | Validation error (invalid transaction ID format, invalid request fields) |

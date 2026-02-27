@@ -53,7 +53,7 @@ OP_DATA_32 <32-byte-public-key> OP_CHECKSIG
 To spend a UTXO locked to a P2PK address, the spender must provide a valid Schnorr signature corresponding to the public key encoded in the address.
 
 <Callout type="info">
-Kaspa uses x-only public keys (32 bytes) rather than compressed public keys (33 bytes). This follows the approach adopted by Bitcoin's Taproot upgrade, where the y-coordinate parity is implicitly even.
+Kaspa's default P2PK flow uses 32-byte x-only Schnorr public keys. The protocol also supports 33-byte ECDSA public key addresses (`PubKeyECDSA`).
 </Callout>
 
 ### Pay-to-Script-Hash (P2SH)
@@ -95,12 +95,12 @@ m / 44' / 111111' / account' / change / index
 | Level | Value | Description |
 |---|---|---|
 | Purpose | `44'` | BIP-44 multi-account hierarchy |
-| Coin Type | `111111'` | Kaspa's registered coin type |
+| Coin Type | `111111'` | Coin type value used in Kaspa implementations |
 | Account | `0'`, `1'`, ... | Account index (hardened) |
 | Change | `0` or `1` | `0` for receiving addresses, `1` for internal change addresses |
 | Index | `0`, `1`, `2`, ... | Sequential address index |
 
-The **coin type `111111`** is Kaspa's registered identifier in the SLIP-44 registry, which assigns unique coin type numbers to different cryptocurrencies.
+Kaspa implementations use **coin type `111111`** for this BIP-44 derivation path.
 
 <Callout>
 A single 12-word or 24-word mnemonic phrase can derive an unlimited number of Kaspa addresses. Wallets typically generate new receiving addresses for each transaction to improve privacy.
@@ -127,9 +127,9 @@ When processing an address, nodes and wallets perform several validation checks:
 1. **Prefix check**: Verify that the prefix matches the expected network (e.g., `kaspa:` for mainnet).
 2. **Bech32 decoding**: Decode the address and verify the Bech32 checksum. If any character has been altered, the checksum will fail.
 3. **Version byte check**: Ensure the version byte corresponds to a known address type.
-4. **Data length check**: Verify that the decoded data has the expected length (32 bytes for P2PK, 32 bytes for P2SH).
+4. **Data length check**: Verify that the decoded data has the expected length (`PubKey` = 32 bytes, `PubKeyECDSA` = 33 bytes, `ScriptHash` = 32 bytes).
 
-Bech32 encoding can detect up to 4 character errors in an address and has a very low probability of accepting addresses with more errors. This makes it significantly more robust than older encoding schemes like Base58Check.
+Bech32 encoding provides strong checksum-based typo detection and a low probability of accepting malformed addresses. In practice, this is much more robust than legacy encodings that are easier to mistype.
 
 <Callout type="info">
 Always validate addresses before sending transactions. Most wallet software performs these checks automatically, but applications integrating with Kaspa should implement full address validation.

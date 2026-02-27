@@ -1,0 +1,7 @@
+## nextjs.org/docs title
+<title>Next.js Docs | Next.js
+## nextjs.org/learn title
+<title>Learn Next.js | Next.js by Vercel - The React Framework
+## nextjs.org/learn interactive text
+## fumadocs.dev title
+<title>Fumadocs

@@ -1,6 +1,6 @@
 ---
 title: "ResolveFinalityConflict"
-description: "Manually resolve a finality conflict by specifying the correct finality point block."
+description: "Resolve a finality conflict by specifying a finality block hash (currently unimplemented)."
 ---
 
 ## Request
@@ -11,7 +11,7 @@ description: "Manually resolve a finality conflict by specifying the correct fin
 
 ## Response
 
-Empty response on success.
+Current node behavior: this method returns a `NotImplemented` error.
 
 ## Example
 
@@ -25,15 +25,19 @@ Empty response on success.
 }
 
 // Response
-{}
+{
+  "error": {
+    "message": "Not implemented"
+  }
+}
 ```
 
 ## Notes
 
 <Callout>
-This is an administrative method intended for emergency use only. Incorrectly resolving a finality conflict can cause your node to diverge from the rest of the network. Do not use this method unless you fully understand the implications.
+This is an administrative method and is unavailable in safe RPC mode. Run the node with `--unsaferpc` to call it.
 </Callout>
 
 - A finality conflict occurs when the node detects two competing chains that both have sufficient depth to be considered final.
 - Under normal network conditions, finality conflicts do not occur. This method exists as a safety mechanism for extraordinary situations.
-- When a finality conflict is detected, the node halts consensus progress until the conflict is resolved either automatically or via this method.
+- Current implementations return `NotImplemented`, so do not rely on this method for automated recovery flows.

@@ -7,16 +7,16 @@ description: "Retrieve a batch of blocks starting from a given hash, useful for 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `lowHash` | string | No | The hash to start from (exclusive). Use the genesis hash or a known block hash. If omitted, starts from the genesis block. |
-| `includeBlocks` | boolean | No | Whether to include full block data. Defaults to `false`. |
-| `includeTransactions` | boolean | No | Whether to include transactions within blocks. Only relevant if `includeBlocks` is `true`. |
+| `lowHash` | string | No | The hash to start from. If provided, it is included as the first returned hash. If omitted, starts from the genesis block. |
+| `includeBlocks` | boolean | Yes | Whether to include full block data. |
+| `includeTransactions` | boolean | Yes | Whether to include transactions within blocks. Only relevant if `includeBlocks` is `true`. |
 
 ## Response
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `blockHashes` | string[] | Ordered list of block hashes from `lowHash` onward. |
-| `blocks` | object[] | Full block objects (only present if `includeBlocks` was `true`). |
+| `blocks` | object[] | Always present. Contains block objects when `includeBlocks=true`, otherwise an empty array. |
 
 ## Example
 
@@ -50,5 +50,5 @@ description: "Retrieve a batch of blocks starting from a given hash, useful for 
 
 - The node returns blocks in topological order from the low hash.
 - The number of blocks returned per call is bounded by the node's internal limits.
-- Use the last hash in the response as the `lowHash` for the next call to paginate through the DAG.
+- `lowHash` is inclusive. If you paginate by reusing the previous page's last hash, skip the first returned hash on the next page to avoid duplicates.
 - If `lowHash` refers to a pruned block, the node returns an error.

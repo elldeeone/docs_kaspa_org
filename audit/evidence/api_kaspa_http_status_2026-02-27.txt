@@ -1,0 +1,3 @@
+https://api.kaspa.org -> HTTP 307
+https://api.kaspa.org/info/coinsupply -> HTTP 200
+https://api.kaspa.org/docs -> HTTP 200

@@ -11,7 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `network` | string | The name of the network (e.g., `kaspa-mainnet`). |
+| `network` | string | The network identifier (e.g., `mainnet`, `testnet-10`). |
 | `blockCount` | u64 | Total number of blocks in the DAG. |
 | `headerCount` | u64 | Total number of headers known to the node. |
 | `tipHashes` | string[] | Hashes of the current DAG tips (blocks with no children yet). |
@@ -33,7 +33,7 @@ No parameters required.
 
 // Response
 {
-  "network": "kaspa-mainnet",
+  "network": "mainnet",
   "blockCount": 52340000,
   "headerCount": 52340000,
   "tipHashes": [

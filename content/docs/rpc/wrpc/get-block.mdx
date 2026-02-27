@@ -8,7 +8,7 @@ description: "Retrieve a specific block by its hash, optionally including full t
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `hash` | string | Yes | The hash of the block to retrieve. |
-| `includeTransactions` | boolean | No | Whether to include full transaction data in the response. Defaults to `false`. |
+| `includeTransactions` | boolean | Yes | Whether to include full transaction data in the response. |
 
 ## Response
 
@@ -16,7 +16,7 @@ description: "Retrieve a specific block by its hash, optionally including full t
 |-------|------|-------------|
 | `block` | object | The block object containing header and optionally transactions. |
 | `block.header` | object | Block header with version, parentsByLevel, hashMerkleRoot, acceptedIdMerkleRoot, utxoCommitment, timestamp, bits, nonce, daaScore, blueWork, blueScore, pruningPoint. |
-| `block.transactions` | array | Transaction objects (only present if `includeTransactions` was `true`). |
+| `block.transactions` | array | Always present. Contains transaction objects when `includeTransactions=true`, otherwise an empty array. |
 | `block.verboseData` | object | Additional metadata: hash, difficulty, selectedParentHash, transactionIds, isHeaderOnly, blueScore, childrenHashes, mergeSetBluesHashes, mergeSetRedsHashes, isChainBlock. |
 
 ## Example
@@ -64,6 +64,6 @@ description: "Retrieve a specific block by its hash, optionally including full t
 
 ## Notes
 
-- If the block has been pruned and is no longer available, the call returns an error.
+- If only the block header is available, the response may be header-only (`block.verboseData.isHeaderOnly=true`) and `block.transactions` will be empty.
 - The `verboseData` field provides computed metadata that is not part of the raw block structure.
-- Transaction data can be large; omit `includeTransactions` when you only need header information.
+- Transaction data can be large; set `includeTransactions` to `false` when you only need header information.

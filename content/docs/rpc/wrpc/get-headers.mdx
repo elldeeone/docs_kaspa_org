@@ -1,6 +1,6 @@
 ---
 title: "GetHeaders"
-description: "Retrieve a range of block headers starting from a given hash."
+description: "Retrieve a range of block headers starting from a given hash (currently unimplemented)."
 ---
 
 ## Request
@@ -13,9 +13,7 @@ description: "Retrieve a range of block headers starting from a given hash."
 
 ## Response
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `headers` | object[] | Array of block header objects. |
+Current node behavior: this method returns a `NotImplemented` error.
 
 ## Example
 
@@ -32,23 +30,13 @@ description: "Retrieve a range of block headers starting from a given hash."
 
 // Response
 {
-  "headers": [
-    {
-      "version": 1,
-      "parentsByLevel": [["..."]],
-      "hashMerkleRoot": "aabb...",
-      "timestamp": 1700000000000,
-      "bits": 1234567890,
-      "nonce": 98765,
-      "daaScore": 50000001,
-      "blueScore": 48000001
-    }
-  ]
+  "error": {
+    "message": "Not implemented"
+  }
 }
 ```
 
 ## Notes
 
-- Headers are lightweight compared to full blocks, making this method efficient for scanning large portions of the DAG.
-- The `limit` parameter controls how many headers are returned in a single call. Use pagination with updated `startHash` for larger ranges.
-- This method is useful for SPV-like verification workflows or light clients.
+- The request schema (`startHash`, `limit`, `isAscending`) is part of the RPC API surface, but the server currently does not implement this call.
+- Do not rely on this method for production flows until implementation is available.

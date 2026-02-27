@@ -30,7 +30,7 @@ Before upgrading kaspad, verify the following:
 
 1. **Read the release notes**: Check the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases) for the target version. Note any breaking changes, new flags, or required actions.
 2. **Check compatibility**: Confirm whether the upgrade requires a database reset or is backward-compatible with existing data.
-3. **Back up your data directory**: Copy the data directory (e.g., `~/.kaspad/kaspa-mainnet/`) to a safe location. This allows recovery if the upgrade fails.
+3. **Back up your data directory**: Copy the data directory (for example `~/.rusty-kaspa/kaspa-mainnet/datadir/`) to a safe location. This allows recovery if the upgrade fails.
 4. **Plan downtime**: The upgrade process requires stopping the node temporarily. On a mining setup, this means brief mining downtime.
 5. **Verify system requirements**: New versions may have different resource requirements. Check that your system meets the updated minimums.
 
@@ -78,7 +78,7 @@ kaspad --reset-db --utxoindex --rpclisten=0.0.0.0:16110
 ```
 
 <Callout>
-A database reset triggers a full re-sync, which can take 30 minutes to several hours depending on your hardware. If you are running a mining operation, plan for this downtime accordingly.
+A database reset triggers a full re-sync. Duration is environment-dependent (hardware, network, and DAG size), so plan downtime conservatively for operational workloads.
 </Callout>
 
 ## Verifying a Successful Upgrade
@@ -92,13 +92,13 @@ After starting the upgraded node, confirm the upgrade succeeded:
 
 ## Backward Compatibility
 
-Minor version upgrades (e.g., `0.14.0` to `0.14.1`) are generally backward-compatible and do not require a database reset. Major version upgrades and hardfork releases may break backward compatibility.
+Compatibility expectations are release-specific. Do not assume that minor versions are always backward-compatible; confirm DB and RPC compatibility from the exact target release notes.
 
 Key compatibility considerations:
 
 - **Database format**: If the on-disk format changes, the old database cannot be read by the new version (and vice versa). A `--reset-db` is required.
-- **RPC interface**: New RPC methods may be added, but existing methods are generally preserved. Check release notes for any deprecated or removed methods.
-- **P2P protocol**: Nodes on different major versions may not be able to communicate. After a hardfork activation, old-version nodes will be unable to sync.
+- **RPC interface**: New RPC methods may be added and existing behavior can change. Check release notes for deprecated or removed methods.
+- **P2P protocol**: Nodes on incompatible versions may fail to communicate. After a hardfork activation, old-version nodes will be unable to sync.
 
 ## Rollback Procedures
 

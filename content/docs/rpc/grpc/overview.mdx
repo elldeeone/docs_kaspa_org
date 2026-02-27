@@ -12,12 +12,12 @@ gRPC is a high-performance, language-neutral remote procedure call framework bui
 | Use Case | Recommended Protocol | Reason |
 |---|---|---|
 | Browser applications | wRPC | gRPC is not natively supported in browsers |
-| Node.js backends | wRPC or gRPC | Both work well; wRPC is simpler to set up |
+| Node.js backends | wRPC or gRPC | Both are viable; choose based on your existing tooling |
 | Rust infrastructure | gRPC | Native tonic support, strong typing |
-| Go / Python / Java backends | gRPC | Mature gRPC ecosystems in these languages |
-| High-frequency data pipelines | gRPC | Binary serialization, HTTP/2 multiplexing |
-| Exchange integrations | gRPC | Server-to-server with strict typing |
-| Mobile applications | wRPC | WebSocket transport is more mobile-friendly |
+| Go / Python / Java backends | gRPC | Standard protobuf/gRPC toolchains and code generation |
+| High-frequency data pipelines | gRPC | Binary serialization, HTTP/2 transport |
+| Exchange integrations | gRPC | Server-to-server integration with typed contracts |
+| Mobile applications | wRPC | WebSocket transport is typically simpler in mobile stacks |
 
 <Callout type="info">
 For most application developers, the wRPC interface or the WASM SDK will be simpler to work with. gRPC is best suited for server-to-server communication, existing gRPC infrastructure, and scenarios where code generation and strong typing are priorities.
@@ -41,12 +41,12 @@ grpc://127.0.0.1:16110
 ```
 
 <Callout>
-gRPC connections require direct access to a Kaspa node. Unlike wRPC, public gRPC endpoints are generally not available. You will need to run your own node or have network access to a node you control.
+gRPC connections require direct access to a Kaspa node. Public resolver infrastructure is focused on wRPC endpoints, so gRPC deployments are typically self-hosted or privately exposed.
 </Callout>
 
 ## Authentication
 
-Kaspa's gRPC interface does not currently implement authentication or TLS by default. Access control is handled at the network level. When deploying in production:
+Kaspa's gRPC interface does not include built-in authentication, and kaspad does not expose native TLS endpoint flags for gRPC. Access control is handled at the network/proxy layer. When deploying in production:
 
 - Bind the gRPC port to `127.0.0.1` or a private network interface rather than `0.0.0.0`.
 - Use a firewall or VPN to restrict access to trusted clients.
@@ -64,7 +64,7 @@ The gRPC interface exposes the same set of RPC methods as wRPC. All query, mutat
 
 ## Language Support
 
-gRPC supports code generation for any language with a protobuf compiler plugin. Kaspa clients have been built or can be generated for:
+gRPC supports code generation for languages with protobuf compiler plugins. Kaspa schemas can be generated for:
 
 - **Rust** -- Native support via the `tonic` crate (used internally by rusty-kaspa)
 - **Go** -- Via `protoc-gen-go` and `protoc-gen-go-grpc`
@@ -84,14 +84,7 @@ use kaspa_rpc_core::api::rpc::RpcApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = GrpcClient::connect(
-        "grpc://127.0.0.1:16110".to_string(),
-        true,   // enable connection retries
-        None,   // no TLS
-        false,  // not verbose
-        None,   // no subscription context
-    )
-    .await?;
+    let client = GrpcClient::connect("grpc://127.0.0.1:16110".to_string()).await?;
 
     let dag_info = client.get_block_dag_info().await?;
     println!("Network: {}", dag_info.network);
@@ -109,17 +102,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 import grpc
 from generated import messages_pb2, messages_pb2_grpc
 
-# Connect to a local Kaspa node
+def requests():
+    yield messages_pb2.KaspadRequest(
+        id=1,
+        getBlockDagInfoRequest=messages_pb2.GetBlockDagInfoRequestMessage(),
+    )
+
 channel = grpc.insecure_channel("127.0.0.1:16110")
 stub = messages_pb2_grpc.RPCStub(channel)
+stream = stub.MessageStream(requests())
 
-# Query block DAG info
-request = messages_pb2.GetBlockDagInfoRequestMessage()
-response = stub.GetBlockDagInfo(request)
-
-print(f"Network: {response.networkName}")
-print(f"Block count: {response.blockCount}")
-print(f"DAA score: {response.virtualDaaScore}")
+for response in stream:
+    if response.HasField("getBlockDagInfoResponse"):
+        info = response.getBlockDagInfoResponse
+        if info.error and info.error.message:
+            raise RuntimeError(info.error.message)
+        print(f"Network: {info.networkName}")
+        print(f"Block count: {info.blockCount}")
+        print(f"DAA score: {info.virtualDaaScore}")
+        break
 ```
 
 ## Example: Connecting in Go
@@ -148,18 +149,39 @@ func main() {
     defer conn.Close()
 
     client := pb.NewRPCClient(conn)
-
-    resp, err := client.GetBlockDagInfo(
-        context.Background(),
-        &pb.GetBlockDagInfoRequestMessage{},
-    )
+    stream, err := client.MessageStream(context.Background())
     if err != nil {
-        log.Fatalf("GetBlockDagInfo failed: %v", err)
+        log.Fatalf("MessageStream failed: %v", err)
     }
 
-    fmt.Printf("Network: %s\n", resp.NetworkName)
-    fmt.Printf("Block count: %d\n", resp.BlockCount)
-    fmt.Printf("DAA score: %d\n", resp.VirtualDaaScore)
+    err = stream.Send(&pb.KaspadRequest{
+        Id: 1,
+        Payload: &pb.KaspadRequest_GetBlockDagInfoRequest{
+            GetBlockDagInfoRequest: &pb.GetBlockDagInfoRequestMessage{},
+        },
+    })
+    if err != nil {
+        log.Fatalf("Send failed: %v", err)
+    }
+
+    resp, err := stream.Recv()
+    if err != nil {
+        log.Fatalf("Recv failed: %v", err)
+    }
+
+    msg, ok := resp.Payload.(*pb.KaspadResponse_GetBlockDagInfoResponse)
+    if !ok {
+        log.Fatalf("Unexpected payload type: %T", resp.Payload)
+    }
+    if msg.GetBlockDagInfoResponse().GetError() != nil &&
+        msg.GetBlockDagInfoResponse().GetError().GetMessage() != "" {
+        log.Fatalf("RPC error: %s", msg.GetBlockDagInfoResponse().GetError().GetMessage())
+    }
+
+    info := msg.GetBlockDagInfoResponse()
+    fmt.Printf("Network: %s\n", info.GetNetworkName())
+    fmt.Printf("Block count: %d\n", info.GetBlockCount())
+    fmt.Printf("DAA score: %d\n", info.GetVirtualDaaScore())
 }
 ```
 

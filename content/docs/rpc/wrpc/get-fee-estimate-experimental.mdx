@@ -17,7 +17,7 @@ description: "Get detailed experimental fee rate estimates with additional verbo
 | `estimate.priorityBucket` | object | Fee rate for high-priority inclusion (same as `GetFeeEstimate`). |
 | `estimate.normalBuckets` | object[] | Normal-priority fee rate buckets. |
 | `estimate.lowBuckets` | object[] | Low-priority fee rate buckets. |
-| `verbose` | object | Additional experimental data about fee estimation internals. |
+| `verbose` | object \| null | Additional experimental data about fee estimation internals. `null` when `verbose=false`. |
 
 ## Example
 
@@ -55,9 +55,9 @@ description: "Get detailed experimental fee rate estimates with additional verbo
 ## Notes
 
 <Callout>
-This method is marked as experimental and its response format may change between node versions without notice. Do not rely on the `verbose` field structure in production code.
+This method is experimental. Treat the `verbose` payload as unstable across versions and avoid strict production dependencies on its exact structure.
 </Callout>
 
 - The `verbose` field provides internal metrics used by the fee estimation algorithm, useful for debugging and research.
 - The `priorityBucket`, `normalBuckets`, and `lowBuckets` fields are identical in format to `GetFeeEstimate`.
-- Use `GetFeeEstimate` for production applications and this method for development, analysis, or monitoring tools.
+- Best practice: use `GetFeeEstimate` for production-facing logic, and reserve this method for diagnostics and analysis.

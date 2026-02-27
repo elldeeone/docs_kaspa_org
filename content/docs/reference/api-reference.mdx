@@ -1,13 +1,17 @@
 ---
 title: "API Reference"
-description: "Comprehensive reference of all Kaspa RPC methods, including parameters, return types, and usage details."
+description: "Reference for commonly used Kaspa RPC methods, including parameters, return types, and usage details."
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 # API Reference
 
-Kaspa exposes its functionality through a set of RPC (Remote Procedure Call) methods. These methods are available via **gRPC** (used by `kaspad`) and **wRPC** (used by `rusty-kaspa`), which supports both WebSocket and JSON-based transports.
+Kaspa exposes its functionality through a set of RPC (Remote Procedure Call) methods. In current `rusty-kaspa` releases, both **gRPC** and **wRPC** are available; wRPC supports both Borsh and JSON encodings.
+
+<Callout type="info">
+This page documents common RPC methods. It is not an exhaustive list of every method exposed by the node.
+</Callout>
 
 <Callout type="info">
 All RPC methods follow a request/response pattern. Subscription methods (prefixed with `notify`) establish persistent event streams and require a corresponding `stop` call to unsubscribe.
@@ -37,15 +41,16 @@ Returns high-level information about the current state of the BlockDAG.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `networkName` | `string` | Name of the network (e.g., `kaspa-mainnet`) |
+| `network` | `string` | Name of the network (e.g., `mainnet`) |
 | `blockCount` | `uint64` | Total number of blocks in the DAG |
 | `headerCount` | `uint64` | Total number of block headers |
 | `tipHashes` | `string[]` | Hashes of the current DAG tips |
 | `difficulty` | `float64` | Current mining difficulty |
-| `pastMedianTime` | `int64` | Median time of the past blocks (milliseconds) |
+| `pastMedianTime` | `uint64` | Median time of the past blocks (milliseconds) |
 | `virtualParentHashes` | `string[]` | Parent hashes of the virtual block |
 | `pruningPointHash` | `string` | Hash of the current pruning point |
 | `virtualDaaScore` | `uint64` | Current DAA score of the virtual block |
+| `sink` | `string` | Hash of the current sink block (virtual selected parent) |
 
 ### getBlock
 
@@ -74,7 +79,7 @@ Retrieves a batch of blocks starting from a given low hash.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `lowHash` | `string` | Yes | The starting block hash (exclusive) |
+| `lowHash` | `string` | No | Optional starting block hash (exclusive). If omitted, the node uses its default range behavior |
 | `includeBlocks` | `bool` | No | Whether to include block data (default: `false`) |
 | `includeTransactions` | `bool` | No | Whether to include transaction data within blocks (default: `false`) |
 
@@ -122,7 +127,12 @@ Submits a mined block to the network for validation and inclusion in the BlockDA
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `rejectReason` | `string` | Reason for rejection, if the block was rejected (empty on success) |
+| `report` | `object` | Submission result object |
+
+`report` uses:
+
+- `{"type":"success"}` when accepted
+- `{"type":"reject","reason":"..."}` when rejected
 
 ---
 
@@ -155,7 +165,7 @@ Each `UtxoEntry` contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `address` | `string` | The address this UTXO belongs to |
+| `address` | `string \| null` | The address this UTXO belongs to (optional in the RPC model) |
 | `outpoint` | `Outpoint` | Transaction ID and output index |
 | `utxoEntry` | `UtxoEntryData` | Amount (in sompi), script public key, block DAA score, and coinbase flag |
 
@@ -233,7 +243,7 @@ Returns a single mempool entry by its transaction ID.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `txId` | `string` | Yes | The transaction ID to look up |
+| `transactionId` | `string` | Yes | The transaction ID to look up |
 | `includeOrphanPool` | `bool` | No | Whether to search the orphan pool (default: `false`) |
 | `filterTransactionPool` | `bool` | No | Whether to exclude the main transaction pool (default: `false`) |
 
@@ -252,7 +262,7 @@ Subscription methods establish persistent notification streams. Each `notify*` m
 | Method | Description |
 |--------|-------------|
 | `notifyBlockAdded` | Subscribe to new block notifications |
-| `notifyVirtualSelectedParentBlueScoreChanged` | Subscribe to blue score changes |
+| `notifySinkBlueScoreChanged` | Subscribe to sink blue score changes |
 | `notifyUtxosChanged` | Subscribe to UTXO changes for specific addresses |
 
 ### notifyBlockAdded
@@ -271,9 +281,9 @@ Subscribes to notifications whenever a new block is added to the BlockDAG.
 |-------|------|-------------|
 | `block` | `RpcBlock` | The newly added block with full header and transaction data |
 
-### notifyVirtualSelectedParentBlueScoreChanged
+### notifySinkBlueScoreChanged
 
-Subscribes to notifications whenever the blue score of the virtual selected parent changes. This is useful for tracking confirmation depth.
+Subscribes to notifications whenever the sink blue score changes. This is useful for tracking confirmation depth.
 
 **Parameters:**
 
@@ -285,7 +295,7 @@ Subscribes to notifications whenever the blue score of the virtual selected pare
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `virtualSelectedParentBlueScore` | `uint64` | The new blue score value |
+| `sinkBlueScore` | `uint64` | The new sink blue score value |
 
 ### notifyUtxosChanged
 
@@ -325,7 +335,7 @@ These methods provide information about the node, its peers, and overall network
 | `estimateNetworkHashesPerSecond` | Estimates the network hash rate |
 | `getSubnetwork` | Returns information about a subnetwork |
 | `getCoinSupply` | Returns the current coin supply |
-| `getVirtualSelectedParentBlueScore` | Returns the current virtual blue score |
+| `getSinkBlueScore` | Returns the current sink blue score |
 
 ### getInfo
 
@@ -355,7 +365,7 @@ Returns detailed information about all currently connected peers.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `infos` | `PeerInfo[]` | Array of connected peer information |
+| `peerInfo` | `PeerInfo[]` | Array of connected peer information |
 
 Each `PeerInfo` contains:
 
@@ -417,7 +427,7 @@ Estimates the total network hash rate based on recent difficulty adjustments.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `windowSize` | `uint32` | Yes | Number of blocks to use for estimation |
-| `startHash` | `string` | No | Block hash to start the estimation window from (defaults to virtual selected parent) |
+| `startHash` | `string` | No | Block hash to start the estimation window from (defaults to the sink) |
 
 **Returns:**
 
@@ -455,12 +465,12 @@ Returns information about the current circulating coin supply.
 | `circulatingSompi` | `uint64` | Current circulating supply in sompi |
 
 <Callout type="info">
-To convert sompi to KAS, divide by 100,000,000. The maximum supply is approximately 28.7 billion KAS.
+To convert sompi to KAS, divide by 100,000,000. Total emitted supply under current consensus rules is approximately 28.38 billion KAS.
 </Callout>
 
-### getVirtualSelectedParentBlueScore
+### getSinkBlueScore
 
-Returns the blue score of the current virtual selected parent, representing the latest DAG state.
+Returns the blue score of the current sink (virtual selected parent), representing the latest DAG state.
 
 **Parameters:** None
 
@@ -468,7 +478,7 @@ Returns the blue score of the current virtual selected parent, representing the 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `blueScore` | `uint64` | The blue score of the virtual selected parent |
+| `blueScore` | `uint64` | The blue score of the current sink |
 
 ---
 

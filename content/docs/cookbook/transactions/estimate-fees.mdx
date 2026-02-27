@@ -119,9 +119,9 @@ The `getFeeEstimate` RPC method returns a response with a top-level `estimate` f
 
 | Bucket | Meaning |
 |---|---|
-| **Priority** | Highest fee rate for inclusion in the very next block. Use this when speed is critical. |
-| **Normal** | An array of fee rate buckets representing reasonable fee levels for confirmation within a few seconds. |
-| **Low** | An array of lower fee rate buckets for transactions that can tolerate longer confirmation times. |
+| **Priority** | Higher suggested fee-rate bucket from the node estimator. |
+| **Normal** | Mid-range fee-rate buckets from the node estimator. |
+| **Low** | Lower fee-rate buckets for less time-sensitive transactions. |
 
 Each bucket contains a `feerate` value in sompi per mass unit. The total fee for a transaction is:
 
@@ -131,25 +131,25 @@ total_fee = feerate x transaction_mass
 
 ### The experimental endpoint
 
-`getFeeEstimateExperimental` provides additional detail, including the estimated time-to-inclusion for each bucket. This is useful for building UIs that let users choose between speed and cost.
+`getFeeEstimateExperimental` provides additional estimator detail (shape may vary by node version). This is useful for building UIs that expose fee-rate choices.
 
 ### How createTransactions handles fees
 
 The `createTransactions` function computes the minimum required fee automatically based on the transaction mass. The `priorityFee` parameter adds an extra fee on top of the minimum to boost inclusion priority. When `priorityFee` is `0n`, the transaction pays only the minimum relay fee.
 
 <Callout>
-Under normal network conditions (no mempool congestion), the minimum relay fee is sufficient for near-instant inclusion because Kaspa's 10 BPS block rate provides ample capacity. You only need to increase fees during periods of sustained high demand.
+Actual inclusion speed depends on current mempool conditions. Treat fee estimates as dynamic network signals rather than fixed guarantees.
 </Callout>
 
 ### Mass components
 
-A standard 1-input, 2-output transaction has approximately:
+Mass is determined by three components:
 
-- **Compute mass**: 1,000 (one signature operation at 1,000 mass each)
-- **Transactional mass**: 300--400 (serialized byte size)
-- **Storage mass**: Varies based on input/output values (see KIP-9)
+- **Compute mass**: Signature/script verification cost.
+- **Transactional mass**: Serialized transaction size cost.
+- **Storage mass**: UTXO set impact (see KIP-9).
 
-The effective mass is the maximum of these three components, so for typical transactions the compute mass of 1,000 dominates.
+The effective mass is the maximum of these components for a given transaction.
 
 ## Further Reading
 

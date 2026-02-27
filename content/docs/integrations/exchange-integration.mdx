@@ -18,7 +18,7 @@ kaspad --utxoindex
 The `--utxoindex` flag builds an index of all UTXOs by address, which is required for the `getUtxosByAddresses` and `notifyUtxosChanged` RPC methods. Without this flag, the node cannot efficiently look up UTXOs for specific addresses.
 
 <Callout type="warn">
-The UTXO index increases disk usage and memory consumption. Ensure your node has adequate resources — at least 8 GB of RAM and 100 GB of SSD storage is recommended for exchange nodes.
+The UTXO index increases disk and memory usage. Capacity requirements depend on traffic, retention, and operating policy, so size your infrastructure from load testing and production monitoring rather than fixed defaults.
 </Callout>
 
 ## KAS Denominations
@@ -49,16 +49,15 @@ The recommended approach for detecting deposits is subscribing to UTXO change no
 
 ### Confirmation Depth
 
-Kaspa's DAG structure provides fast confirmations, but exchanges should wait for sufficient confirmation depth before crediting deposits:
+Kaspa's DAG structure provides fast confirmations, but exchanges should still apply a risk-based credit policy. Confirmation depth is measured in **blue score** -- the number of blue blocks added since a transaction was included.
 
-| Transaction value | Recommended depth (blue score) | Approximate time |
-|---|---|---|
-| Small (< 1,000 KAS) | 100 | ~10 seconds |
-| Medium (1,000–100,000 KAS) | 1,000 | ~100 seconds |
-| Large (> 100,000 KAS) | 10,000 | ~17 minutes |
-| Very large / critical | 432,000 | ~12 hours (finality) |
+| Risk Tier | Example Policy Direction |
+|---|---|
+| Low-value deposits | Allow shallower depth once internal anti-fraud checks pass |
+| Medium-value deposits | Require deeper blue-score confirmation |
+| High-value / sensitive deposits | Require conservative depth and additional operational checks |
 
-The confirmation depth is measured in **blue score** — the number of blue blocks added to the selected parent chain since the transaction was included. A depth of 432,000 represents Kaspa's finality threshold, after which reorgs are rejected by the protocol.
+Treat this as operator policy, not a protocol constant: choose thresholds from your own threat model, incident tolerance, and reconciliation workflow.
 
 ## Withdrawal Processing
 
@@ -72,11 +71,11 @@ To process a withdrawal:
 
 ## UTXO Consolidation
 
-Exchange hot wallets accumulate many UTXOs from user deposits. While there is no hard protocol limit on the number of inputs, the per-transaction mass limit means that in practice a standard transaction can include roughly **84 inputs** (with typical P2PK script sizes). A wallet with thousands of small UTXOs may need multiple transactions to send a large amount.
+Exchange hot wallets accumulate many UTXOs from user deposits. Kaspa consensus enforces a hard per-transaction input cap (`max_tx_inputs = 1000`), and transaction mass/script composition usually lowers the practical input count well below that cap. A wallet with thousands of small UTXOs may need multiple transactions to send a large amount.
 
 Regularly consolidate UTXOs during low-activity periods:
 
-1. Select a batch of small UTXOs (roughly 84 per transaction, depending on script sizes).
+1. Select a batch of small UTXOs sized conservatively for your script/mass profile.
 2. Send them to a single address controlled by the hot wallet.
 3. Repeat until the UTXO set is manageable.
 
@@ -108,7 +107,7 @@ Kaspa's DAG structure makes deep reorgs extremely unlikely, but shallow reorgs c
 
 ## Community Indexers
 
-For exchanges that need historical transaction queries or advanced filtering beyond what the node's built-in RPC provides, [simply-kaspa-indexer](https://github.com/supertypo/simply-kaspa-indexer) is a standalone indexer that connects to a Kaspa node and indexes blocks and transactions into a database. This can simplify deposit reconciliation and transaction history queries at scale.
+For exchanges that need historical transaction queries or advanced filtering beyond built-in RPC methods, a dedicated indexing pipeline can simplify reconciliation and reporting. Evaluate third-party indexers with the same due diligence you apply to other critical dependencies (maintenance cadence, correctness tests, schema stability, and failure handling), or build an internal indexer if you need tighter control.
 
 ## Further Reading
 

@@ -47,7 +47,7 @@ cargo build --release -p kaspa-wallet
 Pre-built binaries are available on the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases). Download the archive for your platform, extract it, and place the `kaspa-wallet` binary in your PATH.
 
 <Callout type="info">
-The CLI wallet requires a running Kaspa node to connect to. By default it connects to `wrpc://127.0.0.1:17110` (mainnet wRPC). You can specify a different endpoint with the `--server` flag or connect to a public node.
+The CLI wallet requires a Kaspa node connection for network operations. If no `server` setting is configured, `connect` resolves a public node. To pin a specific node, set it with `server <host>` and then run `connect`.
 </Callout>
 
 ## Starting the Wallet
@@ -60,8 +60,9 @@ kaspa-wallet
 
 You will enter an interactive prompt where you can issue wallet commands. To connect to a specific node:
 
-```bash
-kaspa-wallet --server wrpc://your-node-ip:17110
+```text
+wallet> server 127.0.0.1:17110
+wallet> connect
 ```
 
 Once inside the interactive shell, you can type `help` to see all available commands:
@@ -72,16 +73,16 @@ wallet> help
 
 ## Creating a Wallet
 
-Create a new wallet with a randomly generated 24-word mnemonic seed phrase:
+Create a new wallet with a randomly generated mnemonic seed phrase (the CLI wizard default is 12 words):
 
 ```
 wallet> wallet create
 ```
 
-The wallet will display your 24-word mnemonic. Write it down immediately and store it securely.
+The wallet will display your mnemonic. Write it down immediately and store it securely.
 
 <Callout>
-Your 24-word seed phrase is the only way to recover your wallet. If you lose it, your funds are permanently inaccessible. Never share your seed phrase with anyone.
+Your seed phrase is the only way to recover your wallet. If you lose it, your funds are permanently inaccessible. Never share your seed phrase with anyone.
 </Callout>
 
 To import an existing wallet from a seed phrase:
@@ -90,7 +91,7 @@ To import an existing wallet from a seed phrase:
 wallet> wallet import
 ```
 
-You will be prompted to enter your 24-word mnemonic.
+You will be prompted to enter your mnemonic (typically 12 or 24 words).
 
 ## Opening and Closing a Wallet
 
@@ -114,7 +115,7 @@ To connect the wallet to a Kaspa node for balance queries and transaction broadc
 wallet> connect
 ```
 
-By default this connects to `wrpc://127.0.0.1:17110`. You can specify a custom endpoint:
+By default, if no server is configured, this connects to a public node. You can specify a custom endpoint:
 
 ```
 wallet> connect wrpc://your-node-ip:17110
@@ -270,13 +271,7 @@ These are interactive commands that will prompt you for the required public key 
 
 ## Configuration
 
-The CLI wallet stores its data (encrypted wallet files, configuration) in a platform-specific directory:
-
-| Platform | Path |
-|---|---|
-| Linux | `~/.kaspa-wallet/` |
-| macOS | `~/Library/Application Support/kaspa-wallet/` |
-| Windows | `%APPDATA%\kaspa-wallet\` |
+The CLI wallet stores encrypted wallet files and settings under the wallet SDK storage root. By default this root is `~/.kaspa` unless changed via wallet SDK storage configuration.
 
 ## Scripting and Automation
 

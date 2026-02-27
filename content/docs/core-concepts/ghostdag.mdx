@@ -76,7 +76,7 @@ In Kaspa's GHOSTDAG, confirmation depth is measured using **blue score** — the
 
 At 10 BPS, blue score accumulates rapidly at approximately 10 blocks per second, providing fast confirmations. However, it's important to distinguish between **confirmations** (relative confidence based on blue score depth) and **finality** (absolute irreversibility).
 
-**Finality** in Kaspa is defined by the `finality_depth` parameter, which provides 12 hours of depth. At 10 BPS, this equals 432,000 blocks (10 blocks/second × 43,200 seconds). Blocks beyond this depth are considered final.
+**Finality** in Kaspa is defined operationally by the `finality_depth` parameter, which provides 12 hours of depth. At 10 BPS, this equals 432,000 blocks (10 blocks/second × 43,200 seconds). Blocks beyond this depth are treated as final for protocol operation, with reorganization probability becoming extremely low rather than mathematically impossible.
 
 **Pruning** is a separate mechanism with its own depth, defined as the maximum of either 30 hours of depth or a lower bound derived from finality depth, merge depth, mergeset size limit, and `k`. In practice, the pruning depth is significantly larger than the finality depth, providing a safety margin before historical data is removed.
 
@@ -84,13 +84,13 @@ For practical transaction acceptance, users can rely on much shorter confirmatio
 
 ## Relationship to Nakamoto Consensus
 
-GHOSTDAG preserves key security properties similar to Nakamoto consensus:
+GHOSTDAG preserves key security properties similar to Nakamoto consensus under the model assumptions used in PHANTOM/GHOSTDAG analyses:
 
-- **Liveness**: As long as the network assumptions hold (honest mining following the protocol, bounded network delay), new transactions will continue to be confirmed.
-- **Safety**: Once a transaction has sufficient blue score depth, the probability of reorganization becomes negligible.
+- **Liveness**: As long as the model assumptions hold (for example, honest mining behavior and bounded delay conditions), new transactions continue to be confirmed.
+- **Safety**: With sufficient blue-score depth, reorganization probability decreases to very low levels.
 - **Deterministic ordering**: All nodes compute the same transaction order given the same DAG structure.
 
-The critical difference is that GHOSTDAG achieves these properties while processing all blocks rather than just one chain. This allows the block rate to be increased without degrading security, as long as `k` is set appropriately for the network conditions based on the PHANTOM paper's security analysis.
+The critical difference is that GHOSTDAG achieves these properties while processing all blocks rather than just one chain. This supports higher block rates when `k` is calibrated for network conditions using PHANTOM-style analysis.
 
 ## GHOSTDAG in Practice
 

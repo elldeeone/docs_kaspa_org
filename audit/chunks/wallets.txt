@@ -1,0 +1,7 @@
+content/docs/wallets/cli-wallet.mdx
+content/docs/wallets/hardware-wallets.mdx
+content/docs/wallets/hd-derivation.mdx
+content/docs/wallets/overview.mdx
+content/docs/wallets/wallet-api.mdx
+content/docs/wallets/wallet-sdk.mdx
+content/docs/wallets/web-wallet.mdx

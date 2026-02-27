@@ -5,7 +5,7 @@ description: "How Kaspa block rewards work — chromatic emission schedule, rewa
 
 ## Overview
 
-Every block in the Kaspa DAG includes a **coinbase transaction** that creates new KAS and pays it to the miner who produced the block. The reward amount follows a predetermined emission schedule called the **chromatic phase**, which smoothly reduces the reward over time rather than using abrupt halvings.
+Every block in the Kaspa DAG includes a **coinbase transaction**. Under current consensus, coinbase outputs are built from mergeset reward data, while the current block's subsidy is encoded in the coinbase payload. Emission follows the **chromatic phase**, which smoothly reduces subsidy over time rather than using abrupt halvings.
 
 ## Current Block Reward
 
@@ -27,11 +27,11 @@ The name "chromatic" comes from the fact that there are 12 reductions per halvin
 
 ## Reward Calculation from DAA Score
 
-The block reward is computed as a function of the block's **DAA score** (the cumulative proof-of-work on the selected parent chain). The calculation works as follows:
+The block reward is computed as a function of the block's **DAA score** (a consensus-time counter used for subsidy and lock-time logic). The calculation works as follows:
 
 1. Determine which **chromatic phase** the current DAA score falls into. Each phase corresponds to one month of block production.
 2. Look up the **base reward** for that phase from the emission table.
-3. The coinbase transaction pays this reward to the miner's address.
+3. Coinbase construction routes rewards according to mergeset blue/red rules.
 
 The emission table is hardcoded in the consensus rules. Every full node independently verifies that each block's coinbase pays the correct reward for its DAA score.
 
@@ -39,8 +39,8 @@ The emission table is hardcoded in the consensus rules. Every full node independ
 
 In GHOSTDAG consensus, blocks are classified as **blue** (honest, well-connected) or **red** (late, potentially adversarial). This classification affects rewards:
 
-- **Blue blocks**: The miner receives the full block reward via the coinbase transaction.
-- **Red blocks**: The coinbase output of a red block is **not paid to the red block's miner**. Instead, the reward from red block coinbases is transferred to the miner of the **merging blue block** — the blue block that first includes the red block in its merge set.
+- **Blue blocks**: When a block is blue, its subsidy and eligible fees are paid via later merging coinbase construction to that blue block's reported script.
+- **Red blocks**: Red-block rewards are redirected through merging coinbase construction to the miner of the merging blue block.
 
 This mechanism ensures that miners are incentivized to build well-connected blocks that arrive on time. Miners who produce blocks that end up red (due to high latency, withholding, or other reasons) forfeit their reward.
 
@@ -86,16 +86,16 @@ Keep in mind that this is a statistical average. Actual results will vary, espec
 | Reduction factor | `(1/2)^(1/12)` per month | `1/2` per halving |
 | Halving period | ~12 months (smooth) | ~210,000 blocks (~4 years, abrupt) |
 | Miner revenue shock | Minimal (gradual decline) | Significant (sudden 50% drop) |
-| Time to 50% supply mined | Similar order of magnitude | ~4 years |
+| Time to 50% supply mined | About ~1 year from schedule start under current constants | ~4 years |
 
 The chromatic model is designed to avoid the economic disruption that Bitcoin halvings cause, where miners suddenly lose half their revenue overnight.
 
 ## Total Supply Progression
 
-Kaspa's total supply is capped at approximately **28.7 billion KAS**. The chromatic emission schedule asymptotically approaches this cap. Because the reward decreases by `(1/2)^(1/12)` each month, emission follows a geometric series that converges. The vast majority of KAS will be mined within the first several years of the network's existence, with a long tail of diminishing rewards extending far into the future.
+Under the current consensus schedule, total emission converges to approximately **28.38 billion KAS** (about 28.376B, with a small high-BPS rounding delta). Because the reward decreases by `(1/2)^(1/12)` each month, emission follows a converging geometric-style schedule with a long diminishing tail.
 
 <Callout>
-The fixed emission schedule means that no governance decision or protocol change can alter the total supply or emission rate. This is enforced by consensus rules that every node validates independently.
+Emission and supply are enforced by consensus rules for the active protocol version. Changing them requires a consensus upgrade (hard fork).
 </Callout>
 
 ## Further Reading

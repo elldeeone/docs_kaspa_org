@@ -5,15 +5,23 @@ description: Complete reference for kaspad CLI flags, data directory structure, 
 
 ## CLI Flags Reference
 
-kaspad is configured primarily through command-line flags. It also supports an optional configuration file (typically `kaspad.conf` in the data directory) where flags can be specified one per line. Command-line flags override any values set in the configuration file.
+kaspad is configured primarily through command-line flags. It can also load a TOML config file when you pass `--configfile=<path>` (or `-C <path>`). Command-line flags override values from the config file.
+
+```toml
+# example: kaspad.toml
+utxoindex = true
+rpclisten = "127.0.0.1:16110"
+perf-metrics = true
+perf-metrics-interval-sec = 10
+```
 
 ### Core Flags
 
 | Flag | Description |
 |---|---|
-| `--utxoindex` | Enables the UTXO index, required for mining, wallet queries, and any RPC method that looks up UTXOs by address. Increases disk usage. |
+| `--utxoindex` | Enables the UTXO index for wallet/address-indexed RPC queries (for example `getUtxosByAddresses`, `getBalanceByAddress`). Increases disk usage. |
 | `--archival` | Runs the node in archival mode, retaining all historical block and transaction data instead of pruning. Required for block explorers and analytics services. |
-| `--sanity` | Enables additional sanity checks during block validation. Useful for debugging but adds CPU overhead. Not recommended for production. |
+| `--sanity` | Reserved/debug flag. Current releases enable sanity checks internally regardless of this flag, so do not rely on it as a runtime toggle. |
 | `--yes` | Automatically answers "yes" to any interactive prompts, such as confirmation dialogs during database resets. Useful for scripted or automated deployments. |
 
 ### Network Flags
@@ -27,7 +35,7 @@ kaspad is configured primarily through command-line flags. It also supports an o
 | `--listen` | Sets the P2P listen address for incoming peer connections. Default: `0.0.0.0:16111`. |
 | `--connect` | Connect only to the specified peer(s). Disables automatic peer discovery. Useful for private network topologies. |
 | `--addpeer` | Add a persistent peer to connect to in addition to discovered peers. |
-| `--outpeers` | Target number of outbound peer connections. Default varies by network. |
+| `--outpeers` | Target number of outbound peer connections. Default: `8`. |
 | `--maxinpeers` | Maximum number of inbound peer connections to accept. |
 | `--disable-upnp` | Disables UPnP port mapping. By default, kaspad attempts to use UPnP to automatically configure port forwarding on your router. Disable this on servers or in environments where UPnP is not available or not desired. |
 
@@ -41,7 +49,7 @@ kaspad is configured primarily through command-line flags. It also supports an o
 
 | Flag | Description |
 |---|---|
-| `--testnet` | Connect to the public test network (testnet). |
+| `--testnet` | Connect to the public test network (`testnet-10` in current release line). |
 | `--simnet` | Run a local simulation network for development. |
 | `--devnet` | Connect to the development network. |
 
@@ -55,7 +63,7 @@ Only one network flag can be specified at a time. If no network flag is provided
 |---|---|
 | `--ram-scale` | Scales the amount of RAM used by internal caches and data structures. Default is `1.0`. Values greater than 1.0 allocate more RAM for faster sync and processing; values less than 1.0 reduce memory usage at the cost of performance. |
 | `--perf-metrics` | Enables periodic logging of performance metrics (CPU, memory, bandwidth). |
-| `--perf-metrics-interval-sec` | Sets the interval in seconds between performance metric log entries. Default: `1`. |
+| `--perf-metrics-interval-sec` | Sets the interval in seconds between performance metric log entries. Default: `10`. |
 
 <Callout>
 On machines with ample RAM (32 GB+), setting `--ram-scale=2.0` or higher can significantly speed up the initial sync. On memory-constrained systems, use `--ram-scale=0.5` to avoid out-of-memory conditions, accepting slower sync performance.
@@ -80,18 +88,17 @@ The kaspad data directory contains the following:
 
 ```
 kaspa-mainnet/
-  datadir2/
+  datadir/
     consensus/          # Block and DAG consensus database
     utxoindex/          # UTXO index database (if --utxoindex enabled)
     ...
   logs/                 # Log files (unless --nologfiles is set)
-  kaspad.pid            # PID file for the running process
 ```
 
 The database files use the RocksDB storage engine internally. These files should not be modified manually.
 
 <Callout type="warn">
-If you change networks (e.g., from mainnet to testnet), kaspad automatically uses a different subdirectory (`kaspa-testnet` vs `kaspa-mainnet`). Do not attempt to share a data directory between networks.
+If you change networks (e.g., from mainnet to testnet), kaspad automatically uses a different subdirectory (`kaspa-testnet-10` vs `kaspa-mainnet`). Do not attempt to share a data directory between networks.
 </Callout>
 
 ## RPC Configuration

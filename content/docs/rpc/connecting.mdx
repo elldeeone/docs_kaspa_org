@@ -97,11 +97,11 @@ There are three ways to define which node to connect to, listed by priority:
 
 1. **Programmatic URL at connect time** (highest priority) -- Pass the URL directly when calling `connect()`
 2. **Constructor-level URL** -- Specify the URL when creating the RPC client
-3. **Resolver-based discovery** (lowest priority) -- Let the Resolver automatically find and return the best available public node
+3. **Resolver-based discovery** (lowest priority) -- Let the Resolver return a public endpoint when no URL is provided
 
 ## Using the Resolver for Automatic Node Discovery
 
-The Resolver queries the Public Node Network (PNN) to find the node with the fewest active connections. This is the recommended approach for applications that do not run their own node, as it provides automatic load balancing and failover.
+The Resolver asks resolver infrastructure for a connectable endpoint. Resolver-side routing policy is operational behavior (not part of the node RPC protocol), so exact selection criteria can change over time.
 
 ### JavaScript / TypeScript (Browser and Node.js)
 
@@ -143,8 +143,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let client = KaspaRpcClient::new(
         WrpcEncoding::Borsh,
-        Some(resolver),
         None,
+        Some(resolver),
         Some(NetworkId::new(NetworkType::Mainnet)),
         None,
     )?;
@@ -152,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     client.connect(None).await?;
 
     let info = client.get_block_dag_info().await?;
-    println!("Network: {}", info.network_name);
+    println!("Network: {}", info.network);
     println!("DAA score: {}", info.virtual_daa_score);
 
     client.disconnect().await?;
@@ -160,8 +160,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<Callout>
-When using the Resolver, the client automatically handles reconnection. If the connected node goes down, the client re-queries the Resolver for the next best node.
+<Callout type="info">
+Operational note (non-normative): resolver-based clients typically reconnect by requesting a fresh endpoint after disconnects. Exact retry/backoff and endpoint-selection behavior depends on SDK and resolver versions.
 </Callout>
 
 ## Direct Connection to Your Own Node
@@ -180,7 +180,7 @@ const rpc = new RpcClient({
 });
 
 await rpc.connect();
-const info = await rpc.getBlockDagInfo();
+const info = await rpc.getInfo();
 console.log("Connected to node:", info.serverVersion);
 ```
 
@@ -217,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     client.connect(None).await?;
 
-    let info = client.get_block_dag_info().await?;
+    let info = client.get_info().await?;
     println!("Connected: {}", info.server_version);
 
     client.disconnect().await?;
@@ -258,14 +258,7 @@ use kaspa_rpc_core::api::rpc::RpcApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = GrpcClient::connect(
-        "grpc://127.0.0.1:16110".to_string(),
-        true,   // enable connection retries
-        None,   // no TLS
-        false,  // not verbose
-        None,   // no subscription context
-    )
-    .await?;
+    let client = GrpcClient::connect("grpc://127.0.0.1:16110".to_string()).await?;
 
     let dag_info = client.get_block_dag_info().await?;
     println!("Network: {}", dag_info.network);
@@ -282,16 +275,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 import grpc
 from generated import messages_pb2, messages_pb2_grpc
 
-# Connect to a local Kaspa node
+def requests():
+    yield messages_pb2.KaspadRequest(
+        id=1,
+        getBlockDagInfoRequest=messages_pb2.GetBlockDagInfoRequestMessage(),
+    )
+
 channel = grpc.insecure_channel("127.0.0.1:16110")
 stub = messages_pb2_grpc.RPCStub(channel)
+stream = stub.MessageStream(requests())
 
-# Query block DAG info
-request = messages_pb2.GetBlockDagInfoRequestMessage()
-response = stub.GetBlockDagInfo(request)
-
-print(f"Network: {response.networkName}")
-print(f"Block count: {response.blockCount}")
+for response in stream:
+    if response.HasField("getBlockDagInfoResponse"):
+        info = response.getBlockDagInfoResponse
+        if info.error and info.error.message:
+            raise RuntimeError(info.error.message)
+        print(f"Network: {info.networkName}")
+        print(f"Block count: {info.blockCount}")
+        break
 ```
 
 The `.proto` files for generating client code are available at [github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto](https://github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto).
@@ -322,17 +323,38 @@ func main() {
     defer conn.Close()
 
     client := pb.NewRPCClient(conn)
-
-    resp, err := client.GetBlockDagInfo(
-        context.Background(),
-        &pb.GetBlockDagInfoRequestMessage{},
-    )
+    stream, err := client.MessageStream(context.Background())
     if err != nil {
-        log.Fatalf("GetBlockDagInfo failed: %v", err)
+        log.Fatalf("MessageStream failed: %v", err)
     }
 
-    fmt.Printf("Network: %s\n", resp.NetworkName)
-    fmt.Printf("Block count: %d\n", resp.BlockCount)
+    err = stream.Send(&pb.KaspadRequest{
+        Id: 1,
+        Payload: &pb.KaspadRequest_GetBlockDagInfoRequest{
+            GetBlockDagInfoRequest: &pb.GetBlockDagInfoRequestMessage{},
+        },
+    })
+    if err != nil {
+        log.Fatalf("Send failed: %v", err)
+    }
+
+    resp, err := stream.Recv()
+    if err != nil {
+        log.Fatalf("Recv failed: %v", err)
+    }
+    msg, ok := resp.Payload.(*pb.KaspadResponse_GetBlockDagInfoResponse)
+    if !ok {
+        log.Fatalf("Unexpected payload type: %T", resp.Payload)
+    }
+    if msg.GetBlockDagInfoResponse().GetError() != nil &&
+        msg.GetBlockDagInfoResponse().GetError().GetMessage() != "" {
+        log.Fatalf("RPC error: %s", msg.GetBlockDagInfoResponse().GetError().GetMessage())
+    }
+
+    info := msg.GetBlockDagInfoResponse()
+
+    fmt.Printf("Network: %s\n", info.GetNetworkName())
+    fmt.Printf("Block count: %d\n", info.GetBlockCount())
 }
 ```
 
@@ -355,7 +377,7 @@ See the [REST API reference](/docs/rpc/rest/network-info) for the full list of a
 
 ## Connecting to a Local Node
 
-If you run your own `kaspad` or `rusty-kaspa` node, RPC is enabled by default on localhost. Ensure the node is fully synced before relying on RPC responses -- use `GetSyncStatus` or `GetInfo` to verify.
+If you run your own `kaspad` or `rusty-kaspa` node, gRPC is enabled on localhost by default. wRPC listeners are enabled when you pass `--rpclisten-borsh` and/or `--rpclisten-json`. Ensure the node is synced before relying on RPC responses -- use `GetSyncStatus` or `GetInfo` to verify.
 
 Start a node with custom listen addresses:
 
@@ -456,7 +478,7 @@ server {
 ```
 
 <Callout type="info">
-The default NGINX configuration allows for 768 simultaneous connections per CPU core. For high-traffic deployments, increase the `worker_connections` directive in nginx.conf. When using `wss://` through a reverse proxy, ensure the proxy supports WebSocket upgrade headers.
+NGINX connection capacity depends on your `worker_connections` and worker process settings. For high-traffic deployments, tune `worker_connections` in `nginx.conf` and validate limits under load. When using `wss://` through a reverse proxy, ensure the proxy supports WebSocket upgrade headers.
 </Callout>
 
 ## Connection Options and Configuration
@@ -507,19 +529,19 @@ try {
 // Listen for disconnect events
 rpc.addEventListener("disconnect", (event) => {
   console.log("Disconnected from node");
-  // When using Resolver, reconnection is automatic.
+  // Resolver-based clients can reconnect by resolving a fresh endpoint.
   // For direct connections, implement reconnection logic:
   // setTimeout(() => rpc.connect(), 5000);
 });
 ```
 
-<Callout>
-When using the Resolver, the SDK handles reconnection automatically. If a node becomes unavailable, the client queries the Resolver for the next available node and reconnects. For direct connections to a specific node, you must implement your own reconnection logic.
+<Callout type="info">
+Operational note (non-normative): many resolver-based deployments rely on automatic endpoint re-resolution during reconnects. For direct URL connections, implement your own reconnect and resubscribe logic.
 </Callout>
 
 ### Common Errors
 
-| Error | Cause | Resolution |
+| Typical Error | Likely Cause | Typical Resolution |
 |-------|-------|------------|
 | Connection refused | Node is not running or port is wrong | Verify node is running and port matches the encoding |
 | Connection timeout | Node is unreachable or firewall blocking | Check network connectivity and firewall rules |
@@ -529,10 +551,10 @@ When using the Resolver, the SDK handles reconnection automatically. If a node b
 ## Connection Lifecycle
 
 1. **Connect**: Establish a WebSocket or gRPC connection to the node.
-2. **Handshake**: The connection is ready immediately -- no authentication handshake is required.
+2. **Verify state**: Optionally call `GetInfo`/`GetSyncStatus` before serving user traffic.
 3. **Request/Response**: Send RPC method calls and receive responses.
 4. **Subscribe**: Optionally subscribe to notifications for real-time updates.
-5. **Keepalive**: Use `Ping` periodically to keep the connection alive through proxies and firewalls.
+5. **Reconnect handling**: On disconnect, reconnect and resubscribe as needed.
 6. **Disconnect**: Close the connection gracefully when done.
 
 ## Verifying a Connection
@@ -551,7 +573,7 @@ if (!info.isSynced) {
 ```
 
 <Callout type="warn">
-Always check `isSynced` before relying on RPC responses for transactions or balance queries. An unsynced node may return stale or incomplete data.
+Always check `isSynced` before relying on RPC responses for transactions or balance queries.
 </Callout>
 
 ## Next Steps

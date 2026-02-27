@@ -5,7 +5,9 @@ description: "Kaspa's technical roadmap — from DAGKnight consensus to smart co
 
 ## Current State
 
-Following the successful activation of the [Crescendo hardfork](/docs/protocol-evolution/crescendo), Kaspa operates at **10 blocks per second** using the GHOSTDAG consensus protocol with K=124. The network produces approximately 864,000 blocks per day, delivers sub-second first confirmations, and supports a growing ecosystem of wallets, miners, and applications.
+Following the activation of the [Crescendo hardfork](/docs/protocol-evolution/crescendo), Kaspa operates at **10 blocks per second** using the GHOSTDAG consensus protocol with K=124. The network produces approximately 864,000 blocks per day and a faster confirmation cadence than the pre-Crescendo 1-BPS regime.
+
+For current protocol constants, see [Network Parameters](/docs/reference/network-params) and KIP-14 / `rusty-kaspa` consensus configuration.
 
 Kaspa's reference node implementation, `rusty-kaspa`, is written in Rust and actively maintained by a global community of contributors.
 
@@ -17,27 +19,16 @@ Kaspa does not have a centralized development team with a fixed roadmap timeline
 
 ### DAGKnight Consensus
 
-The most anticipated protocol upgrade is the transition from GHOSTDAG to **DAGKnight** — a next-generation consensus protocol developed by the same researchers. DAGKnight provides a fundamental improvement over GHOSTDAG:
-
-- **Parameterless consensus.** GHOSTDAG requires a pre-configured K parameter based on assumptions about network delay. If actual delay exceeds the assumed bound, security degrades. DAGKnight dynamically adapts to observed network conditions, eliminating the need to hard-code delay assumptions.
-- **Optimal Byzantine fault tolerance.** DAGKnight achieves the theoretical optimum for BFT in a proof-of-work DAG setting, providing the strongest possible security guarantees for any given network condition.
-- **Faster confirmation times.** By adapting to real-time network conditions rather than worst-case assumptions, DAGKnight can provide faster confirmation guarantees when the network is performing well.
-
-DAGKnight is based on peer-reviewed research and is currently in the specification and implementation phase. Its activation will require a KIP and hardfork.
+`DAGKnight` appears in the KIPs repository as [KIP-2](https://github.com/kaspanet/kips/blob/master/kip-0002.md) with status `Proposed`.
+Any consensus transition would require acceptance through the KIP process and hardfork activation.
 
 <Callout>
-DAGKnight is not a replacement for GHOSTDAG in the sense of being a completely different system. It is a strict upgrade — DAGKnight generalizes GHOSTDAG by removing the fixed K parameter and dynamically computing the equivalent of K from the DAG structure itself. A GHOSTDAG BlockDAG is a valid DAGKnight BlockDAG.
+For deployment details, defer to the accepted KIP text and `rusty-kaspa` implementation at the time of activation.
 </Callout>
 
 ### Further Block Rate Increases
 
-With Crescendo establishing 10 BPS as the baseline, research continues into higher block rates — potentially 32 BPS or beyond. Higher block rates would provide:
-
-- Even faster confirmation times.
-- Higher aggregate transaction throughput.
-- A foundation for more responsive smart contract execution.
-
-Each block rate increase requires recalculating consensus parameters, evaluating network propagation characteristics, and testing extensively. These changes follow the KIP process.
+The currently active baseline is 10 BPS from KIP-14. Additional block-rate changes, if proposed and accepted, would require new KIP status progression and hardfork activation.
 
 ## Medium-Term Goals
 
@@ -49,20 +40,13 @@ Kaspa's scripting capabilities are currently limited to basic transaction script
 - **Transient mass (KIP-13).** Refining the mass model to more accurately price computational resources, which is a prerequisite for efficient smart contract execution.
 - **Contract execution environment.** Research into what form a smart contract layer should take — whether it is a native scripting extension, an embedded VM, or a layered architecture.
 
-Two active prototypes are exploring programmability on Kaspa:
+Specific external prototypes and application-layer experiments are outside the canonical scope of `rusty-kaspa` and the KIPs index. For protocol decisions, treat accepted/active KIPs and merged `rusty-kaspa` changes as authoritative.
 
-- **Silverscript** ([github.com/kaspanet/silverscript](https://github.com/kaspanet/silverscript)) — A smart contract compiler targeting Kaspa's script engine. Currently available on testnet-12 only.
-- **vProgs** ([github.com/kaspanet/vprogs](https://github.com/kaspanet/vprogs)) — A verifiable computation prototype that explores how to execute and verify programs on top of Kaspa's UTXO model.
-
-<Callout type="info">
-Silverscript and vProgs are experimental prototypes, not production-ready systems. They represent active exploration of different approaches to Kaspa programmability. Follow their repositories for development updates.
-</Callout>
-
-The design philosophy for Kaspa smart contracts prioritizes simplicity and security over feature completeness. The goal is to enable programmability without introducing the complexity and attack surface of a full EVM-style execution environment.
+A recurring design tradeoff in KIP discussions is balancing programmability with auditability and consensus safety.
 
 ### Archival Node Improvements
 
-As the network operates at 10 BPS and potentially higher in the future, the volume of data grows proportionally. Improvements to archival node infrastructure include:
+As the network operates at 10 BPS and potentially higher in the future, the volume of data grows proportionally. Potential archival-node improvement areas include:
 
 - More efficient storage formats for historical block data.
 - Better indexing for historical transaction queries.
@@ -72,17 +56,9 @@ Pruned nodes already keep storage requirements bounded, but archival nodes (whic
 
 ## Long-Term Vision
 
-### Optical Mining
+### Proof-of-Work Hardware Trajectories
 
-Kaspa's kHeavyHash proof-of-work algorithm was designed with optical computing in mind. The core operation — a 64x64 matrix multiplication — maps naturally to photonic processors that can perform matrix operations using light rather than electricity.
-
-If optical mining hardware reaches commercial production, it could:
-
-- Reduce the energy cost of proof-of-work mining by orders of magnitude.
-- Fundamentally change the economics of PoW sustainability.
-- Demonstrate that proof-of-work does not inherently require massive energy consumption.
-
-This is a long-term research direction that depends on advances in photonic hardware beyond Kaspa's direct control, but the algorithm was intentionally designed to be ready for this future.
+Consensus does not mandate any specific mining hardware trajectory. Hardware-performance and energy-efficiency outcomes are external to protocol rules and should be treated as implementation/economics questions rather than consensus guarantees.
 
 ### Maximum Decentralization
 
@@ -93,7 +69,7 @@ The long-term vision for Kaspa is a network where:
 - Mining is distributed across a large, geographically diverse set of participants.
 - Protocol governance remains open and permissionless.
 
-Every protocol change is evaluated against these decentralization goals. Throughput increases that would price out small node operators or centralize mining are not pursued.
+Every protocol change is evaluated against these decentralization goals. Throughput increases that appear to significantly raise centralization pressure would generally receive additional scrutiny.
 
 <Callout type="warn">
 This roadmap describes research directions and community aspirations, not commitments. Kaspa has no corporate entity making binding promises about timelines. Each item requires a KIP, community consensus, rigorous testing, and a successful hardfork activation. Some items may be deprioritized, redesigned, or abandoned based on what the research and engineering work reveals.
@@ -101,12 +77,12 @@ This roadmap describes research directions and community aspirations, not commit
 
 ## Research Areas
 
-Active areas of academic and applied research relevant to Kaspa's future:
+Active roadmap themes that are directly reflected in current KIPs/repository state include:
 
-- **DAGKnight formal analysis.** Continued formal verification and security proofs for the DAGKnight protocol under various adversarial models.
-- **Propagation optimization.** Techniques to reduce block propagation latency as block rates increase, including compact block relay and improved peer selection algorithms.
-- **Mass model refinement.** Ongoing analysis of transaction pricing to balance spam prevention, throughput, and fairness.
-- **Pruning and state management.** Research into more efficient state representations as the UTXO set grows over time.
+- **DAGKnight track ([KIP-2](https://github.com/kaspanet/kips/blob/master/kip-0002.md), Proposed).** Potential future consensus evolution beyond fixed-`k` operation.
+- **Mass-model evolution ([KIP-9](https://github.com/kaspanet/kips/blob/master/kip-0009.md) / [KIP-13](https://github.com/kaspanet/kips/blob/master/kip-0013.md), Active).** Ongoing refinement of transaction/resource pricing.
+- **Script and transaction capability expansion ([KIP-10](https://github.com/kaspanet/kips/blob/master/kip-0010.md), Active).** Incremental programmability improvements at the script layer.
+- **Operational scaling at current and future BPS.** Parameter and implementation work required for stable higher-throughput operation.
 
 ## Community Governance
 
@@ -115,7 +91,7 @@ All protocol changes follow the [KIP process](/docs/protocol-evolution/kips-over
 - Anyone can propose a change.
 - Proposals undergo public technical review.
 - Activation requires broad consensus among node operators, miners, and the wider community.
-- There is no single entity that can unilaterally push through or block a protocol change.
+- In practice, major protocol changes have required broad operator and ecosystem coordination.
 
 This governance model is slower and less predictable than a centrally managed roadmap, but it ensures that Kaspa's evolution reflects the genuine consensus of its participants rather than the priorities of a single organization.
 
@@ -125,4 +101,4 @@ This governance model is slower and less predictable than a centrally managed ro
 - [KIPs Overview](/docs/protocol-evolution/kips-overview) — How protocol changes are proposed and activated.
 - [KIP Index](/docs/protocol-evolution/kip-index) — Current status of all proposals.
 - [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — The current consensus protocol that DAGKnight will upgrade.
-- [kHeavyHash](/docs/mining/kheavyhash) — The optical-mining-ready proof-of-work algorithm.
+- [kHeavyHash](/docs/mining/kheavyhash) — Kaspa's proof-of-work algorithm.

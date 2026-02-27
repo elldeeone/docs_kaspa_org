@@ -3,6 +3,8 @@ title: Troubleshooting
 description: Solutions for common Kaspa node issues including startup failures, slow sync, peer connection problems, high memory usage, and database corruption.
 ---
 
+This page is an operator troubleshooting checklist. Behavior depends on hardware, network topology, and runtime flags, so treat these as debugging heuristics rather than protocol guarantees.
+
 ## Node Will Not Start
 
 ### Port Already in Use
@@ -13,7 +15,7 @@ If kaspad fails to start with an "address already in use" error, another process
 
 ### Missing Dependencies
 
-On some Linux distributions, kaspad may fail to start due to missing shared libraries (`libssl`, `libclang`, or `protobuf`). Install the required system packages for your distribution (e.g., `sudo apt-get install -y libssl-dev ca-certificates` on Debian/Ubuntu).
+On some Linux distributions or custom builds, kaspad may fail to start due to missing shared libraries. Install the required packages for your distribution and build context, then retry.
 
 ### Corrupt Data Directory
 
@@ -33,13 +35,13 @@ The `--reset-db` flag deletes the entire blockchain database. The node will need
 
 ### HDD vs SSD
 
-Running kaspad on a traditional hard drive (HDD) will result in dramatically slower sync performance. Kaspa's 10 BPS block rate generates heavy random I/O patterns that HDDs handle poorly.
+Running kaspad on a traditional hard drive (HDD) can significantly slow sync in many deployments. Kaspa's block-processing workload tends to favor lower-latency storage.
 
 **Solution**: Migrate the data directory to an SSD. Copy the data directory, update `--appdir` if needed, and restart.
 
 ### Insufficient RAM
 
-If the system has limited RAM, kaspad relies heavily on disk I/O for cache misses, slowing sync to a crawl.
+If the system has limited RAM, kaspad may incur more cache misses and extra disk I/O, which can reduce sync throughput.
 
 **Solution**: Increase system RAM, or adjust `--ram-scale`. Use `--ram-scale=0.3` to reduce memory usage (slower sync) or `--ram-scale=2.0` to use more RAM for faster sync.
 
@@ -49,9 +51,9 @@ The `--ram-scale` flag is a multiplier applied to default cache sizes. Monitor s
 
 ### Network Bandwidth
 
-Sync speed is also limited by your network bandwidth. During initial sync, kaspad downloads all block headers and the UTXO set from peers.
+Sync speed can also be limited by network bandwidth and connection quality. During initial sync, kaspad downloads headers and UTXO-related state from peers.
 
-**Solution**: Ensure you have a stable connection with at least 10 Mbps download speed. If possible, use `--addpeer` to connect to a well-connected peer on a fast network.
+**Solution**: Ensure you have a stable connection and low packet loss. If possible, use `--addpeer` to connect to a well-connected peer on a fast network.
 
 ## No Peers Connecting
 
@@ -99,9 +101,9 @@ If you are running on testnet or simnet, the default gRPC port is different from
 
 ## Block Validation Errors
 
-Occasional block validation errors in the logs are normal and typically indicate a peer sent an invalid block. The node rejects the invalid block and may disconnect the offending peer.
+Occasional block validation errors can occur (for example, when peers send malformed or invalid data). The node rejects invalid blocks and may disconnect the offending peer.
 
-Persistent validation errors may indicate:
+If validation errors persist, investigate these common possibilities:
 
 - **Outdated software**: Your node may be running an older version that does not understand new consensus rules. Upgrade to the latest release.
 - **Database corruption**: Corrupted state can cause valid blocks to appear invalid. Reset with `--reset-db` if other solutions fail.

@@ -56,7 +56,7 @@ GET https://api.kaspa.org/info/blockdag
 
 ## GET /info/network
 
-Returns general network information from the node.
+Returns general network information from the node. In the current OpenAPI, this route is an alias of `/info/blockdag` and marked deprecated.
 
 **Request:**
 
@@ -160,7 +160,7 @@ GET https://api.kaspa.org/info/hashrate
 
 | Parameter | Type | Description |
 |---|---|---|
-| `windowSize` | integer | Number of blocks to average over (optional) |
+| `stringOnly` | boolean | If `true`, returns the hashrate as a plain string instead of a JSON object |
 
 **Response:**
 
@@ -170,7 +170,13 @@ GET https://api.kaspa.org/info/hashrate
 }
 ```
 
-The hashrate is returned in hashes per second.
+The hashrate value is expressed in **TH/s**.
+
+If `stringOnly=true`, the response is a string:
+
+```text
+"407167.3"
+```
 
 ## GET /info/fee-estimate
 
@@ -206,7 +212,7 @@ GET https://api.kaspa.org/info/fee-estimate
 ```
 
 <Callout type="info">
-Fee estimates are returned as fee rate values in sompi per gram of mass. Under normal network conditions, Kaspa's high throughput (10 BPS) means the minimum fee rate of 1 sompi/gram is usually sufficient. Higher fee rates are only needed during periods of exceptional congestion.
+Fee estimates are returned as fee rate values in sompi per gram of mass. Use the returned buckets (`normalBuckets`, `lowBuckets`, `priorityBucket`) to select a fee rate for your latency target.
 </Callout>
 
 ## GET /info/health
@@ -270,5 +276,5 @@ The blue score is a monotonically increasing value that serves as Kaspa's analog
 | Status Code | Meaning |
 |---|---|
 | `200` | Success |
+| `422` | Validation error (invalid query parameters on strict endpoints) |
 | `500` | Internal server error or node unavailable |
-| `503` | Node is syncing and cannot serve requests |

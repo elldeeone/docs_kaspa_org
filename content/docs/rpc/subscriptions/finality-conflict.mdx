@@ -5,33 +5,28 @@ description: "NotifyFinalityConflict — subscribe to finality conflict events i
 
 ## Overview
 
-The `notifyFinalityConflict` subscription notifies your application when a finality conflict is detected in the network. A finality conflict occurs when the GHOSTDAG selected chain diverges from the finality point -- meaning a block that was previously considered final is no longer on the selected chain.
+The finality-conflict subscription notifies your application when a finality conflict is detected in the network. A finality conflict occurs when the GHOSTDAG selected chain diverges from the finality point -- meaning a block that was previously considered final is no longer on the selected chain.
 
-Finality conflicts are extremely rare under normal network conditions. They would indicate an extraordinary event such as a deep chain reorganization or a significant network partition.
+Finality-conflict notifications are safety-critical and should be treated as high-severity events in monitoring pipelines.
 
 <Callout>
-Finality conflicts are exceptional events that should never occur under normal network operation. If your application receives a finality conflict notification, it likely indicates a major network issue. Log the event, alert operators, and consider pausing transaction processing until the conflict resolves.
+If your application receives a finality conflict notification, treat it as a major network event. Log it, alert operators, and apply your risk controls (for example pausing sensitive processing) until the conflict resolves.
 </Callout>
 
 ## Subscribe
 
 ```typescript
 await rpc.subscribeFinalityConflict();
+await rpc.subscribeFinalityConflictResolved();
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifyFinalityConflict",
-  "params": {}
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with `FinalityConflict` and `FinalityConflictResolved` scopes. gRPC uses `NotifyFinalityConflictRequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 
 ```typescript
 await rpc.unsubscribeFinalityConflict();
+await rpc.unsubscribeFinalityConflictResolved();
 ```
 
 ## Notification Format
@@ -61,13 +56,13 @@ When a finality conflict is resolved:
 
 ## What Triggers a Finality Conflict
 
-Kaspa defines a finality depth based on the DAA score. Once a block's depth exceeds this threshold, it is considered final. A finality conflict occurs when:
+Kaspa finality processing is based on blue-score depth. A finality conflict can occur when:
 
-1. A block has reached the finality depth and is on the selected chain.
-2. A competing chain emerges that does not include this finalized block.
-3. The competing chain has more accumulated blue work than the current chain.
+1. A block is beyond finality depth on the selected chain.
+2. A competing branch emerges that does not include that finalized block.
+3. The competing branch is selected by consensus.
 
-This scenario requires an attacker (or a severe network partition) to produce an alternative chain with more proof-of-work than the honest chain over a very deep window.
+Operationally, this is the kind of scenario where applications should enter a defensive mode until a finality-conflict-resolved event is observed.
 
 ## Event Handling
 

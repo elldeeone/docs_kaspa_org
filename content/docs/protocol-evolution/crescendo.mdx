@@ -5,7 +5,9 @@ description: "The Crescendo hardfork — Kaspa's transition to 10 blocks per sec
 
 ## What is Crescendo?
 
-Crescendo is the name of the **hardfork** that transitioned the Kaspa network from 1 block per second (1 BPS) to **10 blocks per second (10 BPS)**. Formally defined in KIP-14, Crescendo was the most significant protocol upgrade in Kaspa's history, delivering a 10x increase in block production rate while preserving the security guarantees of the GHOSTDAG consensus protocol.
+Crescendo is the name of the **hardfork** that transitioned the Kaspa network from 1 block per second (1 BPS) to **10 blocks per second (10 BPS)**. Formally defined in KIP-14, Crescendo delivered a 10x increase in block production rate and updated a broad set of interdependent consensus parameters.
+
+Primary technical source: [KIP-14](https://github.com/kaspanet/kips/blob/master/kip-0014.md). Current post-fork parameter values are reflected in `rusty-kaspa` consensus constants.
 
 The name "Crescendo" — a musical term meaning a gradual increase in volume — reflects the nature of the upgrade: a carefully orchestrated increase in network throughput.
 
@@ -55,11 +57,11 @@ This ensures that even under worst-case network conditions, the probability of h
 
 ## Timeline
 
-- **KIP-14 drafted** — The Crescendo proposal was formally written and submitted to the KIPs repository.
-- **Community review** — Extensive discussion and analysis of the parameter changes, security implications, and upgrade logistics.
-- **Implementation** — The Crescendo changes were implemented in `rusty-kaspa` and underwent thorough testing on testnet networks.
-- **Testnet activation** — Crescendo was activated on testnet-10 and testnet-11 for real-world validation.
-- **Mainnet activation (May 2025)** — Crescendo activated on mainnet at the predetermined DAA score, transitioning the live network to 10 BPS.
+- **KIP-14 authored and activated** — KIP metadata records creation in January 2025 and `Status: Active`.
+- **Implementation phase** — Consensus and parameter changes were implemented in `rusty-kaspa` prior to mainnet activation.
+- **Mainnet activation (2025)** — Mainnet switched to the 10 BPS rule set at the configured activation DAA score.
+
+Historical note: older references may mention additional testnet suffixes (such as `testnet-11`) used during pre-mainnet validation phases.
 
 ## Impact on Miners
 
@@ -75,10 +77,10 @@ Miners running pre-Crescendo software after the activation point will mine block
 
 ## Impact on Wallets and Applications
 
-- **Faster confirmations.** Applications that count block confirmations benefit directly from the 10x increase in confirmation rate. A transaction that previously took 10 seconds to reach 10 confirmations now achieves the same depth in 1 second.
-- **RPC compatibility.** The RPC interface remained backward-compatible. Existing RPC calls work the same way, but return data at a higher rate. Applications polling for new blocks should be prepared for 10x the event frequency.
+- **Faster confirmations (expected).** Applications that count block confirmations generally benefit from the higher block rate; equivalent confirmation counts are reached faster in wall-clock time.
+- **RPC compatibility.** Core RPC method families remained available, but applications should still validate behavior and throughput assumptions against the specific node/client versions they deploy.
 - **Address format.** No changes to address format or transaction structure. Wallets do not need to change how they construct or sign transactions.
-- **SDK updates.** The Kaspa WASM SDK and other client libraries were updated to account for the new parameters. Applications should use the latest SDK versions.
+- **SDK updates.** Client libraries may require version updates to account for changed network pacing and post-fork defaults.
 
 ## Ensuring Your Node is Crescendo-Ready
 
@@ -92,9 +94,12 @@ Ensure the version is at or above the minimum Crescendo-compatible release. If y
 
 ## Post-Crescendo Network
 
-Since Crescendo activation, the Kaspa network operates at 10 BPS, producing approximately **864,000 blocks per day**. The DAG is wider (more parallel blocks at any given moment), blue score accumulates faster, and first confirmations arrive in approximately 100 milliseconds.
+Under current mainnet parameters, Kaspa operates at 10 BPS, producing approximately **864,000 blocks per day**. The DAG is wider (more parallel blocks at any given moment), and blue-score/DAA progression is 10x faster than pre-Crescendo.
+([KIP-14](https://github.com/kaspanet/kips/blob/master/kip-0014.md), [source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/core/src/config/bps.rs#L23-L24))
 
-The successful activation of Crescendo validated the BlockDAG architecture's ability to support high block rates and demonstrated the community's capacity to coordinate a major consensus upgrade.
+Observed end-user confirmation latency depends on network conditions, mempool state, and client policy; this page does not define a fixed sub-second confirmation guarantee.
+
+Crescendo established the deployed 10-BPS consensus ruleset through the KIP + hardfork path.
 
 ## Further Reading
 

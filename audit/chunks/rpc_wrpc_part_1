@@ -1,0 +1,10 @@
+content/docs/rpc/wrpc/get-coin-supply.mdx
+content/docs/rpc/wrpc/get-connected-peer-info.mdx
+content/docs/rpc/wrpc/get-connections.mdx
+content/docs/rpc/wrpc/get-current-block-color.mdx
+content/docs/rpc/wrpc/get-current-network.mdx
+content/docs/rpc/wrpc/get-daa-score-timestamp-estimate.mdx
+content/docs/rpc/wrpc/get-fee-estimate-experimental.mdx
+content/docs/rpc/wrpc/get-fee-estimate.mdx
+content/docs/rpc/wrpc/get-headers.mdx
+content/docs/rpc/wrpc/get-info.mdx

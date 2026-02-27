@@ -36,20 +36,20 @@ async function checkNodeStatus() {
   console.log(`Network: ${dagInfo.network}`);
   console.log(`Synced: ${syncStatus.isSynced}`);
   console.log(`DAA Score: ${dagInfo.virtualDaaScore}`);
-  console.log(`Peers: ${peerInfo.infos.length}`);
+  console.log(`Peers: ${peerInfo.peerInfo.length}`);
   console.log(`Mempool: ${info.mempoolSize} transactions`);
   console.log(`Block Count: ${dagInfo.blockCount}`);
   console.log(`Header Count: ${dagInfo.headerCount}`);
   console.log(`Difficulty: ${dagInfo.difficulty}`);
 
   // Basic health assessment
-  const isHealthy = syncStatus.isSynced && peerInfo.infos.length > 0;
+  const isHealthy = syncStatus.isSynced && peerInfo.peerInfo.length > 0;
   console.log(`\nHealth: ${isHealthy ? "OK" : "DEGRADED"}`);
 
   if (!syncStatus.isSynced) {
     console.log("  Warning: Node is not synced. Queries may return stale data.");
   }
-  if (peerInfo.infos.length === 0) {
+  if (peerInfo.peerInfo.length === 0) {
     console.log("  Warning: No connected peers. Node may be isolated.");
   }
 

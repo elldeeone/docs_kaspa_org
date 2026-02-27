@@ -8,7 +8,7 @@ description: "Retrieve all transaction entries currently in the node's mempool."
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `includeOrphanPool` | boolean | No | Whether to include orphan pool entries. Defaults to `false`. |
-| `filterTransactionPool` | boolean | No | If `true`, excludes the main transaction pool and returns only orphan pool entries. Defaults to `false`. |
+| `filterTransactionPool` | boolean | No | If `true`, filters out the main transaction pool and returns orphan-pool entries only. Requires `includeOrphanPool=true`. Defaults to `false`. |
 
 ## Response
 
@@ -36,7 +36,12 @@ description: "Retrieve all transaction entries currently in the node's mempool."
       "transaction": {
         "version": 0,
         "inputs": [{ "previousOutpoint": { "transactionId": "...", "index": 0 } }],
-        "outputs": [{ "value": 100000000, "scriptPublicKey": { "version": 0, "script": "20..." } }]
+        "outputs": [{ "value": 100000000, "scriptPublicKey": { "version": 0, "script": "20..." } }],
+        "lockTime": 0,
+        "subnetworkId": "0000000000000000000000000000000000000000",
+        "gas": 0,
+        "payload": "",
+        "mass": 2345
       },
       "isOrphan": false
     }
@@ -47,5 +52,6 @@ description: "Retrieve all transaction entries currently in the node's mempool."
 ## Notes
 
 - The mempool can contain a large number of transactions. Use this method with caution on busy networks as the response may be large.
+- If `includeOrphanPool=false` and `filterTransactionPool=true`, the request is invalid and returns `InconsistentMempoolTxQuery`.
 - For address-specific mempool queries, use `GetMempoolEntriesByAddresses` instead.
 - Entries are not returned in any guaranteed order.

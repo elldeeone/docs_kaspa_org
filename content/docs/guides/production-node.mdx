@@ -11,11 +11,11 @@ Running a Kaspa node in production requires careful attention to hardware, secur
 |---|---|---|---|
 | CPU | 4 cores | 8+ cores | More cores help during initial sync |
 | RAM | 8 GB | 16-32 GB | Adjust `--ram-scale` if constrained |
-| Storage | 80 GB SSD | 200+ GB NVMe | HDD is not viable at 10 BPS |
+| Storage | 80+ GB (SSD or tuned HDD) | 200+ GB NVMe | HDD is possible with `--rocksdb-preset=hdd`, but slower |
 | Network | 25 Mbps | 100+ Mbps | High peer counts increase bandwidth |
 
 <Callout type="warn">
-An SSD is mandatory. Kaspa's 10 BPS block rate generates heavy disk I/O. Running on a spinning disk will cause the node to fall behind the DAG tip.
+SSD/NVMe is strongly recommended for general production workloads. If you must run on HDD, use `--rocksdb-preset=hdd` and expect slower sync plus tighter operational margins.
 </Callout>
 
 ## Firewall Configuration
@@ -110,7 +110,7 @@ Alternatively, run with `--nologfiles` and rely on journald.
 | Wallet mnemonic | Encrypted offline backup | Once (at creation) |
 
 <Callout type="info">
-You do not need to back up blockchain data. A new node can re-sync from the network in 2-4 hours. Backing up the data directory avoids this wait.
+You do not need to back up blockchain data for recoverability. Re-sync time is environment-dependent (hardware, network, and current DAG size). Backing up the data directory mainly reduces recovery time.
 </Callout>
 
 ## Security Checklist

@@ -27,13 +27,16 @@ Each month, the block reward is multiplied by this factor. After 12 months, the 
 
 The block reward at any point is determined by the DAA score. The emission schedule divides time into monthly phases, with the reward decreasing by the chromatic factor at each phase boundary.
 
-At 10 BPS, one month is approximately:
+In consensus, a "month" for subsidy purposes is defined as `2,629,800` seconds (30.4375 days), not a fixed 30-day bucket:
 
 ```
-30 days × 24 hours × 3600 seconds × 10 blocks/second = 25,920,000 blocks
+SECONDS_PER_MONTH = 2,629,800
+subsidy_month = floor(seconds_since_deflationary_phase_started / SECONDS_PER_MONTH)
 ```
 
-The reward phase is computed from the DAA score relative to the emission start point.
+At 10 BPS, that corresponds to `26,298,000` DAA-score units per subsidy month-equivalent period.
+Across the Crescendo boundary, subsidy-month calculation first converts DAA-score distance to seconds using the pre/post-fork BPS and only then divides by `SECONDS_PER_MONTH`.
+([source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/src/processes/coinbase.rs#L21-L24), [source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/src/processes/coinbase.rs#L239-L254))
 
 ## Chromatic Phase Table
 
@@ -59,17 +62,10 @@ The musical note names (C, C#, D, ..., B) reflect the chromatic scale metaphor. 
 
 ## Supply Progression
 
-| Year | Approximate Block Reward | Approximate Annual Emission | Cumulative Supply |
-|------|--------------------------|---------------------------|------------------|
-| 1 | Starting reward | Highest emission year | ~20% of max |
-| 2 | ~50% of year 1 | ~50% of year 1 | ~30% of max |
-| 3 | ~25% of year 1 | ~25% of year 1 | ~35% of max |
-| 5 | ~6.25% of year 1 | Low | ~38% of max |
-| 10 | Very small | Minimal | Approaching max |
-| ∞ | Asymptotic to 0 | 0 | 28.7 billion KAS |
+Supply percentages over specific calendar years depend on the exact genesis start point and phase boundaries used in the calculation. For canonical totals, prefer consensus-derived values from the `rusty-kaspa` subsidy table and coinbase logic rather than simplified year buckets.
 
 <Callout type="info">
-The total supply cap is approximately **28.7 billion KAS**. This is hardcoded in the protocol and cannot be changed. The emission is purely algorithmic with no foundation allocation, no pre-mine, and no developer tax.
+Under current consensus rules, total emitted supply is approximately **28.38 billion KAS**. Changing emission behavior requires a consensus upgrade (hardfork).
 </Callout>
 
 ## Reward Distribution in a DAG
@@ -88,9 +84,8 @@ This incentive structure encourages miners to follow the GHOSTDAG protocol hones
 |----------|---------|-------|
 | Halving style | Abrupt 50% every ~4 years | Smooth ~5.6% monthly reduction |
 | Halving period | ~210,000 blocks | 12 chromatic phases (~1 year) |
-| Max supply | 21 million BTC | 28.7 billion KAS |
+| Max supply | 21 million BTC | ~28.38 billion KAS (current consensus schedule) |
 | Smallest unit | 1 satoshi (10^-8 BTC) | 1 sompi (10^-8 KAS) |
-| Pre-mine | None | None |
 
 ## Implementation
 

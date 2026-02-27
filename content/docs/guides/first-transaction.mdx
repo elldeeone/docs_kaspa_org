@@ -1,6 +1,6 @@
 ---
 title: "Your First Transaction with the WASM SDK"
-description: "End-to-end guide: install the Kaspa WASM SDK, connect to testnet, create a wallet, get testnet KAS from the faucet, send a transaction, and verify it on-chain."
+description: "End-to-end guide: install the Kaspa WASM SDK, connect to testnet, create a wallet, fund it with testnet KAS, send a transaction, and verify it on-chain."
 ---
 
 This guide walks you through sending your first Kaspa transaction programmatically using the WASM SDK in a Node.js project. By the end you will have installed the SDK, generated a wallet, funded it with testnet KAS, sent a transaction, and confirmed it on-chain.
@@ -21,7 +21,7 @@ npx tsc --init
 ```
 
 <Callout type="info">
-The `kaspa-wasm` package bundles the full Kaspa SDK compiled to WebAssembly. It works in Node.js, browsers, and Deno.
+The `kaspa-wasm` package bundles the full Kaspa SDK compiled to WebAssembly. Official docs cover Node.js and browser usage.
 </Callout>
 
 ## Step 2 -- Connect to Testnet
@@ -68,15 +68,7 @@ In a real application, never log or hard-code mnemonic phrases. Store them encry
 
 ## Step 4 -- Fund with Testnet KAS
 
-Copy the `kaspatest:` address printed above and paste it into the Kaspa testnet faucet. Wait a few seconds for the funds to arrive -- at 10 blocks per second, confirmation is nearly instant.
-
-| Network | Faucet URL | Address prefix |
-|---|---|---|
-| Testnet | `https://faucet.kaspanet.io` | `kaspatest:` |
-
-<Callout type="info">
-Faucet availability may vary. If the faucet is temporarily unavailable, check the official Kaspa Discord for alternative ways to obtain testnet KAS.
-</Callout>
+Fund the generated `kaspatest:` address using any testnet funding source you control, such as a transfer from another testnet wallet. Community faucets may exist, but they are external operational services and may change or be unavailable.
 
 ## Step 5 -- Send a Transaction
 
@@ -140,7 +132,7 @@ You can also look up the transaction ID on a testnet block explorer to see its p
 |---|---|
 | Unit of value | 1 KAS = 100,000,000 sompi (10^8) |
 | Derivation path | `m/44'/111111'/account'/change/index` |
-| Confirmation speed | Sub-second block inclusion, ~10 s full confirmation |
+| Confirmation speed | Fast first inclusion at 10 BPS; use DAA-depth policy for finality |
 | Fee model | Based on transaction mass, not congestion |
 | UTXO model | Like Bitcoin -- spend entire outputs, receive change |
 

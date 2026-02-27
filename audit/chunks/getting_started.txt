@@ -1,0 +1,5 @@
+content/docs/getting-started/first-transaction.mdx
+content/docs/getting-started/installation.mdx
+content/docs/getting-started/quick-start.mdx
+content/docs/getting-started/what-is-kaspa.mdx
+content/docs/getting-started/why-kaspa.mdx

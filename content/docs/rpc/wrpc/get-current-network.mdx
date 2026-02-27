@@ -11,7 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `network` | string | The network name (e.g., `mainnet`, `testnet-10`, `testnet-11`). |
+| `network` | string | The network type (`mainnet`, `testnet`, `simnet`, or `devnet`). |
 
 ## Example
 
@@ -29,11 +29,12 @@ No parameters required.
 
 // Response (testnet)
 {
-  "network": "testnet-10"
+  "network": "testnet"
 }
 ```
 
 ## Notes
 
-- The `network` field returns the network identifier (e.g., `mainnet`, `testnet-10`).
+- The `network` field here is a network type, not a suffixed network ID.
+- If you need the suffixed identifier (for example `testnet-10`), use `GetServerInfo.networkId`.
 - Use this to verify your application is connected to the expected network before performing operations.

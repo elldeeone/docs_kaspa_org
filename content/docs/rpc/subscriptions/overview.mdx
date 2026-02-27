@@ -5,13 +5,17 @@ description: "Real-time event subscriptions in Kaspa — subscribe to blocks, UT
 
 ## How Subscriptions Work
 
-Kaspa's RPC interface supports a publish-subscribe model that enables real-time event notifications. Instead of polling the node repeatedly, your application subscribes to specific event types and receives push notifications as events occur. This is critical for Kaspa's 10 BPS block rate, where polling would be prohibitively expensive.
+Kaspa's RPC interface supports a publish-subscribe model that enables real-time event notifications. Instead of polling the node repeatedly, your application subscribes to specific event types and receives push notifications as events occur.
 
 The subscription lifecycle follows three steps:
 
-1. **Subscribe** -- Call the `notify*` method (e.g., `notifyBlockAdded`) to register your interest in a specific event type.
+1. **Subscribe** -- Register the event scope (for example, block-added) using your SDK subscription method.
 2. **Receive notifications** -- The node pushes notification messages to your connection as events occur.
-3. **Unsubscribe** -- Call the same method with a command to stop receiving notifications.
+3. **Unsubscribe** -- Stop the same scope when it is no longer needed.
+
+<Callout type="info">
+Wire contracts differ by transport: wRPC JSON uses `subscribe` / `unsubscribe` with a `Scope` payload, while gRPC uses `Notify*RequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
+</Callout>
 
 <Callout type="info">
 Subscriptions are connection-scoped. If your connection drops, all subscriptions are lost. After reconnecting, you must resubscribe to all event types you need.
@@ -19,16 +23,16 @@ Subscriptions are connection-scoped. If your connection drops, all subscriptions
 
 ## Available Subscription Types
 
-| Subscription | Method | Use Case |
+| Subscription | WASM SDK methods | Use Case |
 |---|---|---|
-| [Block Added](/docs/rpc/subscriptions/block-added) | `notifyBlockAdded` | Track new blocks entering the DAG |
-| [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed) | `notifyVirtualChainChanged` | Detect chain reorganizations and accepted transactions |
-| [Finality Conflict](/docs/rpc/subscriptions/finality-conflict) | `notifyFinalityConflict` | Monitor for finality violations (rare) |
-| [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed) | `notifyUtxosChanged` | Watch address balances and UTXO changes |
-| [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed) | `notifySinkBlueScoreChanged` | Track the chain's blue score progression |
-| [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) | `notifyVirtualDaaScoreChanged` | Monitor DAA score for timing and difficulty |
-| [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override) | `notifyPruningPointUtxoSetOverride` | Detect pruning point advances |
-| [New Block Template](/docs/rpc/subscriptions/new-block-template) | `notifyNewBlockTemplate` | Receive mining templates (for miners) |
+| [Block Added](/docs/rpc/subscriptions/block-added) | `subscribeBlockAdded()` / `unsubscribeBlockAdded()` | Track new blocks entering the DAG |
+| [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed) | `subscribeVirtualChainChanged()` / `unsubscribeVirtualChainChanged()` | Detect chain reorganizations and accepted transactions |
+| [Finality Conflict](/docs/rpc/subscriptions/finality-conflict) | `subscribeFinalityConflict()` / `unsubscribeFinalityConflict()` | Monitor for finality-violation events |
+| [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed) | `subscribeUtxosChanged()` / `unsubscribeUtxosChanged()` | Watch address balances and UTXO changes |
+| [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed) | `subscribeSinkBlueScoreChanged()` / `unsubscribeSinkBlueScoreChanged()` | Track the chain's blue score progression |
+| [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) | `subscribeVirtualDaaScoreChanged()` / `unsubscribeVirtualDaaScoreChanged()` | Monitor DAA score for timing and difficulty |
+| [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override) | `subscribePruningPointUtxoSetOverride()` / `unsubscribePruningPointUtxoSetOverride()` | Detect pruning-point UTXO override events (IBD/reset flows) |
+| [New Block Template](/docs/rpc/subscriptions/new-block-template) | `subscribeNewBlockTemplate()` / `unsubscribeNewBlockTemplate()` | Receive mining templates (for miners) |
 
 ## Subscribing and Unsubscribing
 
@@ -51,7 +55,7 @@ await rpc.subscribeBlockAdded();
 
 // Subscribe to UTXO changes for specific addresses
 await rpc.subscribeUtxosChanged([
-  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
+  "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
 ]);
 
 // Subscribe to DAA score changes
@@ -66,7 +70,7 @@ await rpc.unsubscribeBlockAdded();
 
 // Unsubscribe from UTXO changes
 await rpc.unsubscribeUtxosChanged([
-  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
+  "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
 ]);
 ```
 
@@ -134,16 +138,16 @@ rpc.addEventListener("connect", async () => {
 ```
 
 <Callout>
-After reconnecting, there may be a gap between the last notification you received and the current network state. Use query methods (such as `getBlockDagInfo`, `getUtxosByAddresses`, or `getVirtualSelectedParentChainFromBlock`) to catch up on missed events before relying solely on the notification stream.
+After reconnecting, there may be a gap between the last notification you received and the current network state. Use query methods (such as `getBlockDagInfo`, `getUtxosByAddresses`, or `getVirtualChainFromBlock`) to catch up on missed events before relying solely on the notification stream.
 </Callout>
 
 ## Best Practices
 
-- **Subscribe only to what you need.** Each subscription consumes resources on both the node and your client. Avoid subscribing to high-frequency events (like `notifyBlockAdded`) if you only need periodic state checks.
+- **Subscribe only to what you need.** Each subscription consumes resources on both the node and your client. Avoid high-frequency streams like block-added if you only need periodic state checks.
 - **Process notifications quickly.** If your handler blocks, notifications queue up and your client falls behind. Offload heavy processing to a background queue.
 - **Always handle reconnection.** Network disruptions, node restarts, and connection timeouts are inevitable. Build reconnection and resubscription into your application from the start.
-- **Use `notifyUtxosChanged` for balance tracking** instead of polling `getBalanceByAddress`. The subscription is far more efficient and provides real-time updates.
-- **Combine subscriptions for richer context.** For example, use `notifyVirtualDaaScoreChanged` alongside `notifyBlockAdded` to correlate blocks with DAA score progression.
+- **Use `subscribeUtxosChanged` for balance tracking** instead of polling `getBalanceByAddress`. The subscription is far more efficient and provides real-time updates.
+- **Combine subscriptions for richer context.** For example, use virtual-daa-score-changed alongside block-added to correlate blocks with DAA score progression.
 - **Track state for gap detection.** Store the last DAA score or blue score received, so you can detect and fill gaps after reconnection.
 
 ## Next Steps

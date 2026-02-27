@@ -108,9 +108,11 @@ The `--utxoindex` flag enables the UTXO index, which is required for wallet func
 
 By default, rusty-kaspa stores blockchain data and configuration in:
 
-- **Linux:** `~/.rusty-kaspa/kaspa-mainnet/`
-- **macOS:** `~/.rusty-kaspa/kaspa-mainnet/`
-- **Windows:** `%LOCALAPPDATA%\rusty-kaspa\kaspa-mainnet\`
+- **Linux:** `~/.rusty-kaspa/kaspa-mainnet/datadir/`
+- **macOS:** `~/.rusty-kaspa/kaspa-mainnet/datadir/`
+- **Windows:** `%LOCALAPPDATA%\rusty-kaspa\kaspa-mainnet\datadir\`
+
+Logs are written under the sibling `logs/` directory (unless `--nologfiles` is set).
 
 You can override this with the `--appdir` flag:
 
@@ -133,7 +135,7 @@ Once the node starts, you should see log output indicating it is connecting to p
 A full sync from genesis takes time depending on your hardware and network speed. The node will first sync all block headers (relatively fast), then download and validate all block bodies and UTXO state.
 
 <Callout type="info">
-For the quickest sync, ensure your system has an SSD and at least 8 GB of RAM. You can reduce memory usage with `--ram-scale=0.3` if needed, at the cost of slower sync speed.
+For faster sync, SSD/NVMe storage and more RAM are typically helpful. You can reduce memory usage with `--ram-scale` (for example `0.3`), trading memory for sync speed.
 </Callout>
 
 ## Next Steps

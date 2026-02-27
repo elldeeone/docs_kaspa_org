@@ -1,0 +1,6 @@
+content/docs/reference/api-reference.mdx
+content/docs/reference/emission-schedule.mdx
+content/docs/reference/glossary.mdx
+content/docs/reference/network-params.mdx
+content/docs/reference/research-papers.mdx
+content/docs/reference/specifications.mdx

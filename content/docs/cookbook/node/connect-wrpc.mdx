@@ -14,7 +14,7 @@ wRPC (WebSocket RPC) is Kaspa's native RPC protocol. It supports both **Borsh** 
 
 ## Code
 
-The following example demonstrates connecting to a Kaspa node with various configurations, handling connection events, and implementing reconnection logic:
+The following example demonstrates connecting to a Kaspa node with various configurations, handling connection events, and handling reconnect behavior:
 
 ```typescript
 import {
@@ -118,15 +118,11 @@ async function connectWithRetry(
     throw new Error(`Failed to connect after ${maxRetries} attempts`);
   }
 
-  // Set up automatic reconnection on disconnect
-  rpc.addEventListener("disconnect", async () => {
-    console.log("Connection lost. Attempting to reconnect...");
-    try {
-      await rpc.connect();
-      console.log("Reconnected successfully.");
-    } catch (err) {
-      console.error("Reconnection failed:", err.message);
-    }
+  // On reconnect, re-subscribe to any RPC notifications your app needs.
+  rpc.addEventListener("connect", async () => {
+    console.log("Connected (or reconnected).");
+    // Example:
+    // await rpc.subscribeVirtualDaaScoreChanged();
   });
 
   return rpc;
@@ -203,7 +199,7 @@ Register event handlers before calling `connect()` to ensure you capture the ini
 
 ### Reconnection strategies
 
-The SDK does not automatically reconnect on disconnect. Implement reconnection logic in the `disconnect` event handler. Consider:
+The SDK automatically reconnects transport sessions after disconnects. Application-level notification subscriptions are server-side state, so re-subscribe in your `connect` handler after reconnection. Consider:
 
 - **Exponential backoff**: Increase the delay between retries to avoid overwhelming the node
 - **Maximum retry count**: Give up after a reasonable number of attempts and alert the operator

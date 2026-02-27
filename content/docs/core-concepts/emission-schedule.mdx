@@ -47,23 +47,23 @@ The smooth reduction has practical benefits:
 
 ## Total Supply
 
-Kaspa's emission schedule converges to a **total supply cap of approximately 28.7 billion KAS** (28,700,000,000 KAS). This is a hard cap — no more than this amount will ever be created.
+Under the current consensus schedule, Kaspa's total emission converges to approximately **28.376 billion KAS** (about 28,376,242,398 KAS from schedule constants, with a small high-BPS rounding delta of roughly +51.7 KAS).
 
-The total supply is the sum of the geometric series defined by the chromatic emission:
+As a simplified intuition, the long-tail chromatic phase is a geometric series:
 
 ```
-total_supply = initial_annual_emission × (1 / (1 - 0.5)) = 2 × initial_annual_emission
+total_supply_tail ≈ initial_annual_emission × (1 / (1 - 0.5)) = 2 × initial_annual_emission
 ```
 
-The supply approaches the cap asymptotically — block rewards become vanishingly small but never technically reach zero. In practice, the reward eventually rounds down to zero sompi, at which point emission ceases entirely.
+The exact schedule in consensus code includes pre-deflationary parameters plus monthly-step rewards and integer rounding. Rewards eventually round down to zero sompi, at which point emission ceases.
 
 <Callout type="info">
-The 28.7 billion KAS total supply was determined by the initial block reward and the chromatic reduction schedule. It is a fixed parameter of the protocol that cannot be changed without a consensus-breaking hard fork.
+The total emission is defined by consensus parameters for the active protocol version. Changing it would require a consensus upgrade (hard fork).
 </Callout>
 
 ## Block Reward Calculation
 
-The block reward for a given block is determined by the block's **DAA score**. The DAA score serves as a monotonically increasing logical clock that advances with the selected parent chain.
+The block reward for a given block is determined by the block's **DAA score**. The DAA score is a monotonically increasing logical clock anchored on selected-parent context and eligible mergeset contributions.
 
 The reward calculation follows this structure:
 
@@ -86,14 +86,14 @@ After the pre-deflationary phase ended, the chromatic schedule took effect and t
 
 ## Coinbase Transaction Structure
 
-New KAS enters circulation through **coinbase transactions** — special transactions included in each block that mint the block reward. A coinbase transaction has the following characteristics:
+New KAS enters circulation through **coinbase transactions**. In Kaspa, coinbase construction is mergeset-aware rather than a simple "this block immediately pays itself" model. A coinbase transaction has the following characteristics:
 
 - **No inputs**: Unlike regular transactions, coinbase transactions have no inputs (since they create new coins rather than spending existing ones).
 - **Subnetwork ID**: Uses the coinbase subnetwork ID (`0x0100000000000000000000000000000000000000`).
-- **Outputs**: One or more outputs distributing the block reward to the miner's address(es).
-- **Payload**: May contain arbitrary data (commonly used by mining pools for identification).
+- **Outputs**: One or more outputs paying mergeset rewards under consensus rules (blue-block rewards to each blue block's reported script, and red-block rewards aggregated to the current merging block miner).
+- **Payload**: Encodes consensus fields including blue score, current block subsidy, and miner data.
 
-The coinbase transaction's output value must exactly match the allowed block reward for the block's DAA score. Nodes reject blocks where the coinbase output exceeds the calculated reward.
+Nodes validate coinbase structure against consensus reward rules for the mergeset and payload, not just a single "current block subsidy output equals X" check.
 
 ## Coinbase Maturity
 
@@ -115,11 +115,11 @@ In a BlockDAG, multiple miners produce blocks in parallel, and GHOSTDAG classifi
 
 ### Blue Block Rewards
 
-A **blue block** receives its full block reward — the subsidy (newly minted KAS) determined by the emission schedule for that block's DAA score. The miner who produced the blue block receives this reward in the coinbase transaction.
+A **blue block's** subsidy (from its DAA score) and eligible fees are paid when a later merging block constructs its coinbase outputs. The payout goes to the script public key reported by that blue block.
 
 ### Red Block Rewards
 
-A **red block** does not pay its reward to the red block's miner. Instead, the reward from a red block is **collected by the miner of the merging block** — the blue block that merges the red block into the DAG ordering.
+A **red block** does not pay subsidy to the red block's miner. Under current coinbase construction, red-block rewards are aggregated and paid to the miner of the merging blue block.
 
 This design has important consequences:
 
@@ -129,7 +129,7 @@ This design has important consequences:
 
 | Block Classification | Subsidy Recipient | Fees Recipient |
 |---|---|---|
-| Blue block | Miner of the blue block | Miner of the blue block |
+| Blue block | Blue block's reported script (via later merging coinbase) | Blue block's reported script (via later merging coinbase) |
 | Red block | Miner of the merging blue block | Miner of the merging blue block |
 
 ## Further Reading

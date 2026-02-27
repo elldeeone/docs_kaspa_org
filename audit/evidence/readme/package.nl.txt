@@ -1,0 +1,35 @@
+     1	{
+     2	  "name": "docs_kaspa_org",
+     3	  "version": "0.0.0",
+     4	  "private": true,
+     5	  "scripts": {
+     6	    "build": "next build",
+     7	    "dev": "next dev",
+     8	    "start": "next start",
+     9	    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
+    10	    "postinstall": "fumadocs-mdx",
+    11	    "lint": "eslint"
+    12	  },
+    13	  "dependencies": {
+    14	    "fumadocs-core": "16.5.2",
+    15	    "fumadocs-mdx": "14.2.7",
+    16	    "fumadocs-ui": "16.5.2",
+    17	    "lucide-react": "^0.563.0",
+    18	    "next": "16.1.6",
+    19	    "react": "^19.2.4",
+    20	    "react-dom": "^19.2.4",
+    21	    "tailwind-merge": "^3.4.0"
+    22	  },
+    23	  "devDependencies": {
+    24	    "@tailwindcss/postcss": "^4.1.18",
+    25	    "@types/mdx": "^2.0.13",
+    26	    "@types/node": "^25.2.1",
+    27	    "@types/react": "^19.2.13",
+    28	    "@types/react-dom": "^19.2.3",
+    29	    "postcss": "^8.5.6",
+    30	    "tailwindcss": "^4.1.18",
+    31	    "typescript": "^5.9.3",
+    32	    "eslint-config-next": "16.1.6",
+    33	    "eslint": "^10.0.0"
+    34	  }
+    35	}

@@ -47,7 +47,7 @@ Use the **Wallet SDK** when you need fine-grained control over UTXO handling and
 A new wallet is created with a BIP-39 mnemonic and an encryption secret. The wallet file is stored using the platform-appropriate backend.
 
 ```javascript
-import { Wallet } from "kaspa-wasm";
+import { Wallet, Resolver } from "kaspa-wasm";
 
 // The Wallet manages its own RPC connection internally
 const wallet = new Wallet({
@@ -141,10 +141,11 @@ await wallet.accountsCreate({
 ```javascript
 // Enumerate all accounts in the wallet
 const accounts = await wallet.accountsEnumerate({});
+const firstAccount = accounts.accountDescriptors[0];
 
 // Generate a new receive address for an account
 const address = await wallet.accountsCreateNewAddress({
-  accountId: accounts[0].accountId,
+  accountId: firstAccount.accountId,
 });
 ```
 
@@ -157,11 +158,15 @@ The Wallet API handles UTXO selection, transaction construction, signing, and br
 ```javascript
 // Send KAS to an address
 const result = await wallet.accountsSend({
-  accountId: accounts[0].accountId,
+  accountId: firstAccount.accountId,
   walletSecret: "wallet-encryption-password",
-  destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
-  amount: 100_000_000n, // Amount in sompi (1 KAS = 100,000,000 sompi)
-  priorityFee: 0n,
+  destination: [
+    {
+      address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+      amount: 100_000_000n, // Amount in sompi (1 KAS = 100,000,000 sompi)
+    },
+  ],
+  priorityFeeSompi: 0n,
 });
 ```
 
@@ -171,13 +176,18 @@ Before sending, you can estimate the transaction fee:
 
 ```javascript
 const estimate = await wallet.accountsEstimate({
-  accountId: accounts[0].accountId,
-  destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
-  amount: 100_000_000n,
+  accountId: firstAccount.accountId,
+  destination: [
+    {
+      address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+      amount: 100_000_000n,
+    },
+  ],
+  priorityFeeSompi: 0n,
 });
 
-console.log("Estimated fee:", estimate.fees);
-console.log("Number of compound transactions:", estimate.transactions);
+console.log("Estimated fee:", estimate.generatorSummary.fees);
+console.log("Number of compound transactions:", estimate.generatorSummary.transactions);
 ```
 
 <Callout type="warn">
@@ -311,9 +321,8 @@ wallet.accounts_create(AccountsCreateRequest {
 wallet.accounts_send(AccountsSendRequest {
     account_id: account_id,
     wallet_secret: Secret::from("password"),
-    destination: address,
-    amount: 100_000_000, // 1 KAS
-    priority_fee: 0,
+    destination: PaymentOutputs::from((address.clone(), 100_000_000u64)).into(), // 1 KAS
+    priority_fee_sompi: Fees::SenderPays(0),
     ..Default::default()
 }).await?;
 

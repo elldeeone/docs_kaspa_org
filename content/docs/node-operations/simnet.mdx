@@ -7,7 +7,7 @@ description: How to run a Kaspa simulation network for local development, includ
 
 Simnet (simulation network) is a local, self-contained Kaspa network designed for development and testing. Unlike testnet, simnet does not connect to any external peers. You have full control over the network, including block production, which makes it ideal for unit testing, integration testing, and rapid prototyping.
 
-Simnet operates with relaxed difficulty rules, allowing you to mine blocks instantly without significant hash power. This means you can produce blocks on demand and test transaction flows without waiting for real network propagation.
+On simnet, consensus params set `skip_proof_of_work=true`, so proof-of-work is simulated. This lets you produce blocks quickly for local testing without real network mining conditions.
 
 <Callout type="info">
 Simnet is completely isolated. It has its own genesis block, its own DAG, and no connection to mainnet or testnet. Nothing that happens on simnet affects any other network.
@@ -48,7 +48,7 @@ Wallet software connected to a simnet node will automatically generate addresses
 
 ## Mining Blocks on Simnet
 
-Simnet uses a minimal mining difficulty, allowing blocks to be mined nearly instantly with CPU mining. To mine blocks on simnet:
+Simnet uses simulated PoW, so blocks can be produced very quickly for tests. To mine blocks on simnet:
 
 1. Start kaspad with `--simnet` and `--utxoindex`.
 2. Connect a miner to the node's gRPC endpoint, providing your simnet mining address to the **miner** (not to kaspad).
@@ -64,7 +64,7 @@ kaspa-miner --mining-address kaspasim:qr...your_address --kaspad-address 127.0.0
 Note that `kaspad` does **not** have a `--mining-address` flag. The mining address is always specified on the miner, not the node.
 
 <Callout>
-On simnet, blocks are mined almost instantly because the difficulty target is set extremely low. This allows you to generate blocks as fast as your CPU can produce them, which is ideal for testing transaction confirmation flows and DAG behavior.
+On simnet, throughput is typically very high because PoW is simulated. Exact block production speed still depends on your machine and test setup.
 </Callout>
 
 ## Use Cases
@@ -95,7 +95,7 @@ kaspad --simnet --utxoindex --rpclisten=127.0.0.1:16510 --listen=127.0.0.1:16511
 
 # Node 2 (connects to Node 1)
 kaspad --simnet --utxoindex --rpclisten=127.0.0.1:16520 --listen=127.0.0.1:16521 \
-  --connect=127.0.0.1:16511 --appdir=~/.kaspad-sim2
+  --connect=127.0.0.1:16511 --appdir=~/.rusty-kaspa-sim2
 ```
 
 This setup allows you to test peer-to-peer propagation, DAG convergence, and multi-node scenarios locally.

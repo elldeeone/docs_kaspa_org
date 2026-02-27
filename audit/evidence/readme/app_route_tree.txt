@@ -1,0 +1,7 @@
+# src/app/(home) files
+src/app/(home)/layout.tsx
+src/app/(home)/page.tsx
+
+# src/app/docs files
+src/app/docs/[[...slug]]/page.tsx
+src/app/docs/layout.tsx

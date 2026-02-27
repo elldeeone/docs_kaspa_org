@@ -19,7 +19,7 @@ No parameters required.
 | `peerInfo[].timeOffset` | i64 | Time offset between the peer's clock and the local clock in milliseconds. |
 | `peerInfo[].userAgent` | string | The peer's user agent string (software name and version). |
 | `peerInfo[].advertisedProtocolVersion` | u32 | The protocol version advertised by the peer. |
-| `peerInfo[].timeConnected` | u64 | The timestamp (milliseconds since epoch) when the peer connected. |
+| `peerInfo[].timeConnected` | u64 | Milliseconds since this connection was established. |
 | `peerInfo[].isIbdPeer` | boolean | Whether this peer is the node's IBD (Initial Block Download) peer. |
 
 ## Example
@@ -42,7 +42,7 @@ No parameters required.
       "timeOffset": -200,
       "userAgent": "rusty-kaspa:0.15.0",
       "advertisedProtocolVersion": 6,
-      "timeConnected": 1700000000000,
+      "timeConnected": 48213,
       "isIbdPeer": false
     }
   ]

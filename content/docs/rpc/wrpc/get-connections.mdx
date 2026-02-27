@@ -7,15 +7,15 @@ description: "Get the number of active peer and client connections to the node."
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `includeProfileData` | boolean | No | Whether to include connection profile data in the response. |
+| `includeProfileData` | boolean | No | Whether to include connection profile data in the response. Defaults to `false` when omitted. |
 
 ## Response
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `clients` | u32 | Number of RPC clients currently connected. |
+| `clients` | u32 | Number of currently connected wRPC clients (JSON + Borsh transports). |
 | `peers` | u16 | Number of P2P peers currently connected. |
-| `profileData` | object \| null | Connection profile data (only present if `includeProfileData` was `true`). |
+| `profileData` | object \| null | Connection profile data (`cpuUsage`, `memoryUsage`), present when `includeProfileData=true`. |
 
 ## Example
 
@@ -32,13 +32,15 @@ description: "Get the number of active peer and client connections to the node."
 {
   "clients": 3,
   "peers": 48,
-  "profileData": null
+  "profileData": {
+    "cpuUsage": 8.4,
+    "memoryUsage": 734003200
+  }
 }
 ```
 
 ## Notes
 
 - `peers` reflects P2P connections to other Kaspa nodes for block and transaction propagation.
-- `clients` reflects RPC connections (wRPC or gRPC) from applications querying the node.
-- A healthy mainnet node typically maintains 30-50+ peer connections.
+- `clients` currently reflects active wRPC client connections.
 - Use this for monitoring node health and connectivity.

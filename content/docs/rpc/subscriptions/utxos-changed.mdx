@@ -5,7 +5,7 @@ description: "NotifyUtxosChanged — subscribe to UTXO changes for specific addr
 
 ## Overview
 
-The `notifyUtxosChanged` subscription notifies your application whenever the UTXO set changes for one or more watched addresses. Each notification reports which UTXOs were added (received) and which were removed (spent). This is the primary mechanism for real-time balance tracking in Kaspa.
+The utxos-changed subscription notifies your application whenever the UTXO set changes for one or more watched addresses. Each notification reports which UTXOs were added (received) and which were removed (spent). This is the primary mechanism for real-time balance tracking in Kaspa.
 
 ## Subscribe
 
@@ -13,29 +13,18 @@ Subscribe with one or more addresses to watch:
 
 ```typescript
 await rpc.subscribeUtxosChanged([
-  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
-  "kaspa:qzu8yngf4ross8dylan5en8hy9emr3vysjq0hpve5yhnf87s3hq7qv6lvl9"
+  "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+  "kaspa:qrcz0ha5krc2y3snq6vm6quyqdh7fcs8gkx0f5z5v4ld0s32l4p850cvk8udv"
 ]);
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifyUtxosChanged",
-  "params": {
-    "addresses": [
-      "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
-    ]
-  }
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `UtxosChanged` scope payload (`addresses`). gRPC uses `NotifyUtxosChangedRequestMessage` with `addresses` and `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 
 ```typescript
 await rpc.unsubscribeUtxosChanged([
-  "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev"
+  "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
 ]);
 ```
 
@@ -45,7 +34,7 @@ await rpc.unsubscribeUtxosChanged([
 {
   "added": [
     {
-      "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+      "address": "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
       "outpoint": {
         "transactionId": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         "index": 0
@@ -63,7 +52,7 @@ await rpc.unsubscribeUtxosChanged([
   ],
   "removed": [
     {
-      "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+      "address": "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
       "outpoint": {
         "transactionId": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
         "index": 0
@@ -130,12 +119,12 @@ UTXO amounts can be large numbers. Use `BigInt` in JavaScript/TypeScript (or equ
 - **UTXO management** -- Track the UTXO set for an address to optimize transaction construction and consolidation.
 
 <Callout>
-A UTXO appearing in the `added` array means it exists in the current virtual UTXO set. However, it may still be subject to reorganization until it reaches sufficient confirmation depth. For high-value transactions, wait for multiple DAA score increments before treating the payment as final.
+A UTXO appearing in the `added` array means it exists in the current virtual UTXO set. It can still be affected by reorgs, so production systems should apply an explicit confirmation policy before treating funds as final.
 </Callout>
 
 ## Watching Multiple Addresses
 
-You can subscribe to changes for hundreds of addresses in a single subscription call. This is useful for HD wallets that derive many addresses:
+You can subscribe to changes for many addresses in a single subscription call. This is useful for HD wallets that derive many addresses:
 
 ```typescript
 // Watch all derived addresses from an HD wallet

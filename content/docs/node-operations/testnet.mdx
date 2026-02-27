@@ -1,21 +1,16 @@
 ---
 title: Testnet
-description: How to run a Kaspa node on the public test network for development and testing, including ports, faucet access, and differences from mainnet.
+description: How to run a Kaspa node on the public test network for development and testing, including ports and differences from mainnet.
 ---
 
 ## What Is Testnet
 
-Testnet is a public Kaspa network that mirrors mainnet functionality but uses valueless coins. It allows developers to test applications, wallet integrations, and protocol changes without risking real funds. Testnet coins (tKAS) have no monetary value and can be obtained freely from a faucet.
+Testnet is a public Kaspa network that mirrors mainnet functionality but uses valueless coins. It allows developers to test applications, wallet integrations, and protocol changes without risking real funds. Testnet coins (tKAS) have no monetary value.
 
-Kaspa maintains two testnet instances:
-
-- **Testnet-10**: Runs at 10 BPS, matching mainnet's current block rate.
-- **Testnet-11**: Also runs at 10 BPS, used for testing upcoming protocol changes and features.
-
-Both testnets run the same consensus rules as mainnet (including GHOSTDAG parameters calibrated for 10 BPS) but operate as independent networks with separate DAGs and UTXO sets.
+In the current `rusty-kaspa` release line, local `kaspad --testnet` uses **testnet-10**. It mirrors mainnet's 10 BPS operating mode while remaining a separate network with its own DAG and UTXO set.
 
 <Callout type="info">
-Testnet-11 is frequently used to trial pre-release features and protocol upgrades before they are deployed to mainnet. If you are testing against current mainnet behavior, testnet-10 is the more stable choice.
+If you are testing against current mainnet behavior, use `testnet-10`.
 </Callout>
 
 ## Running a Testnet Node
@@ -40,7 +35,7 @@ Testnet uses different default ports than mainnet to allow both to run on the sa
 | wRPC JSON | 18110 | 18210 |
 
 <Callout>
-Because testnet uses separate ports and a separate data directory (`kaspa-testnet`), you can run a mainnet and testnet node simultaneously on the same machine without conflicts.
+Because testnet uses separate ports and a separate data directory (`kaspa-testnet-10`), you can run a mainnet and testnet node simultaneously on the same machine without conflicts.
 </Callout>
 
 ## Testnet Address Prefix
@@ -54,13 +49,13 @@ Wallet software should automatically detect and use the correct prefix based on 
 
 ## Getting Testnet KAS
 
-Testnet coins can be obtained from the Kaspa testnet faucet. The faucet distributes small amounts of tKAS to any valid testnet address. You can find faucet links in the Kaspa Discord community or on the Kaspa website.
+`rusty-kaspa` does not define a canonical faucet endpoint. Funding sources are operational and may change over time.
 
 To request testnet coins:
 
 1. Generate a testnet wallet address (using the CLI wallet with `--testnet` or any compatible wallet).
-2. Submit your `kaspatest:` address to the faucet.
-3. Wait for the faucet transaction to confirm (typically a few seconds at 10 BPS).
+2. Fund that address from another testnet wallet you control, testnet mining rewards, or a community-operated faucet if available.
+3. Wait for the funding transaction to appear and confirm on testnet.
 
 <Callout type="warn">
 Do not send mainnet KAS to testnet addresses or vice versa. The address prefixes are different precisely to prevent this mistake. Transactions sent to the wrong network are unrecoverable.
@@ -73,8 +68,8 @@ Do not send mainnet KAS to testnet addresses or vice versa. The address prefixes
 | Address prefix | `kaspa:` | `kaspatest:` |
 | Coin value | Real economic value | No value |
 | Network stability | Production-grade | May be reset periodically |
-| Mining difficulty | High (ASIC-level) | Low (CPU/GPU mineable) |
-| Data directory | `kaspa-mainnet/` | `kaspa-testnet/` |
+| Mining economics | Production economics | Experimental economics (may change) |
+| Data directory | `kaspa-mainnet/` | `kaspa-testnet-10/` |
 
 Testnet may be reset (DAG wiped) during major protocol upgrades. Do not rely on testnet data persisting indefinitely.
 

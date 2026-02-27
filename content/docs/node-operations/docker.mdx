@@ -8,7 +8,7 @@ description: Running a Kaspa full node in Docker with persistent volumes, expose
 Running kaspad in Docker provides a consistent, reproducible deployment environment. Containers isolate the node from the host system, simplify upgrades, and integrate with orchestration tools like Docker Compose and Kubernetes.
 
 <Callout type="info">
-The official rusty-kaspa repository does not publish pre-built Docker images at the time of writing. You will need to build your own image from the source code or use a community-maintained image.
+The project provides an official prebuilt image on Docker Hub (`kaspanet/rusty-kaspad`). Building from source is still useful when you need custom binaries or pinned toolchains.
 </Callout>
 
 ## Dockerfile
@@ -25,13 +25,19 @@ RUN cargo build --release --bin kaspad
 
 # Runtime stage
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /build/target/release/kaspad /usr/local/bin/kaspad
 EXPOSE 16110 16111 17110 18110
 ENTRYPOINT ["kaspad"]
 ```
 
 Build the image by cloning the rusty-kaspa repository and running `docker build -t kaspad:latest .` from the repo root.
+
+If you prefer the official prebuilt image:
+
+```bash
+docker pull kaspanet/rusty-kaspad:latest
+```
 
 ## Docker Compose
 
@@ -46,6 +52,8 @@ services:
     command:
       - "--utxoindex"
       - "--rpclisten=0.0.0.0:16110"
+      - "--rpclisten-borsh=0.0.0.0:17110"
+      - "--rpclisten-json=0.0.0.0:18110"
       - "--appdir=/data"
       - "--nologfiles"
     ports:
@@ -112,15 +120,15 @@ For a more thorough check, install `grpcurl` in the image and call the `GetInfo`
 
 ## Resource Considerations
 
-Allocate at least 8 GB of memory (tune with `--ram-scale`) and 4 CPU cores minimum. Use SSD-backed volumes for the data directory; avoid network-attached storage where possible, as I/O latency impacts sync performance.
+As a starting point, many operators allocate around 8 GB RAM and 4 CPU cores, then tune with `--ram-scale` based on observed workload. Use SSD-backed volumes where possible; high-latency storage can slow sync and query performance.
 
-## Community Docker Images
+## Third-Party Docker Images
 
-The community maintains pre-built Docker images that can save you from building from source.
+Third-party images can be convenient, but they are outside the `kaspanet/rusty-kaspad` release process.
 
-### supertypo/rusty-kaspad
+### Example: supertypo/rusty-kaspad
 
-[supertypo/rusty-kaspad](https://hub.docker.com/r/supertypo/rusty-kaspad) is a community-maintained Docker image published on Docker Hub. It tracks the latest rusty-kaspa releases and provides ready-to-run images for multiple architectures.
+[supertypo/rusty-kaspad](https://hub.docker.com/r/supertypo/rusty-kaspad) is a community-published image on Docker Hub. Validate the build inputs and version mapping yourself before using it.
 
 To use it in your Docker Compose configuration, replace the image reference:
 
@@ -133,6 +141,8 @@ services:
     command:
       - "--utxoindex"
       - "--rpclisten=0.0.0.0:16110"
+      - "--rpclisten-borsh=0.0.0.0:17110"
+      - "--rpclisten-json=0.0.0.0:18110"
       - "--appdir=/data"
       - "--nologfiles"
     ports:

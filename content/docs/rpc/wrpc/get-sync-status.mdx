@@ -11,7 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `isSynced` | boolean | `true` if the node is fully synced with the network, `false` otherwise. |
+| `isSynced` | boolean | `true` when the node considers itself synced (recent sink timestamp, sufficient connectivity, and not in transitional IBD state). |
 
 ## Example
 
@@ -30,7 +30,8 @@ No parameters required.
 
 ## Notes
 
-- A node is considered synced when it has downloaded and validated all blocks up to the current network tip.
-- During initial block download (IBD), this returns `false`. IBD can take minutes to hours depending on the network and hardware.
+- Sync status is a readiness heuristic, not a literal proof that every possible block has been downloaded.
+- During initial block download (IBD), this returns `false`.
+- IBD duration depends on hardware, network conditions, and chain state history.
 - Applications should check sync status before trusting balance or UTXO data from the node.
 - This is the simplest way to check if a node is ready to serve accurate data.

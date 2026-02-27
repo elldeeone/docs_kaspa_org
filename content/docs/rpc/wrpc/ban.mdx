@@ -31,6 +31,6 @@ Empty response on success.
 ## Notes
 
 - Banning an IP immediately disconnects any peer with that address and prevents future connections from it.
-- Bans persist until explicitly removed with `Unban`.
+- Bans expire automatically after the node's max ban time (currently 24 hours), or can be removed earlier with `Unban`.
 - Use `GetPeerAddresses` to view the current list of banned IPs.
 - This is an administrative operation. Restrict RPC access to prevent unauthorized banning.

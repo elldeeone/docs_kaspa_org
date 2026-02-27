@@ -7,7 +7,7 @@ description: "Submit a transaction that replaces an existing transaction in the 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `transaction` | object | Yes | The signed replacement transaction object. Must spend at least one of the same inputs as the transaction being replaced, and must pay a higher fee. |
+| `transaction` | object | Yes | The signed replacement transaction object. It must double-spend inputs belonging to exactly one mempool transaction and pay a higher fee/mass ratio (feerate). |
 
 The `transaction` object follows the same structure as in `SubmitTransaction`.
 
@@ -45,7 +45,10 @@ The `transaction` object follows the same structure as in `SubmitTransaction`.
         }
       ],
       "lockTime": 0,
-      "subnetworkId": "0000000000000000000000000000000000000000"
+      "subnetworkId": "0000000000000000000000000000000000000000",
+      "gas": 0,
+      "payload": "",
+      "mass": 0
     }
   }
 }
@@ -63,9 +66,9 @@ The `transaction` object follows the same structure as in `SubmitTransaction`.
 ## Notes
 
 <Callout type="info">
-The replacement transaction must pay a higher fee than the transaction it replaces. This is Kaspa's Replace-by-Fee (RBF) mechanism, allowing users to bump the priority of stuck transactions.
+The replacement transaction must pay a higher fee/mass ratio (feerate) than the transaction it replaces. This is Kaspa's Replace-by-Fee (RBF) mechanism.
 </Callout>
 
-- The replacement must spend at least one input in common with the transaction being replaced.
+- In mandatory replacement mode, all double-spent inputs must map to the same mempool transaction.
 - The replaced transaction is evicted from the mempool and returned in the response.
 - If no matching transaction is found in the mempool, the method returns an error.

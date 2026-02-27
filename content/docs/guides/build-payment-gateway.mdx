@@ -95,7 +95,7 @@ async function getConfirmationDepth(depositDaaScore: bigint): Promise<bigint> {
 ```
 
 <Callout type="warn">
-A DAA score depth of **10** is generally considered safe for low-value transactions. For high-value payments, wait for a depth of **100+** (roughly 10 seconds at 10 BPS). Kaspa's GHOSTDAG consensus provides fast probabilistic finality.
+Use confirmation depth as an operator risk policy, not a protocol constant. Common defaults are **10** for low-value payments and **100+** for higher-value payments, but you should tune this to your risk model.
 </Callout>
 
 ## Step 4 -- Handle Partial Payments

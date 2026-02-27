@@ -1,118 +1,55 @@
 ---
 title: Web Wallet
-description: How to use the Kaspa Web Wallet to create a wallet, send and receive KAS, manage UTXOs, and keep your funds secure — all from your browser.
+description: Operational guide for using a Kaspa web wallet safely from a browser.
 ---
 
 ## Overview
 
-The Kaspa Web Wallet ([wallet.kaspanet.io](https://wallet.kaspanet.io)) is a client-side wallet that runs entirely in your browser. Your private keys are generated and stored locally — they are never transmitted to any server. The wallet communicates with the Kaspa network through public wRPC (WebSocket RPC) endpoints to broadcast transactions and query balances, but all cryptographic operations happen on your device.
+Web wallets provide a fast onboarding path and convenient day-to-day access. They are best treated as hot-wallet environments: convenient, but with stronger browser/device risk than dedicated hardware signing setups.
 
 <Callout>
-The Web Wallet is non-custodial. If you lose your seed phrase, there is no way to recover your funds. No one — including the Kaspa developers — can reset your wallet or reverse transactions.
+UI flows and feature availability can change between releases. Use the wallet's current official documentation and in-app prompts as the source of truth for exact steps.
 </Callout>
 
-## Creating a Wallet
+## Safe Setup Flow
 
-1. Navigate to [wallet.kaspanet.io](https://wallet.kaspanet.io) in a modern browser (Chrome, Firefox, Edge, or Brave).
-2. Click **Create New Wallet**.
-3. The wallet generates a **24-word mnemonic seed phrase** using the BIP-39 standard.
-4. Write down the 24 words **on paper** in the exact order shown. Do not store them digitally (no screenshots, no cloud notes, no email).
-5. Confirm your seed phrase by entering the requested words.
-6. Set an optional encryption password. This password encrypts the wallet data in your browser's local storage. It does **not** replace your seed phrase — it only protects against someone accessing your wallet from the same browser session.
+1. Open the official wallet URL from a trusted source.
+2. Create or import a wallet using the wallet's supported mnemonic flow.
+3. Back up recovery material offline before funding addresses.
+4. Use an additional local unlock/password if offered.
+5. Verify the first receive address and send a small test transaction.
 
-### Key Derivation
+## Sending and Receiving
 
-The Web Wallet uses **BIP-32 hierarchical deterministic (HD) key derivation**. From your single 24-word mnemonic, the wallet can derive a virtually unlimited number of key pairs. The derivation path follows the pattern:
+- Use fresh receive addresses when practical.
+- Verify destination addresses before signing.
+- Treat transaction settlement policy (required confirmations) as your own risk decision, not a fixed protocol rule.
 
-```
-m / purpose' / coin_type' / account' / change / address_index
-```
+## UTXO Behavior
 
-For Kaspa, the coin type is `111111'`. This means all your addresses — receive and change — are deterministically generated from the same seed. As long as you have your 24 words, you can fully reconstruct your wallet and all its addresses on any compatible wallet application.
+Kaspa wallets operate on UTXOs. Depending on your UTXO distribution, large sends may require extra consolidation/batching behavior handled by the wallet engine. If the wallet prompts for compounding/consolidation steps, review the prompt details before approval.
 
-## Addresses
+## Browser Security Practices
 
-### Receive Addresses
+- Keep browser and OS updated.
+- Avoid untrusted extensions in the profile used for wallet operations.
+- Verify the exact URL each session.
+- Do not store mnemonics/private keys in screenshots, notes apps, or cloud docs.
+- Prefer a dedicated browser profile for financial operations.
 
-Receive addresses are the addresses you share with others to receive KAS. The wallet generates new receive addresses as needed. You can always generate a fresh address for each incoming transaction to improve privacy, though reusing an address is not a security risk in Kaspa.
-
-### Change Addresses
-
-When you spend KAS, the wallet may need to consume an entire UTXO (Unspent Transaction Output) even if the UTXO's value is greater than the amount you intend to send. The excess value is sent back to your own wallet via a **change address**. Change addresses are derived from a separate branch of the HD derivation tree, but they belong to the same wallet and are fully controlled by your seed phrase.
-
-<Callout type="info">
-If you see a balance distributed across multiple addresses in your wallet, this is normal. The wallet automatically manages receive and change addresses behind the scenes.
+<Callout type="warn">
+For larger balances, use a hardware-signing workflow or cold-storage architecture. Browser wallets are operationally convenient but carry broader client-side attack surface.
 </Callout>
 
-## Sending KAS
+## Recovery Discipline
 
-1. Click **Send** in the wallet interface.
-2. Enter the recipient's Kaspa address (a `kaspa:` prefixed address).
-3. Enter the amount of KAS to send.
-4. Review the transaction details, including the network fee.
-5. Click **Confirm** to sign and broadcast the transaction.
-
-The wallet will automatically select the appropriate UTXOs to fund the transaction. With Kaspa's 10 BPS block rate, your transaction will typically appear in a block within one second and reach full confirmation in approximately 10 seconds.
-
-## Compound Transactions (UTXO Management)
-
-Kaspa uses a UTXO model similar to Bitcoin. Each time you receive KAS, it creates a new UTXO. Over time — especially if you receive many small payments (e.g., from mining) — your wallet may accumulate hundreds or thousands of small UTXOs.
-
-A single Kaspa transaction has a maximum size limit on the number of inputs it can include. If your balance is spread across more UTXOs than a single transaction can consume, the wallet cannot send your full balance in one transaction.
-
-To solve this, the Web Wallet supports **compound transactions** (also called UTXO consolidation). This process:
-
-1. Combines many small UTXOs into fewer, larger UTXOs.
-2. Sends them back to your own wallet addresses.
-3. May require multiple compounding rounds if you have a very large number of UTXOs.
-
-<Callout type="info">
-If the wallet shows a "Compound" button or prompts you to compound before sending, this means your UTXOs need consolidation. This is a normal operation and does not send funds to anyone else. The only cost is the standard network fee for each compounding transaction.
-</Callout>
-
-## Receiving KAS
-
-1. Click **Receive** in the wallet interface.
-2. Copy the displayed Kaspa address or use the QR code.
-3. Share the address with the sender.
-
-Each address is a Schnorr public key encoded in a Kaspa-specific Bech32 format, prefixed with `kaspa:`. For example:
-
-```
-kaspa:qr0emu7s4yrkunhp2p4vodqem59nnfmryzrsmjy7mvsrgf22ygqqxf7z8g5wv
-```
-
-## Security Best Practices
-
-### Seed Phrase Protection
-
-- Write your 24-word seed phrase on **physical media** (paper, metal backup plate) and store it in a secure location.
-- **Never** enter your seed phrase into any website, application, or form other than the official Kaspa Web Wallet or a trusted compatible wallet.
-- **Never** share your seed phrase with anyone. No Kaspa developer, support agent, or community member will ever ask for it.
-- Consider creating multiple physical copies stored in different secure locations.
-
-### Browser Security
-
-Since the Web Wallet runs in your browser, your browser environment matters:
-
-- Keep your browser updated to the latest version.
-- Avoid browser extensions from untrusted sources — malicious extensions can read page content and intercept key material.
-- Use the wallet in a clean browser profile or an incognito/private window if you are on a shared computer.
-- Always verify you are on `wallet.kaspanet.io` (check the URL and HTTPS certificate) before entering your seed phrase.
-- Clear your browser data or log out of the wallet when you are finished, especially on shared machines.
-
-<Callout>
-For large holdings, consider using a [hardware wallet](/docs/wallets/hardware-wallets) or keeping funds in a wallet whose seed phrase has never been entered into a browser. The Web Wallet is convenient for everyday use, but a hardware wallet provides stronger key isolation.
-</Callout>
-
-### Transaction Verification
-
-- Always double-check the recipient address before confirming a transaction. Kaspa transactions are irreversible.
-- Compare the first and last several characters of the address to catch clipboard-hijacking malware.
+- Test restore procedure with small balances before production use.
+- Keep redundant physical backups in separate secure locations.
+- Record wallet/network/account context needed for deterministic restore.
 
 ## Further Reading
 
-- [CLI Wallet](/docs/wallets/cli-wallet) — A command-line wallet for advanced users and scripting.
-- [Hardware Wallets](/docs/wallets/hardware-wallets) — Store your keys on a dedicated hardware device.
-- [Transactions](/docs/core-concepts/transactions) — How Kaspa transactions and UTXOs work at the protocol level.
-- [HD Derivation](/docs/wallets/hd-derivation) — How Kaspa wallet key derivation works.
+- [CLI Wallet](/docs/wallets/cli-wallet) — Terminal-based wallet operations.
+- [Hardware Wallets](/docs/wallets/hardware-wallets) — Device-based key isolation.
+- [Transactions](/docs/core-concepts/transactions) — UTXO transaction model.
+- [HD Derivation](/docs/wallets/hd-derivation) — Deterministic wallet paths and recovery.

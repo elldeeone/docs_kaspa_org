@@ -1,24 +1,23 @@
 ---
 title: "Testnet Development"
-description: "Connect to Kaspa testnet-10 or testnet-11, obtain test KAS, build and test your application, and understand the differences from mainnet."
+description: "Connect to Kaspa testnet-10, obtain test KAS, build and test your application, and understand the differences from mainnet."
 ---
 
-Kaspa operates two public testnets for development and testing. They mirror mainnet consensus rules but use worthless test KAS, making them safe for experimentation. This guide covers connecting to testnet, funding your addresses, testing your application, and understanding how testnet differs from mainnet.
+Kaspa testnet mirrors mainnet consensus behavior but uses valueless test KAS, making it safe for experimentation. This guide covers connecting to testnet, funding your addresses, testing your application, and understanding how testnet differs from mainnet.
 
-## Available Testnets
+## Current Local-Node Support
 
-| Property | Testnet-10 | Testnet-11 |
-|---|---|---|
-| Network ID | `testnet-10` | `testnet-11` |
-| gRPC port | 16210 | 16210 |
-| wRPC Borsh port | 17210 | 17210 |
-| P2P port | 16211 | 16311 |
-| Block rate | 10 BPS | 10 BPS |
-| Address prefix | `kaspatest:` | `kaspatest:` |
-| Purpose | General app testing | Protocol experiments |
+| Property | Value |
+|---|---|
+| Network ID | `testnet-10` |
+| gRPC port | 16210 |
+| wRPC Borsh port | 17210 |
+| P2P port | 16211 |
+| Block rate | 10 BPS |
+| Address prefix | `kaspatest:` |
 
 <Callout type="info">
-Testnet-10 is the recommended network for most application development. Testnet-11 is sometimes used for protocol-level experiments and may be reset more frequently.
+In the current `rusty-kaspa` release line, local `kaspad --testnet` supports suffix `10`.
 </Callout>
 
 ## Option A -- Use a Public Node via Resolver
@@ -46,12 +45,6 @@ For heavier workloads or when you need `--utxoindex`:
 kaspad --testnet --utxoindex --rpclisten=0.0.0.0:16210 --rpclisten-borsh=0.0.0.0:17210
 ```
 
-The `--testnet` flag defaults to testnet-10. To use testnet-11:
-
-```bash
-kaspad --testnet --netsuffix=11 --utxoindex --rpclisten=0.0.0.0:16210 --rpclisten-borsh=0.0.0.0:17210
-```
-
 Then connect your SDK directly:
 
 ```typescript
@@ -64,14 +57,14 @@ await rpc.connect();
 
 ## Getting Test KAS
 
-Use the community-operated faucets to receive free testnet KAS:
+To test transaction flows, fund your `kaspatest:` addresses with testnet-only sources:
 
-1. Generate a testnet address (prefix `kaspatest:`).
-2. Paste it into the faucet web page.
-3. Wait a few seconds -- at 10 BPS, confirmation is nearly instant.
+1. Transfer from another testnet wallet you control.
+2. Mine on testnet and send rewards to your development wallet.
+3. Use a community faucet if one is currently available.
 
 <Callout type="warn">
-Faucets may rate-limit requests. If you need large amounts of test KAS for load testing, consider running your own testnet miner.
+Faucets and other community services are not part of `rusty-kaspa`; availability, limits, and policies can change without notice.
 </Callout>
 
 ## Building Your App Against Testnet
@@ -123,9 +116,9 @@ See [Send KAS](/docs/cookbook/transactions/send-kas) for the full code pattern.
 | Address prefix | `kaspatest:` | `kaspa:` |
 | KAS value | Worthless | Real value |
 | wRPC Borsh port | 17210 | 17110 |
-| Network ID | `testnet-10` / `testnet-11` | `mainnet` |
+| Network ID | `testnet-10` | `mainnet` |
 | Resets | May be reset periodically | Never reset |
-| Mining difficulty | Lower | Production difficulty |
+| Mining economics | Experimental and may change | Production economics |
 | Block rate | 10 BPS | 10 BPS |
 
 ## Switching to Mainnet

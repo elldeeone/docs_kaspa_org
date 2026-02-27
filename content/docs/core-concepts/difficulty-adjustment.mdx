@@ -25,14 +25,14 @@ The window parameters are carefully chosen:
 
 - **Large enough** (2,641 seconds) to smooth out natural variance in block times caused by the probabilistic nature of mining.
 - **Small enough** to respond to genuine hash rate changes in a timely manner.
-- **Odd-numbered sample count** (661) to simplify the median calculation used for timestamp sampling.
 - **Sample rate of 40 blocks** (4 seconds at 10 BPS) balances granularity against computational cost.
+- **Sample count of 661** provides a broad window while keeping per-block computation practical.
 
 ## How the DAA Works
 
 For each new block, the DAA computation proceeds as follows:
 
-1. **Sample timestamps**: Collect the timestamps of blocks within the DAA window. The algorithm uses the selected parent chain (the "blue" chain determined by GHOSTDAG) to identify the window boundaries.
+1. **Sample timestamps**: Collect timestamps from the sampled DAA window in the selected-parent context, including eligible mergeset blocks according to the window sampling rules.
 
 2. **Compute the time span**: Calculate the elapsed time between the earliest and latest sampled timestamps. This represents the actual time taken to produce the blocks in the window.
 
@@ -46,15 +46,15 @@ The adjustment formula ensures that the new difficulty is proportional to the ra
 new_target = old_target × (actual_time / expected_time)
 ```
 
-This is applied with dampening to prevent oscillation — the adjustment is smoothed so that a single anomalous block cannot cause a dramatic difficulty swing.
+In practice, the sampled-window construction and expected-vs-observed duration ratio provide smoothing against short-term variance.
 
 <Callout type="info">
-The DAA uses timestamps from the selected parent chain (determined by GHOSTDAG), not from all blocks in the DAG. This ensures that the difficulty calculation follows a consistent linear sequence and is not distorted by the parallelism of the DAG structure.
+The DAA is anchored on selected-parent context, but its sampled window also considers eligible mergeset blocks under the consensus sampling rules. It is not a simple "selected-parent-chain-only" timestamp average.
 </Callout>
 
 ## DAA Score
 
-Every block in Kaspa has a **DAA score** — a monotonically increasing counter on the selected parent chain. The DAA score serves as a logical clock for the network:
+Every block in Kaspa has a **DAA score** — a monotonically increasing consensus-time counter anchored on the selected parent and incremented by eligible mergeset contributions. The DAA score serves as a logical clock for the network:
 
 ```
 block.daa_score = selected_parent.daa_score + (mergeset_size - mergeset_non_daa_count)
@@ -66,7 +66,7 @@ The DAA score is used throughout the protocol for:
 
 - **Lock time**: Transaction lock times can be specified as DAA scores, providing block-production-rate-independent timing.
 - **Block reward calculation**: The [emission schedule](/docs/core-concepts/emission-schedule) uses the DAA score to determine the current block reward.
-- **Finality depth**: Finality and pruning thresholds are measured in DAA score.
+- **Finality depth**: Finality and pruning thresholds are expressed using blue-score depth (not DAA score).
 - **Difficulty window**: The DAA window boundaries are defined in terms of DAA score.
 
 Because the DAA score increments by the mergeset size (which includes parallel blocks), it grows faster than a simple block count. At 10 BPS with typical parallelism, the DAA score increases at roughly 10 per second.
@@ -81,13 +81,13 @@ Block timestamps must satisfy:
 - **Lower bound**: A block's timestamp must be greater than the median timestamp of its past blocks. This prevents miners from using timestamps in the past.
 - **Upper bound**: A block's timestamp must not be too far in the future relative to the receiving node's local clock. Blocks with future timestamps are temporarily rejected.
 
-### Median-Based Sampling
+### Windowed Timestamp Span
 
-The DAA uses **median timestamps** rather than raw timestamps for its time span calculations. This is resistant to individual miners submitting anomalous timestamps, because the median of a window is not significantly affected by a small number of outliers.
+The sampled DAA window uses a bounded timestamp span between sampled extremes (with additional window construction rules) rather than relying on a simple chain-median time-span formula. In practice, this reduces sensitivity to isolated timestamp outliers while keeping the adjustment responsive.
 
 ### Selected Chain Basis
 
-By computing difficulty only along the selected parent chain, the DAA avoids being influenced by timestamps in parallel blocks that a miner might manipulate without cost.
+By anchoring the calculation on selected-parent context and constrained sampled-window rules, the DAA limits the influence of arbitrary parallel-block timestamp manipulation.
 
 ## Minimum Difficulty
 
@@ -101,7 +101,7 @@ There is a **minimum difficulty** (equivalently, a maximum target value) that pr
 | Target block time | 100ms (10 BPS) | 10 minutes |
 | Window size | 661 sampled blocks spanning 2,641 seconds (~44 min) | 2,016 blocks (~2 weeks) |
 | Response to 2x hashrate | Minutes | ~2 weeks |
-| Timestamp source | Selected parent chain | Linear chain |
+| Timestamp source | Sampled DAA window in selected-parent context (including eligible mergeset samples) | Linear chain |
 | Timestamp protection | Median-based, bounded | Median-based, bounded |
 
 The key advantage of Kaspa's approach is responsiveness. Bitcoin's two-week adjustment interval means that significant hash rate changes (such as miners switching between coins or large farms going online/offline) cause extended periods of abnormal block production. Kaspa's per-block adjustment keeps block times close to the target even during rapid hash rate changes.

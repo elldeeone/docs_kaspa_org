@@ -75,10 +75,9 @@ The SDK supports the following environments:
 | Platform | Status | Notes |
 |---|---|---|
 | Chrome, Firefox, Safari, Edge | Supported | Requires async WASM initialization |
-| Node.js 16+ | Supported | Synchronous module loading; needs WebSocket shim |
-| Bun | Supported | No WebSocket shim required |
-| Deno | Experimental | ESM imports |
-| React Native | Experimental | Community-tested |
+| Node.js | Supported | CommonJS package flow; WebSocket shim needed unless using the `kaspa` wrapper |
+
+For Bun, Deno, and React Native, treat support as environment-specific and verify against the exact SDK release you deploy.
 
 ## Browser Integration
 
@@ -231,9 +230,9 @@ node nodejs/javascript/general/rpc.js
 The `node init` command creates a local `examples/data/config.json` containing a private key (mnemonic) shared across Node.js examples. Most examples accept the following arguments:
 
 ```bash
-node <script> [address] [mainnet|testnet-10|testnet-11] \
+node <script> [address] [mainnet|testnet-10|simnet] \
   [--address <address>] \
-  [--network <mainnet|testnet-10|testnet-11>] \
+  [--network <mainnet|testnet-10|simnet>] \
   [--encoding <borsh|json>]
 ```
 
@@ -419,7 +418,7 @@ rpc.addEventListener("block-added", (e) => console.log("Block:", e.data.block.he
 
 await rpc.subscribeUtxosChanged(["kaspa:your-address"]);
 rpc.addEventListener("utxos-changed", (e) => {
-  for (const entry of e.data.added) console.log("Received:", entry.utxoEntry.amount, "sompi");
+  for (const entry of e.data.added) console.log("Received:", entry.amount, "sompi");
 });
 ```
 
@@ -446,4 +445,3 @@ The SDK ships with full TypeScript declarations -- all classes, method signature
 - [Rust Documentation (docs.rs)](https://docs.rs/kaspa-wasm/latest/kaspa_wasm/index.html) -- Rust-level API reference.
 - [TypeScript Documentation](https://kaspa.aspectron.org/docs/) -- TypeDoc-generated API reference.
 - [WASM SDK Examples on GitHub](https://github.com/kaspanet/rusty-kaspa/tree/master/wasm/examples/) -- Official example code for Node.js and web browsers.
-- [Aspectron Integration Guide](https://kaspa.aspectron.org/) -- Additional integration documentation.

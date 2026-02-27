@@ -9,7 +9,7 @@ Kaspa's gRPC interface uses a **bidirectional streaming** model. The service def
 
 ```protobuf
 service RPC {
-  rpc MessageStream (stream KaspadMessage) returns (stream KaspadMessage);
+  rpc MessageStream (stream KaspadRequest) returns (stream KaspadResponse);
 }
 ```
 
@@ -26,7 +26,7 @@ Subscribing to events via gRPC follows the same logical model as wRPC subscripti
 5. **Unsubscribe** -- Send an unsubscribe request to stop receiving notifications for that event type.
 
 <Callout type="info">
-All notifications for all active subscriptions are delivered over the same bidirectional stream. Your client must inspect the `oneof` field in each incoming `KaspadMessage` to determine the notification type and dispatch it accordingly.
+All notifications for all active subscriptions are delivered over the same bidirectional stream. Your client must inspect the `payload` `oneof` in each incoming `KaspadResponse` and dispatch by message type.
 </Callout>
 
 ## Available Notification Types
@@ -51,41 +51,31 @@ The following example demonstrates subscribing to block notifications and DAA sc
 ```rust
 use kaspa_grpc_client::GrpcClient;
 use kaspa_rpc_core::api::rpc::RpcApi;
-use kaspa_rpc_core::notify::connection::ChannelConnection;
-use kaspa_rpc_core::Notification;
+use kaspa_notify::scope::{BlockAddedScope, Scope, VirtualDaaScoreChangedScope};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = GrpcClient::connect(
-        "grpc://127.0.0.1:16110".to_string(),
-        true,
-        None,
-        false,
-        None,
-    )
-    .await?;
+    let client = GrpcClient::connect("grpc://127.0.0.1:16110".to_string()).await?;
 
     // Subscribe to block-added notifications
-    client.start_notify(
-        Default::default(),
-        Notification::BlockAdded(Default::default()),
-    ).await?;
+    client
+        .start_notify(Default::default(), Scope::BlockAdded(BlockAddedScope::default()))
+        .await?;
 
     // Subscribe to DAA score changes
-    client.start_notify(
-        Default::default(),
-        Notification::VirtualDaaScoreChanged(Default::default()),
-    ).await?;
+    client
+        .start_notify(
+            Default::default(),
+            Scope::VirtualDaaScoreChanged(VirtualDaaScoreChangedScope::default()),
+        )
+        .await?;
 
     println!("Listening for notifications...");
 
-    // Process notifications from the client's notification channel
-    // The GrpcClient delivers notifications via an internal channel
-    // that you can consume in your application loop.
+    let receiver = client.notification_channel_receiver();
     loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        // In production, read from the notification channel
-        // provided by the GrpcClient's listener infrastructure
+        let notification = receiver.recv().await?;
+        println!("Notification: {:?}", notification);
     }
 }
 ```
@@ -103,18 +93,20 @@ def run():
 
     def request_iterator():
         # Subscribe to block notifications
-        msg = messages_pb2.KaspadMessage()
-        msg.notifyBlockAddedRequest.CopyFrom(
-            messages_pb2.NotifyBlockAddedRequestMessage()
+        yield messages_pb2.KaspadRequest(
+            id=1,
+            notifyBlockAddedRequest=messages_pb2.NotifyBlockAddedRequestMessage(
+                command=0  # NOTIFY_START
+            ),
         )
-        yield msg
 
         # Subscribe to DAA score changes
-        msg = messages_pb2.KaspadMessage()
-        msg.notifyVirtualDaaScoreChangedRequest.CopyFrom(
-            messages_pb2.NotifyVirtualDaaScoreChangedRequestMessage()
+        yield messages_pb2.KaspadRequest(
+            id=2,
+            notifyVirtualDaaScoreChangedRequest=messages_pb2.NotifyVirtualDaaScoreChangedRequestMessage(
+                command=0  # NOTIFY_START
+            ),
         )
-        yield msg
 
         # Keep the stream open
         event = threading.Event()
@@ -165,12 +157,12 @@ loop {
 ```
 
 <Callout>
-After reconnection, there may be a gap between the last notification received and the current state. Use query methods like `getBlockDagInfo` or `getVirtualSelectedParentBlueScore` to catch up before relying on the notification stream.
+After reconnection, there may be a gap between the last notification received and the current state. Use query methods like `getBlockDagInfo` or `getSinkBlueScore` to catch up before relying on the notification stream.
 </Callout>
 
 ## Backpressure Considerations
 
-When the node produces notifications faster than your client can process them, backpressure builds up. In gRPC, this manifests as the server-side send buffer filling up, which can cause the node to slow down or drop the subscription.
+When the node produces notifications faster than your client can process them, backpressure builds up. In gRPC, this manifests as growing buffers and processing lag.
 
 To avoid backpressure issues:
 
@@ -181,7 +173,7 @@ To avoid backpressure issues:
 
 ## Performance Tips
 
-- **Single stream, multiple subscriptions** -- All subscriptions share one bidirectional stream. There is no benefit to opening multiple streams.
+- **Single stream, multiple subscriptions** -- All subscriptions can share one bidirectional stream. Open additional streams only if your own architecture requires it.
 - **Keep-alive settings** -- Configure HTTP/2 keep-alive pings to prevent idle connection drops, especially for subscriptions that may have infrequent notifications.
 - **Message size awareness** -- `BlockAddedNotification` messages can be large when blocks contain many transactions. Ensure your gRPC client's maximum receive message size is configured appropriately (the default of 4 MB may not be sufficient for large blocks).
 

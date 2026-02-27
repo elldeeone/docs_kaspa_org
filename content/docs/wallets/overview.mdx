@@ -5,7 +5,7 @@ description: "Overview of the Kaspa wallet ecosystem — architecture tiers, wal
 
 ## Overview
 
-The Kaspa ecosystem offers several wallet options, each suited to different use cases. All Kaspa wallets use the same HD derivation standard (BIP-32/39/44), which means your 24-word seed phrase is portable -- you can recover your funds in any compatible wallet.
+The Kaspa ecosystem offers several wallet options, each suited to different use cases. Kaspa wallets use BIP-32/39-based HD derivation, but full portability depends on using the same account type/path family (standard, multisig, or legacy). Mnemonic flows commonly use 12-word or 24-word phrases.
 
 This page helps you understand the wallet architecture, choose the right wallet for your needs, and understand the trade-offs between security, convenience, and functionality.
 
@@ -21,8 +21,8 @@ The foundation of the wallet stack is a set of cryptographic and encoding primit
 |---|---|
 | **Mnemonics** | BIP-39 seed phrase generation and recovery. Supports 12-word and 24-word phrases with optional passphrases. Converts human-readable word sequences into deterministic seeds for key derivation. |
 | **Keys** | secp256k1 elliptic curve key operations. Generates private/public keypairs, handles key serialization, and provides the signing primitives used for Schnorr signatures. Built on a customized `kaspa-bip32` crate. |
-| **Derivation** | BIP-32 hierarchical deterministic key derivation following the BIP-44 path `m/44'/111111'/account'/change/index`. Generates unlimited receive and change addresses from a single seed. |
-| **Addresses** | Kaspa address encoding and validation. Addresses consist of a network prefix (`kaspa:` for mainnet, `kaspatest:` for testnet), a bech32-encoded public key, and a checksum. |
+| **Derivation** | BIP-32 hierarchical deterministic derivation. Standard accounts use BIP-44 style paths (`m/44'/111111'/account'/change/index`), with separate variants for multisig/legacy account families. |
+| **Addresses** | Kaspa address encoding and validation. Prefixes include `kaspa:` (mainnet), `kaspatest:` (testnet), `kaspasim:` (simnet), and `kaspadev:` (devnet). Address versions include public-key, script-hash, and ECDSA-related variants. |
 
 These primitives are available as standalone Rust crates (`kaspa-bip32`, `kaspa-addresses`, `kaspa-consensus-core`) and through the WASM SDK for JavaScript/TypeScript environments.
 
@@ -62,10 +62,7 @@ At the top of the stack are the wallet applications that users interact with dir
 |---|---|---|
 | [Web Wallet](https://wallet.kaspanet.io) | Browser | WASM SDK |
 | [CLI Wallet](/docs/wallets/cli-wallet) | Terminal | Wallet API (Rust) |
-| Kaspa NG | Desktop / Browser | Wallet API (Rust + WASM) |
-| KasVault | Browser extension | WASM SDK |
-| [Ledger](/docs/wallets/hardware-wallets) | Hardware device | Hardware signing + companion app |
-| Tangem | NFC card + phone | Hardware signing + mobile app |
+| [Hardware Wallets](/docs/wallets/hardware-wallets) | Hardware device + companion software | Hardware signing flow |
 
 ## Wallet Types
 
@@ -77,39 +74,29 @@ The [Kaspa Web Wallet](https://wallet.kaspanet.io) runs entirely in your browser
 
 The [CLI Wallet](/docs/wallets/cli-wallet) (`kaspa-wallet`) is a command-line tool included in the rusty-kaspa project. It connects to a Kaspa node via wRPC and performs all key management and signing locally. The CLI wallet is ideal for server environments, scripting, and advanced operations like multi-sig and UTXO sweeps.
 
-### Browser Extension (KasVault)
-
-KasVault is a browser extension wallet similar to MetaMask. It integrates with web-based Kaspa dApps, allowing you to approve transactions and sign messages directly from your browser. KasVault can also interface with Ledger hardware wallets for hardware-backed signing.
-
 ### Hardware Wallets
 
-[Hardware wallets](/docs/wallets/hardware-wallets) store your private keys on a dedicated physical device with a secure element. Kaspa is supported on Ledger (Nano S Plus, Nano X) and Tangem NFC cards. Hardware wallets are the recommended option for securing large amounts of KAS.
-
-### Mobile Wallets
-
-Mobile wallets are available for iOS and Android, including the Tangem app and community-developed wallets. These are convenient for on-the-go transactions and point-of-sale payments.
+[Hardware wallets](/docs/wallets/hardware-wallets) store your private keys on a dedicated physical device with a secure element. They are generally the strongest option for long-term custody because signing can be isolated from day-to-day computing environments.
 
 ## Comparison Table
 
-| Feature | Web Wallet | CLI Wallet | KasVault | Ledger | Tangem |
-|---|---|---|---|---|---|
-| Platform | Browser | Terminal | Browser extension | USB device | NFC card + phone |
-| Key storage | Browser (local) | Encrypted file | Browser extension | Secure element | Secure chip |
-| dApp integration | No | No | Yes | Via companion app | No |
-| Multi-sig support | No | Yes | No | No | No |
-| Hardware key isolation | No | No | No | Yes | Yes |
-| Ease of use | High | Low | High | Medium | High |
-| Best for | Daily use | Servers, scripting | dApp interaction | Large holdings | Simple mobile use |
+| Feature | Web Wallet | CLI Wallet | Hardware Wallets |
+|---|---|---|---|
+| Platform | Browser | Terminal | Dedicated device + companion software |
+| Key storage | Browser (local encrypted data) | Encrypted wallet file | Secure element/chip on device |
+| Automation and scripting | Limited | Strong | Limited |
+| Hardware key isolation | No | No | Yes |
+| Best for | Fast onboarding and daily use | Infrastructure, automation, advanced workflows | Long-term custody and high-value storage |
 
 ## Recommendations by Use Case
 
 ### Daily Spending and Receiving
 
-Use the **Web Wallet** or **KasVault** browser extension. Both provide a straightforward interface for sending and receiving KAS. The web wallet requires no installation beyond visiting a URL, while KasVault integrates with dApps.
+Use the **Web Wallet** for straightforward sending and receiving. It is the fastest way to get started and works well for routine balances.
 
 ### Large Holdings and Long-Term Storage
 
-Use a **hardware wallet** (Ledger or Tangem). Your private keys remain on the physical device and are never exposed to your computer. Even if your machine is compromised, an attacker cannot extract your keys.
+Use a **hardware wallet**. Your private keys remain on the physical device and are not directly exposed to your workstation environment.
 
 <Callout>
 For significant holdings, a hardware wallet is strongly recommended. Software wallets -- even well-designed ones -- are only as secure as the device they run on.
@@ -121,7 +108,7 @@ Use the **CLI Wallet**. It supports scripting, automation, and advanced features
 
 ### dApp Interaction
 
-Use **KasVault**. It functions like MetaMask for the Kaspa ecosystem, providing a popup-based approval flow for web applications that request transaction signatures.
+Use a wallet that explicitly supports the dApp signing flow your application requires. Verify compatibility in the wallet provider's current documentation before relying on it in production.
 
 ### Custom Wallet Development
 
@@ -133,14 +120,14 @@ For building your own wallet application, choose the appropriate tier:
 
 ## Seed Phrase Portability
 
-All standard Kaspa wallets derive keys using the same BIP-44 derivation path (`m/44'/111111'/0'/0/index`). This means:
+For standard BIP-32 account families, wallets derive keys using BIP-44 style paths (`m/44'/111111'/0'/0/index`). In practice:
 
-- A wallet created in the web wallet can be recovered in the CLI wallet using the same 24-word seed phrase.
-- A wallet created in KasVault can be recovered on a Ledger device (if the same mnemonic is used).
-- You can freely move between wallets without losing access to your funds.
+- Recovery is typically portable across wallets that support the same account family and derivation path.
+- Both 12-word and 24-word mnemonic flows are common, but support details vary by wallet implementation.
+- Legacy, multisig, or watch-only account models may require wallet-specific migration/import steps.
 
 <Callout type="info">
-Tangem cards are an exception -- they use a multi-card backup system instead of a seed phrase. Tangem wallets cannot be recovered using a mnemonic in other wallet software.
+Some wallet products use different backup/recovery models. Always verify recovery compatibility before funding a wallet.
 </Callout>
 
 ## Choosing a Wallet: Quick Guide
@@ -148,14 +135,14 @@ Tangem cards are an exception -- they use a multi-card backup system instead of 
 - **New to Kaspa?** Start with the [Web Wallet](/docs/wallets/web-wallet).
 - **Holding more than you can afford to lose?** Get a [hardware wallet](/docs/wallets/hardware-wallets).
 - **Building applications or running infrastructure?** Use the [CLI Wallet](/docs/wallets/cli-wallet).
-- **Interacting with dApps?** Install KasVault.
+- **Interacting with dApps?** Use a wallet that documents dApp-signing support for your target application.
 - **Building a custom wallet?** Start with the [Wallet API](/docs/wallets/wallet-api) or [Wallet SDK](/docs/wallets/wallet-sdk).
 
 ## Further Reading
 
 - [Web Wallet](/docs/wallets/web-wallet) -- Browser-based wallet guide.
 - [CLI Wallet](/docs/wallets/cli-wallet) -- Command-line wallet for advanced users.
-- [Hardware Wallets](/docs/wallets/hardware-wallets) -- Ledger and Tangem setup.
+- [Hardware Wallets](/docs/wallets/hardware-wallets) -- Device setup and security workflow.
 - [HD Derivation](/docs/wallets/hd-derivation) -- How key derivation works under the hood.
 - [Wallet SDK](/docs/wallets/wallet-sdk) -- Building custom wallets with the Rust/WASM framework.
 - [Wallet API](/docs/wallets/wallet-api) -- Complete wallet management interface.

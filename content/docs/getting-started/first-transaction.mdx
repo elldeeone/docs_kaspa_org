@@ -18,7 +18,7 @@ Start it by running:
 This opens an interactive prompt where you can issue wallet commands.
 
 <Callout type="info">
-The wallet connects to a local `kaspad` node via wRPC on `127.0.0.1:17110` by default. Ensure your node is running with the `--utxoindex` flag before using the wallet.
+By default, wallet settings use `server=public` (resolver-backed public infrastructure). To force a local node, set `server 127.0.0.1:17110` and run `connect`. Ensure your node is running with `--utxoindex` so wallet/address-indexed queries are available.
 </Callout>
 
 ## Creating a New Wallet
@@ -26,13 +26,13 @@ The wallet connects to a local `kaspad` node via wRPC on `127.0.0.1:17110` by de
 At the wallet prompt, create a new wallet:
 
 ```
-wallet> create
+wallet> wallet create
 ```
 
-You will be prompted to set an encryption password and will be shown a **24-word mnemonic phrase**. This mnemonic is the sole backup of your wallet.
+You will be prompted to set an encryption password and will be shown a mnemonic phrase (the current wizard defaults to **12 words**). This mnemonic is the sole backup of your wallet.
 
 <Callout type="error">
-Write down your 24-word mnemonic phrase immediately and store it securely offline. If you lose this phrase, your funds are permanently unrecoverable. Never share it with anyone, and never store it digitally in an unencrypted format.
+Write down your mnemonic phrase immediately and store it securely offline. If you lose this phrase, your funds are permanently unrecoverable. Never share it with anyone, and never store it digitally in an unencrypted format.
 </Callout>
 
 After creation, the wallet automatically opens and is ready to use.
@@ -42,7 +42,7 @@ After creation, the wallet automatically opens and is ready to use.
 If you have previously created a wallet, open it with:
 
 ```
-wallet> open
+wallet> wallet open
 ```
 
 You will be prompted for the encryption password you set during creation.
@@ -88,7 +88,7 @@ Kaspa addresses are derived using BIP-32 hierarchical deterministic (HD) key der
 To see your wallet balance after receiving funds:
 
 ```
-wallet> balance
+wallet> list
 ```
 
 This queries the UTXO index on your connected node and displays both your mature (spendable) balance and any pending balance:
@@ -107,37 +107,36 @@ To send KAS to another address, use the `send` command:
 wallet> send kaspa:qpxz2rk7nqtf60stqa0ney8xsjxhgcpruxr69z6xyufge9a5cg4vk0yznw8x 10.5
 ```
 
-This sends 10.5 KAS to the specified address. You will be asked to confirm the transaction details before it is broadcast:
+This sends 10.5 KAS to the specified address and prints a summary with submitted transaction IDs:
 
 ```
-Sending 10.50000000 KAS to kaspa:qpxz2rk7nqtf60stqa0ney8xsjxhgcpruxr69z6xyufge9a5cg4vk0yznw8x
-Fee: 0.00003000 KAS
-Confirm (y/n): y
-Transaction submitted: abc123def456...
+Send - ...
+Sending 10.5 KAS to kaspa:qpxz2rk7nqtf60stqa0ney8xsjxhgcpruxr69z6xyufge9a5cg4vk0yznw8x, tx ids:
+...
 ```
 
 <Callout type="info">
-Kaspa transaction fees are extremely low, typically fractions of a cent. Fees are calculated based on the transaction mass (size in bytes and number of inputs/outputs), not on network congestion.
+Kaspa transaction fees are calculated from transaction mass (size and script operations), not account-style gas. Fees are typically low in sompi terms; fiat cost varies with market price.
 </Callout>
 
 ### Transaction Confirmation
 
-Because Kaspa produces 10 blocks per second, your transaction will be included in a block almost immediately -- typically within 1 second. Full confirmation (where the transaction reaches sufficient depth in the BlockDAG) takes approximately 10 seconds.
+At 10 BPS, inclusion is usually quick, but exact timing depends on network and node conditions. For higher assurance, rely on your own DAA-depth policy rather than a fixed wall-clock time.
 
 You can verify the transaction was accepted by checking your balance:
 
 ```
-wallet> balance
+wallet> list
 ```
 
 Or by looking up the transaction ID on a Kaspa block explorer like [kas.fyi](https://kas.fyi).
 
-## Compound Transactions (UTXO Management)
+## UTXO Consolidation (Sweep)
 
-If your wallet has received many small UTXO entries (for example, from mining), you may need to compound them before sending larger amounts. The wallet handles this automatically by creating compound transactions when needed, but you can also trigger it manually:
+If your wallet has received many small UTXO entries (for example, from mining), you may need to consolidate them before sending larger amounts. The wallet handles this automatically when needed, and you can also trigger a manual sweep:
 
 ```
-wallet> compound
+wallet> sweep
 ```
 
 This consolidates small UTXOs into larger ones, making future transactions more efficient.
@@ -147,25 +146,25 @@ This consolidates small UTXOs into larger ones, making future transactions more 
 If you need to restore your wallet on a new machine or after data loss, use:
 
 ```
-wallet> import
+wallet> wallet import
 ```
 
-You will be prompted to enter your 24-word mnemonic phrase and set a new encryption password. After import, connect to a synced node and the wallet will scan the UTXO set to recover your balance.
+You will be prompted to enter your mnemonic phrase and set a new encryption password. After import, connect to a synced node and the wallet will scan the UTXO set to recover your balance.
 
 ## Summary of Wallet Commands
 
 | Command | Description |
 | --- | --- |
-| `create` | Create a new wallet with a fresh mnemonic |
-| `open` | Open an existing wallet file |
+| `wallet create` | Create a new wallet with a fresh mnemonic |
+| `wallet open` | Open an existing wallet file |
 | `connect` | Connect the wallet to a kaspad node |
 | `address` | Generate a new receive address |
-| `balance` | Display current wallet balance |
+| `list` | List accounts and balances |
 | `send <address> <amount>` | Send KAS to an address |
-| `compound` | Consolidate small UTXOs |
-| `import` | Recover a wallet from a mnemonic phrase |
+| `sweep` | Consolidate account UTXOs |
+| `wallet import` | Recover a wallet from a mnemonic phrase |
 | `export` | Display the current wallet's mnemonic |
-| `close` | Close the current wallet |
+| `wallet close` | Close the current wallet |
 | `exit` | Exit the wallet CLI |
 
 ## Next Steps

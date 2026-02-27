@@ -13,6 +13,10 @@ An SPV client downloads only block headers rather than full blocks. Since header
 SPV clients trust that the majority of hash power is honest — they verify proof-of-work and block inclusion but do not independently validate every transaction in every block.
 </Callout>
 
+<Callout type="info">
+This page is conceptual guidance. Kaspa does not currently define a single canonical "SPV client implementation spec" in this docs section.
+</Callout>
+
 ## SPV in a BlockDAG Context
 
 SPV in Kaspa's BlockDAG is conceptually similar to SPV in Bitcoin, but the DAG structure introduces additional considerations:
@@ -24,41 +28,41 @@ In a traditional blockchain, each block header points to a single parent, formin
 This means an SPV client needs to:
 
 1. Download and store the DAG of block headers.
-2. Run a local copy of the GHOSTDAG algorithm on the headers to determine the canonical ordering and blue/red classification.
-3. Identify the selected parent chain (the "spine" of the DAG).
+2. Determine canonical ordering information from trusted node responses and/or local header processing, depending on client design.
+3. Track selected-parent/blue-score progress used by the chosen verification strategy.
 
 ### Header Volume
 
 At 10 BPS, Kaspa produces approximately 864,000 block headers per day. While each header is small, the aggregate volume is significantly larger than what a Bitcoin SPV client would encounter (~144 headers per day). SPV clients in Kaspa need to account for this higher header throughput in their sync and storage strategies.
 
 <Callout type="info">
-Despite the higher header volume, Kaspa block headers are compact. The total header data for an entire year at 10 BPS is still manageable for modern mobile devices, on the order of a few gigabytes.
+Despite the higher header volume, headers are still much smaller than full blocks. Storage impact depends on the wallet's sync strategy, retention policy, and encoding.
 </Callout>
 
 ## Proof-of-Inclusion
 
-To verify that a specific transaction was included in the DAG, an SPV client requests a **proof-of-inclusion** from a full node. This proof consists of:
+To verify that a specific transaction was included in the DAG, an SPV client requests a **proof-of-inclusion** from one or more full nodes. A typical proof package can include:
 
 1. **Merkle proof**: A cryptographic proof that the transaction is included in a specific block's Merkle tree. This is the same mechanism used in Bitcoin — the block header contains the Merkle root of all transactions in the block, and the proof provides the sibling hashes along the path from the transaction to the root.
 
-2. **Block header**: The header of the block containing the transaction, which the SPV client can verify is part of the DAG by checking its parent references and proof-of-work.
+2. **Block header**: The header of the block containing the transaction, which the client can validate for proof-of-work and parent-link consistency.
 
-3. **DAG position**: The SPV client uses its local GHOSTDAG computation to determine where the block falls in the canonical ordering and how many confirmations (blue score depth) the block has accumulated.
+3. **Ordering/finality evidence**: Depending on the client model, ordering confidence can come from local header processing, trusted checkpoints, or multi-peer cross-checking.
 
-The SPV client can then verify:
+The SPV client can then verify, under its chosen trust model:
 
 - The transaction is included in the block (via the Merkle proof).
 - The block is part of the DAG (via parent references to known headers).
 - The block has a valid proof-of-work.
-- The block is in the blue set and has sufficient confirmations (via local GHOSTDAG computation).
+- The transaction has reached the confirmation depth required by the wallet's policy.
 
 ## GHOSTDAG-Aware Verification
 
-A key difference between SPV in Kaspa and SPV in Bitcoin is that Kaspa SPV clients must be **GHOSTDAG-aware**. This means:
+A key difference between SPV in Kaspa and SPV in Bitcoin is that some Kaspa light-client designs include **GHOSTDAG-aware** logic. Depending on design, this can include:
 
-- **Blue set verification**: The client must determine whether the block containing their transaction is in the blue set. A transaction in a red block may still be valid, but it has a different security profile than one in a blue block.
-- **Confirmation depth**: Instead of counting blocks on top of the transaction's block (as in Bitcoin), the client counts the increase in blue score since the block was added. This provides a more accurate measure of finality in a DAG.
-- **Selected chain awareness**: The client should track the selected parent chain to determine the canonical ordering of transactions and detect potential conflicts.
+- **Blue/red awareness** for confidence heuristics.
+- **Blue-score depth tracking** rather than linear-chain block counts.
+- **Selected-parent progression** to reason about canonical ordering conflicts.
 
 ## Security Considerations
 
@@ -70,10 +74,10 @@ SPV clients assume that the majority of hash power follows the protocol honestly
 
 ### Eclipse Attacks
 
-An SPV client that connects only to adversarial nodes could be fed a false view of the DAG. Mitigations include:
+An SPV client that connects only to adversarial nodes could be fed a false view of the DAG. Mitigations can include:
 
 - Connecting to multiple independent peers.
-- Using hardcoded checkpoints for known-good DAG states.
+- Using checkpoints from trusted software releases or independent sources.
 - Cross-referencing header data from multiple sources.
 
 ### Transaction Withholding
@@ -84,40 +88,40 @@ A full node could prove that a transaction is included in a block but withhold i
 SPV provides practical security for everyday transactions. For high-value transfers, users should wait for deeper confirmations or use a full node for verification.
 </Callout>
 
-## Light Client Sync Strategies
+## Light Client Sync Strategies (Conceptual)
 
-Given the high header volume in Kaspa, SPV clients can employ several strategies to reduce sync time and resource usage:
+Given the high header volume in Kaspa, light clients can employ several strategies to reduce sync time and resource usage. These are design options, not protocol-mandated behavior:
 
 ### Header Checkpoints
 
-The client can ship with recent header checkpoints — known-good points in the DAG that have been verified by the developer community. The client only needs to download and verify headers from the most recent checkpoint forward, significantly reducing initial sync time.
+Some clients can ship with recent checkpoints (or trusted sync anchors) and then verify forward from that point, reducing initial sync time.
 
 ### Header Compression
 
-Block headers in the DAG contain repeated information (such as parent hashes that appear in multiple headers). Compression techniques can reduce the bandwidth required to transmit headers between full nodes and SPV clients.
+Compression techniques can reduce the bandwidth required to transmit headers between full nodes and light clients.
 
 ### Selective Header Download
 
-For clients that only need to verify recent transactions, it may be sufficient to download only the headers from a recent pruning point forward, rather than the entire header history. Combined with UTXO commitments in headers, this allows a client to verify the current state without processing the full header DAG.
+For clients that only need recent activity, downloading from a recent trusted point can reduce sync cost. Security tradeoffs depend on what trust anchors and proofs are used.
 
 ### UTXO Commitment Verification
 
-Kaspa block headers include a commitment to the UTXO set. An SPV client can download a UTXO snapshot at a recent point and verify it against the header commitment. This allows the client to check whether a specific UTXO exists (and thus whether a payment has been received) without needing a full Merkle proof for the historical transaction.
+Kaspa block headers include a commitment to the UTXO set. A light client can use this in snapshot-validation flows, but commitment matching alone does not replace full historical inclusion proofs for arbitrary past transactions.
 
 ## Mobile Wallet Implications
 
-SPV is particularly important for mobile wallets, which operate under constraints of limited storage, bandwidth, and processing power. Kaspa's SPV model enables mobile wallets to:
+SPV is particularly important for mobile wallets, which operate under constraints of limited storage, bandwidth, and processing power. Depending on wallet design, light-client mode can enable mobile wallets to:
 
-- **Verify incoming payments** by requesting Merkle proofs from full nodes and checking them against locally stored headers.
-- **Monitor the UTXO set** for outputs addressed to the wallet's keys.
-- **Submit transactions** by broadcasting signed transactions to connected full nodes.
-- **Track confirmations** by following the DAG's growth and computing blue score increases for pending transactions.
+- **Verify incoming payments** from proof packages returned by full nodes.
+- **Track wallet-relevant activity** using the wallet's indexing/sync method.
+- **Submit signed transactions** to connected full nodes.
+- **Track confirmations** with wallet-defined confidence thresholds.
 
-The main tradeoff is that mobile wallets must either download a significant number of headers or rely on trusted checkpoints. With Kaspa's header rate, a mobile client that has been offline for a day would need to sync approximately 864,000 headers upon reconnection. Efficient sync protocols and checkpoint mechanisms make this practical on modern mobile hardware.
+The main tradeoff is header-sync cost versus trust assumptions. For example, a client offline for a day may need to process on the order of ~864,000 new headers at 10 BPS unless it uses checkpointed/trusted sync shortcuts.
 
 ## Further Reading
 
 - [BlockDAG Architecture](/docs/core-concepts/blockdag) — The DAG structure that SPV clients must navigate.
-- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — The consensus protocol that SPV clients run locally on headers.
+- [GHOSTDAG Protocol](/docs/core-concepts/ghostdag) — Consensus ordering context that light-client designs may use.
 - [Pruning & Data Management](/docs/core-concepts/pruning) — How pruning affects the availability of historical data for SPV proofs.
 - [Transactions](/docs/core-concepts/transactions) — The transaction structure that SPV clients verify.

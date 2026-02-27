@@ -1,6 +1,6 @@
 ---
 title: Restore from Mnemonic
-description: "Restore a Kaspa wallet from a 24-word mnemonic seed phrase."
+description: "Restore a Kaspa wallet from a 12-word or 24-word mnemonic seed phrase."
 ---
 
 ## Prerequisites
@@ -155,7 +155,7 @@ restoreWallet(phrase, "mainnet", 20).catch(console.error);
 
 The `Mnemonic` constructor validates that the input is a well-formed BIP-39 phrase. It checks:
 
-- Word count (must be 12, 15, 18, 21, or 24)
+- Word count (must be 12 or 24)
 - Each word exists in the BIP-39 English wordlist
 - The checksum is correct
 

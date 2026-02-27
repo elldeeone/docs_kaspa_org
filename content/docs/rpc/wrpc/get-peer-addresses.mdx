@@ -11,7 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `knownAddresses` | object[] | List of known peer addresses with their metadata. |
+| `knownAddresses` | object[] | List of known peer network addresses (`ip`, `port`). |
 | `bannedAddresses` | string[] | List of banned IP addresses. |
 
 ## Example
@@ -26,8 +26,8 @@ No parameters required.
 // Response
 {
   "knownAddresses": [
-    { "address": "192.168.1.100:16111" },
-    { "address": "10.0.0.50:16111" }
+    { "ip": "192.168.1.100", "port": 16111 },
+    { "ip": "10.0.0.50", "port": 16111 }
   ],
   "bannedAddresses": [
     "203.0.113.50"
@@ -37,6 +37,6 @@ No parameters required.
 
 ## Notes
 
-- Known addresses are peers the node has discovered through DNS seeds, manual additions, or address exchange with connected peers.
+- Known addresses are addresses currently stored in the node's address manager (source and scoring policy are implementation details).
 - Not all known addresses are currently connected; they are potential peers the node may connect to.
-- Banned addresses are IPs that have been explicitly banned via the `Ban` method or due to misbehavior.
+- Banned addresses are IPs currently present in the node's ban list.

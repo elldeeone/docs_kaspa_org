@@ -1,0 +1,24 @@
+# corepack yarn dev --port 3043
+PID=45910
+## HTTP
+HTTP/1.1 307 Temporary Redirect
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+location: /docs
+link: </_next/static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/chunks/%5Broot-of-the-server%5D__0785f11c._.css>; rel=preload; as="style"
+Cache-Control: no-store, must-revalidate
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Fri, 27 Feb 2026 10:03:52 GMT
+## LOG
+yarn run v1.22.22
+$ next dev --port 3043
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3043
+- Network:       http://10.0.0.150:3043
+
+✓ Starting...
+[MDX] generated files in 18.43425000000002ms
+✓ Ready in 842ms
+[MDX] started dev server
+ HEAD / 307 in 1231ms (compile: 1055ms, render: 176ms)
+[MDX] closing dev server

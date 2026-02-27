@@ -34,11 +34,11 @@ async function queryUtxos(address: string) {
   let totalSompi = 0n;
 
   for (const entry of result.entries) {
-    const kas = Number(entry.utxoEntry.amount) / 1e8;
-    totalSompi += BigInt(entry.utxoEntry.amount);
+    const kas = Number(entry.amount) / 1e8;
+    totalSompi += entry.amount;
 
     console.log(`${kas} KAS - TX: ${entry.outpoint.transactionId}:${entry.outpoint.index}`);
-    console.log(`  DAA Score: ${entry.utxoEntry.blockDaaScore}, Coinbase: ${entry.utxoEntry.isCoinbase}`);
+    console.log(`  DAA Score: ${entry.blockDaaScore}, Coinbase: ${entry.isCoinbase}`);
   }
 
   console.log(`\nTotal balance: ${Number(totalSompi) / 1e8} KAS`);
@@ -59,10 +59,10 @@ Each entry returned by `getUtxosByAddresses` contains:
 |---|---|
 | `outpoint.transactionId` | Hash of the transaction that created this output |
 | `outpoint.index` | Index of this output within the transaction |
-| `utxoEntry.amount` | Value in sompi (divide by 1e8 for KAS) |
-| `utxoEntry.blockDaaScore` | DAA score of the block that included the creating transaction |
-| `utxoEntry.isCoinbase` | Whether this output is a mining reward |
-| `utxoEntry.scriptPublicKey` | The locking script that defines who can spend this output |
+| `amount` | Value in sompi (divide by 1e8 for KAS) |
+| `blockDaaScore` | DAA score of the block that included the creating transaction |
+| `isCoinbase` | Whether this output is a mining reward |
+| `scriptPublicKey` | The locking script that defines who can spend this output |
 
 ### Coinbase maturity
 

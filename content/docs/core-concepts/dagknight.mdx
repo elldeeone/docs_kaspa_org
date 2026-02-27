@@ -5,10 +5,10 @@ description: DAGKnight is the successor to GHOSTDAG, providing a parameterless c
 
 ## Overview
 
-DAGKnight is a consensus protocol designed to operate on BlockDAG structures, developed as the natural successor to GHOSTDAG. Its defining innovation is that it is **parameterless** — it does not require a predetermined `k` value to distinguish honest blocks from adversarial ones. Instead, DAGKnight dynamically adapts to the actual network conditions it observes, achieving optimal confirmation times without making assumptions about network propagation delay.
+DAGKnight is a consensus protocol designed to operate on BlockDAG structures, developed as a proposed successor to GHOSTDAG. Its defining innovation is that it is **parameterless** for ordering — it does not require a predetermined global `k` value to distinguish honest blocks from adversarial ones. Instead, DAGKnight adapts to observed network conditions for ordering decisions, while broader protocol integration (for example, difficulty/pruning/minting interactions) still requires explicit engineering assumptions.
 
 <Callout>
-DAGKnight removes the need to fix a delay parameter in advance. GHOSTDAG requires choosing `k` based on an estimated upper bound on network delay (`D`); DAGKnight achieves consensus without this assumption, making it robust to changing network conditions.
+DAGKnight removes the need to fix a global delay-derived `k` parameter for ordering. GHOSTDAG chooses `k` from an estimated network delay bound (`D`); DAGKnight adapts ordering confidence to observed DAG conditions.
 </Callout>
 
 ## From GHOSTDAG to DAGKnight
@@ -18,13 +18,13 @@ GHOSTDAG operates with a fixed parameter `k` that is calculated from the expecte
 - **If `D` is overestimated**: The protocol is safe but confirmation times are slower than necessary, because `k` is larger than needed.
 - **If `D` is underestimated**: The protocol may misclassify honest blocks as red, potentially degrading security.
 
-DAGKnight eliminates this tradeoff entirely. It does not take `D` as an input parameter. Instead, it infers the effective delay from the DAG structure itself and adjusts its behavior accordingly.
+DAGKnight is designed to reduce this tradeoff. It does not take a fixed global `D` parameter as input for ordering; instead, it infers effective delay conditions from DAG structure and adapts its behavior.
 
 | Property | GHOSTDAG | DAGKnight |
 |---|---|---|
 | Delay parameter | Fixed `k` based on estimated `D` | None — adapts automatically |
-| Confirmation time | Depends on chosen `k` | Optimal for actual conditions |
-| Security assumption | Bounded network delay | Honest majority only |
+| Confirmation time | Depends on chosen `k` | Adapts to observed conditions (per the paper's model) |
+| Security assumption | Bounded network delay | Honest-majority assumptions in the analyzed model, plus additional integration assumptions in deployment |
 | Block classification | Blue/red via k-cluster | Blue/red via adaptive analysis |
 
 ## How DAGKnight Works
@@ -39,40 +39,23 @@ The protocol achieves this without knowing the delay `D` because:
 2. **Honest majority behavior is observable**: When a majority of hash power is honest, their block-building patterns reveal the true temporal ordering of blocks.
 3. **Adaptive thresholds**: Rather than using a fixed `k` to classify blocks, DAGKnight computes ordering confidence from the observed DAG topology.
 
-## Optimal Confirmation Times
+## Research Scope
 
-One of DAGKnight's most important theoretical properties is that it achieves **asymptotically optimal confirmation times**. This means that for any given network delay `D` and attacker hash rate, no other consensus protocol can consistently confirm transactions faster than DAGKnight.
-
-In GHOSTDAG, confirmation time is bounded by the chosen `k`, which is calibrated for the worst-case delay. If the actual delay is much lower than the assumed bound, users still wait longer than necessary. DAGKnight, by contrast, automatically provides faster confirmations when the network is performing well and slower (but still safe) confirmations when conditions degrade.
+DAGKnight literature describes an adaptive, parameterless ordering approach and analyzes it under explicit model assumptions. Those claims belong to the paper/KIP research context and should not be read as "already-live mainnet guarantees."
 
 <Callout type="info">
-DAGKnight achieves the theoretical minimum confirmation latency for any given attacker fraction and network delay — without needing to know the delay in advance. This is a provably optimal result from the DAGKnight paper.
+KIP-2 references DAGKnight as a proposed consensus upgrade. Mainnet behavior today is still governed by GHOSTDAG.
 </Callout>
-
-## Formal Security Properties
-
-The DAGKnight paper (Sompolinsky and Zohar, 2022) establishes the following security properties:
-
-- **Safety**: Under an honest majority assumption (attacker controls less than 50% of hash power), DAGKnight guarantees that confirmed transactions will not be reversed, regardless of the actual network delay.
-- **Liveness**: Transactions submitted by honest users will eventually be confirmed, even under adversarial network conditions (as long as the honest majority holds).
-- **Optimality**: The confirmation time achieved by DAGKnight is asymptotically optimal — no protocol can do better without additional assumptions about the network.
-
-These properties hold without any assumption about an upper bound on network delay `D`. The only requirement is that a majority of mining power follows the protocol honestly.
 
 ## The DAGKnight Paper
 
-The protocol was formally presented in the paper "DAGKnight: A Parameterless Generalization of Nakamoto Consensus" by Yonatan Sompolinsky and Aviv Zohar (2022). The paper proves that parameterless consensus is achievable in the BlockDAG setting and provides the DAGKnight construction as a concrete protocol achieving this goal.
-
-Key contributions of the paper include:
-
-- A formal definition of parameterless consensus and what it means for a protocol to be "optimal."
-- The DAGKnight protocol construction and its proof of security.
-- Analysis showing that DAGKnight's confirmation times match a known lower bound, establishing optimality.
-- A comparison framework between parameterized protocols (like GHOSTDAG) and parameterless ones.
+The protocol is presented in the paper "DAGKnight: A Parameterless Generalization of Nakamoto Consensus." The paper and KIP-2 are the canonical places to evaluate its formal assumptions, proofs, and deployment requirements.
 
 ## Current Status
 
 Kaspa currently runs **GHOSTDAG** as its consensus protocol. DAGKnight represents the planned next step in Kaspa's consensus evolution.
+
+KIP-2 (the DAGKnight proposal) is currently in **Proposed** status and is not active on Kaspa mainnet.
 
 The transition from GHOSTDAG to DAGKnight is a significant protocol upgrade that requires:
 
@@ -81,7 +64,7 @@ The transition from GHOSTDAG to DAGKnight is a significant protocol upgrade that
 - **Hard fork coordination**: Deploying DAGKnight requires a network-wide hard fork, since the consensus rules change fundamentally.
 
 <Callout>
-GHOSTDAG is the battle-tested consensus protocol running on Kaspa mainnet today. DAGKnight is the theoretical successor that eliminates the need for a fixed delay parameter. The upgrade path from GHOSTDAG to DAGKnight is a key item on Kaspa's research and development roadmap.
+GHOSTDAG is the consensus protocol running on Kaspa mainnet today. DAGKnight is a proposed successor with active research and design work before any production activation.
 </Callout>
 
 ## Relationship to GHOSTDAG

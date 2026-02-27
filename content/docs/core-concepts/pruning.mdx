@@ -27,13 +27,13 @@ In essence, once a block is pruned, the specific details of what transactions it
 
 Even after pruning, nodes retain critical data structures:
 
-- **Block headers**: Every block header is kept indefinitely. Headers are small (a few hundred bytes each) and contain the proof-of-work, parent references, and other metadata needed for DAG structure verification.
+- **Headers/proofs around the active consensus horizon**: Pruned nodes keep the header/proof/state data needed for ongoing validation and synchronization. Fully pruned historical headers can be deleted.
 - **UTXO set**: The complete set of unspent transaction outputs is maintained. This represents the current state of all spendable coins and is all that is needed to validate new transactions.
 - **UTXO commitment**: A cryptographic commitment to the UTXO set is included in block headers, allowing nodes to verify the integrity of the UTXO set they hold.
-- **DAG structure**: The parent-child relationships between all blocks are preserved through the headers, maintaining the full DAG topology.
+- **DAG relation data required for current operation**: Pruned nodes keep relations needed near the pruning horizon, but do not preserve full historical DAG topology indefinitely.
 
 <Callout type="info">
-The UTXO set is a compact representation of the entire current state of the Kaspa network. A new node only needs the UTXO set and block headers to fully validate new blocks and transactions.
+The UTXO set is a compact representation of current spendable state. A pruned node still validates new blocks and transactions, but with retained recent header/proof/state data rather than a complete historical DAG record.
 </Callout>
 
 ## Pruning Depth
@@ -51,7 +51,7 @@ A pruned node can still fully participate in consensus because:
 
 1. **New transaction validation**: Validating a new transaction requires checking that its inputs reference existing UTXOs and that the signatures are valid. Both of these checks use only the current UTXO set, which is fully retained.
 2. **New block validation**: Validating a new block requires checking the proof-of-work (from the header), verifying the block's transactions, and confirming that the block's parent references are valid (from retained headers).
-3. **GHOSTDAG ordering**: Computing the GHOSTDAG ordering requires only the DAG structure (block headers and parent references), all of which are retained.
+3. **GHOSTDAG ordering**: Ongoing GHOSTDAG processing uses retained consensus data near the active/pruning horizon instead of requiring an indefinitely complete historical topology.
 4. **UTXO commitment verification**: The UTXO commitment in block headers allows nodes to verify that their UTXO set is consistent with the consensus state.
 
 In short, pruned nodes lose the ability to look up historical transaction details, but they retain full ability to validate and extend the DAG.
@@ -62,7 +62,7 @@ Kaspa supports two types of nodes:
 
 ### Pruned Nodes
 
-- Store block headers, the UTXO set, and recent block bodies.
+- Store required header/proof data near the active pruning horizon, the UTXO set, and recent block bodies.
 - Discard block bodies and transaction data beyond the pruning depth.
 - Can fully validate new blocks and transactions.
 - Can participate in consensus and mining.
@@ -85,7 +85,7 @@ Running a pruned node is sufficient for most users, including miners. Archival n
 
 When a new node joins the network, it does not need to download and replay the entire history from the genesis block. Instead, it can sync using the following process:
 
-1. **Header download**: The node downloads all block headers from peers. This establishes the full DAG structure.
+1. **Header/proof synchronization**: The node downloads the header/proof data required around the pruning point and recent history.
 2. **UTXO set download**: The node downloads the UTXO set at the pruning point from peers.
 3. **UTXO commitment verification**: The node verifies that the downloaded UTXO set matches the UTXO commitment in the block headers, ensuring the set has not been tampered with.
 4. **Recent block download**: The node downloads full block data (including transaction bodies) for blocks above the pruning depth.
@@ -104,7 +104,7 @@ At 10 BPS, Kaspa produces approximately:
 | 1 day | 864,000 |
 | 1 year | ~315 million |
 
-The headers for these blocks are small and manageable. The block bodies and transaction data, however, would grow to enormous sizes without pruning. By discarding this data after finality, pruned nodes maintain a bounded storage footprint that depends primarily on the UTXO set size and header chain rather than on the total historical transaction volume.
+The headers for these blocks are small and manageable. The block bodies and transaction data, however, would grow to enormous sizes without pruning. By discarding this data after finality/pruning conditions, pruned nodes maintain a bounded storage footprint that depends primarily on UTXO state plus retained consensus/pruning data rather than full historical transaction volume.
 
 ## Pruning and SPV
 

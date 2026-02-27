@@ -61,5 +61,5 @@ Always check `isSynced` before mining. If the node is not synced, mined blocks w
 </Callout>
 
 - The miner must find a nonce that satisfies the difficulty target encoded in `bits`.
-- Request a new template frequently (at least every few seconds at 10 BPS) to avoid mining on stale DAG tips.
+- Refresh templates frequently to reduce stale-work risk as the DAG tip advances.
 - The `extraData` field is limited in size and must not exceed the maximum allowed length.

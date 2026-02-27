@@ -1,0 +1,4 @@
+content/docs/protocol-evolution/crescendo.mdx
+content/docs/protocol-evolution/kip-index.mdx
+content/docs/protocol-evolution/kips-overview.mdx
+content/docs/protocol-evolution/roadmap.mdx

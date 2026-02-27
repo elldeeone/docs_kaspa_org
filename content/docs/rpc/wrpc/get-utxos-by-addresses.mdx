@@ -14,7 +14,7 @@ description: "Retrieve all unspent transaction outputs (UTXOs) for one or more a
 | Field | Type | Description |
 |-------|------|-------------|
 | `entries` | object[] | Array of UTXO entries for the queried addresses. |
-| `entries[].address` | string | The address this UTXO belongs to. |
+| `entries[].address` | string \| null | The address this UTXO belongs to. |
 | `entries[].outpoint` | object | The outpoint (`transactionId` and `index`) identifying this UTXO. |
 | `entries[].utxoEntry` | object | The UTXO data: `amount` (u64, sompi), `scriptPublicKey`, `blockDaaScore` (u64), `isCoinbase` (bool). |
 
@@ -60,4 +60,4 @@ This method requires the node to have the UTXO index enabled (`--utxoindex` flag
 - Values are in **sompi** (1 KAS = 100,000,000 sompi).
 - Coinbase UTXOs have a maturity requirement and cannot be spent until sufficient block confirmations have passed.
 - The `blockDaaScore` indicates when the UTXO was created, which can be used to calculate its age.
-- Querying many addresses at once is more efficient than making separate calls per address.
+- Querying many addresses at once can reduce client-side round trips.

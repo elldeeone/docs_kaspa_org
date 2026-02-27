@@ -9,7 +9,7 @@ Running your own Kaspa full node gives you direct, trustless access to the netwo
 
 - **Sovereignty**: Verify the state of the ledger yourself without trusting any intermediary.
 - **Privacy**: Submit transactions directly to the network without exposing your activity to a third-party API provider.
-- **Mining**: A fully synced node with `--utxoindex` enabled is required for solo mining, as it constructs block templates locally.
+- **Mining**: A fully synced node is required for reliable solo-mining workflows; many operators also enable `--utxoindex` for wallet/address-indexed tooling.
 - **Development**: Build and test applications against a local node with full RPC access.
 
 ## System Requirements
@@ -24,6 +24,8 @@ Running your own Kaspa full node gives you direct, trustless access to the netwo
 <Callout type="warn">
 An SSD is strongly recommended. Kaspa's 10 BPS block rate generates significant disk I/O during sync and normal operation. Running on an HDD will result in extremely slow sync times and may cause the node to fall behind the DAG tip.
 </Callout>
+
+Treat these hardware values as baseline planning estimates, not protocol-enforced limits.
 
 ## Quick Start
 
@@ -53,7 +55,7 @@ kaspad --utxoindex --rpclisten=0.0.0.0:16110
 
 | Flag | Purpose |
 |---|---|
-| `--utxoindex` | Maintains a UTXO index required for mining and wallet queries. |
+| `--utxoindex` | Maintains a UTXO index used by wallet/address-indexed RPC queries. |
 | `--rpclisten` | Sets the gRPC listen address and port. Default is `127.0.0.1:16110`. |
 
 <Callout type="info">
@@ -69,7 +71,7 @@ When a new node starts for the first time, it syncs with the network in several 
 3. **Recent blocks download**: Full block data (including transactions) is downloaded for blocks above the pruning depth.
 4. **Validation and catch-up**: The node validates recent blocks and catches up to the current DAG tip.
 
-Sync time depends on your hardware, network bandwidth, and the current size of the DAG. On a machine with an SSD and a fast internet connection, initial sync typically takes 30 minutes to a few hours. On an HDD or with limited RAM, it may take significantly longer.
+Sync time depends on your hardware, network bandwidth, and current DAG size. On SSD/NVMe systems with strong connectivity, sync is typically much faster than HDD-based systems, but exact durations vary.
 
 <Callout>
 You can monitor sync progress in the log output. The node logs its current blue score and the timestamp of the DAG tip it has reached. Once the logged timestamp is close to the current wall clock time, the node is fully synced.
@@ -89,18 +91,18 @@ kaspad stores its blockchain data, logs, and configuration in a platform-specifi
 
 | Platform | Default Path |
 |---|---|
-| Linux | `~/.kaspad/kaspa-mainnet/` |
-| macOS | `~/Library/Application Support/kaspad/kaspa-mainnet/` |
-| Windows | `%APPDATA%\kaspad\kaspa-mainnet\` |
+| Linux | `~/.rusty-kaspa/kaspa-mainnet/datadir/` |
+| macOS | `~/.rusty-kaspa/kaspa-mainnet/datadir/` |
+| Windows | `%LOCALAPPDATA%\rusty-kaspa\kaspa-mainnet\datadir\` |
 
-You can override this location with the `--appdir` flag. The data directory contains the block database, UTXO set, peer information, and log files.
+You can override this location with the `--appdir` flag. The data directory contains the block database and related state; logs are under the sibling network path `.../logs/` unless `--nologfiles` is set.
 
 ## Peer Discovery
 
 Kaspa nodes discover peers through DNS seeders that maintain lists of active nodes on the network. The DNS seeder implementations are open source:
 
 - [dnsseeder](https://github.com/kaspanet/dnsseeder) — The original Go-based DNS seeder for Kaspa's P2P network.
-- [rusty-dnsseeder](https://github.com/elldeeone/rusty-dnsseeder) — A Rust rewrite of the DNS seeder (under testing).
+- [rusty-dnsseeder](https://github.com/elldeeone/rusty-dnsseeder) — A Rust implementation of a Kaspa DNS seeder.
 
 If your node cannot find peers, ensure that DNS resolution is working and that your firewall allows outbound connections on the P2P port (16111 for mainnet).
 

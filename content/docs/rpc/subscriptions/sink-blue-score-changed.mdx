@@ -5,7 +5,7 @@ description: "NotifySinkBlueScoreChanged — subscribe to blue score updates as 
 
 ## Overview
 
-The `notifySinkBlueScoreChanged` subscription notifies your application whenever the blue score of the DAG sink (the virtual selected parent) changes. The blue score is a monotonically increasing counter that represents the number of blue blocks in the selected parent chain from genesis. It serves as Kaspa's analogue to block height in a traditional blockchain.
+The sink-blue-score-changed subscription notifies your application whenever the blue score of the DAG sink (the virtual selected parent) changes. Blue score is a monotonically increasing GHOSTDAG score associated with block ordering and progression.
 
 ## Subscribe
 
@@ -13,14 +13,7 @@ The `notifySinkBlueScoreChanged` subscription notifies your application whenever
 await rpc.subscribeSinkBlueScoreChanged();
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifySinkBlueScoreChanged",
-  "params": {}
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `SinkBlueScoreChanged` scope payload. gRPC uses `NotifySinkBlueScoreChangedRequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 
@@ -57,8 +50,8 @@ While both are monotonically increasing, blue score and DAA score serve differen
 
 | Property | Blue Score | DAA Score |
 |---|---|---|
-| **Meaning** | Count of blue blocks in selected chain | Difficulty-weighted block count |
-| **Increments by** | 1 per chain block | Varies based on timestamps and difficulty |
+| **Meaning** | GHOSTDAG blue score of the selected sink block | Difficulty-adjustment clock used by consensus rules |
+| **Increments by** | Variable increments (not fixed to +1) | Variable increments |
 | **Use** | Confirmation depth, chain progression | Timing, difficulty adjustment, lock times |
 | **Subscription** | `notifySinkBlueScoreChanged` | `notifyVirtualDaaScoreChanged` |
 
@@ -69,5 +62,5 @@ While both are monotonically increasing, blue score and DAA score serve differen
 - **Sync monitoring** -- Track how quickly the node is catching up during initial block download.
 
 <Callout type="info">
-The blue score increases by exactly 1 for each new chain block. At 10 BPS, you can expect approximately 10 blue score increments per second under normal conditions.
+Blue score is monotonic, but increment size is not fixed. Use it as an ordering/progression metric, not as a wall-clock substitute.
 </Callout>

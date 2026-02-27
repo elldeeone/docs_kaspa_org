@@ -17,24 +17,26 @@ Rather than relying on a simple byte-size metric, Kaspa uses a **mass system** t
 Transaction mass ensures that transactions which are expensive for the network to process -- whether due to complex scripts, large size, or UTXO set growth -- pay proportionally higher fees.
 </Callout>
 
-The network enforces two hard mass limits:
+Kaspa commonly uses these two limits:
 
 | Limit | Value | Description |
 |---|---|---|
-| Maximum transaction mass | 100,000 grams | No single transaction can exceed this (mempool standard) |
+| Maximum transaction mass | 100,000 grams | Standard mempool policy limit for individual transactions |
 | Maximum block mass | 500,000 grams | Total mass of all transactions in a block (consensus rule) |
 
 With 10 blocks per second and a maximum block mass of 500,000, the network has an aggregate mass budget of 5,000,000 mass units per second across all concurrent blocks.
 
 ## How Mass Is Calculated
 
-Transaction mass is computed as the **maximum** of three independent mass components:
+For mempool policy, fee estimation, and transaction selection, an effective transaction mass is commonly computed as the **maximum** of three components:
 
 ```
 transaction_mass = max(compute_mass, transient_mass, storage_mass)
 ```
 
-Each component measures a different dimension of cost. A transaction is limited by whichever dimension is most expensive. Compute mass and transient mass are non-contextual (can be computed from the transaction alone), while storage mass is contextual (requires knowledge of the input UTXOs). This approach follows KIP-9 (storage mass) and KIP-13 (transient mass).
+Each component measures a different dimension of cost. Compute mass and transient mass are non-contextual (can be computed from the transaction alone), while storage mass is contextual (requires knowledge of the input UTXOs). This approach follows KIP-9 (storage mass) and KIP-13 (transient mass).
+
+Consensus block validation still checks mass dimensions independently against block limits. So `max(compute, transient, storage)` is a useful policy abstraction, not a standalone consensus rule by itself.
 
 ## Compute Mass
 
@@ -120,20 +122,19 @@ Storage mass is inversely proportional to output values. Consolidating many smal
 
 ### Output Constraints
 
-The KIP-9 algorithm enforces practical limits on how much a transaction can "fan out" small amounts:
+KIP-9 plus standardness policy create practical limits on how much a transaction can "fan out" small amounts. These limits are emergent from mass formulas and policy checks, not from a fixed protocol-wide output/input ratio constant.
 
-- **Output-to-input ratio**: The number of outputs should not exceed 10 times the number of inputs. A 1-to-10 transaction gets rejected; a 5-to-10 transaction succeeds.
 - **High-value outputs** (greater than 100 KAS): No practical limit on output count.
 - **Outputs greater than 10 KAS**: Approximately 100 outputs before reaching the 100,000 gram limit.
 - **Outputs greater than 1 KAS**: Limited to roughly 10 outputs.
 
-**Consolidation is always allowed**: You can combine or transfer inputs without increasing transaction mass, as long as the number of outputs is equal to or fewer than the number of inputs (e.g., 10-to-10 or 10-to-1).
+**Consolidation is favored**: Combining many inputs into fewer outputs often yields low storage mass, subject to normal mass and policy checks.
 
 ### Dust Prevention
 
-The minimum viable output amount is **0.019 KAS**. Using **0.02 KAS** as a safe minimum is recommended. Outputs below this threshold cause the storage mass to spike, leading to transaction rejection.
+Dust is handled by relay policy, not by a fixed protocol-wide KAS constant. The practical minimum depends on output script size and the node's configured minimum relay fee.
 
-The algorithm does allow flexibility in how values are split. For example, breaking a 0.007 KAS input into 0.004 + 0.003 KAS outputs is valid, as long as each output stays above the minimum threshold.
+A wallet can estimate a dust floor from current relay policy and treat very small outputs as uneconomical change. Conservative wallet defaults are useful, but they should be treated as policy heuristics rather than consensus constants.
 
 ## Transient Mass (KIP-13)
 
@@ -155,7 +156,7 @@ The **fee rate** is a multiplier that converts transaction mass into KAS fees:
 fee = fee_rate * transaction_mass
 ```
 
-A fee rate of **1.0** represents the minimum mandatory fees required by the network to process a transaction. Each mass unit (gram) maps to 1 sompi at the minimum fee rate. Higher fee rates provide transaction priority.
+A fee rate of **1.0** is commonly used in wallet tooling as a baseline (1 sompi per mass unit). Minimum accepted fee is ultimately a relay-policy decision by nodes/miners, not a consensus-mandated universal constant.
 
 ### Example
 
@@ -163,9 +164,9 @@ For a transaction with a mass of 2,000 grams:
 
 | Fee Rate | Total Fee (sompi) | Breakdown |
 |---|---|---|
-| 1.0 (minimum) | 2,000 | 2,000 mandatory |
-| 2.0 | 4,000 | 2,000 mandatory + 2,000 priority |
-| 1.5 | 3,000 | 2,000 mandatory + 1,000 priority |
+| 1.0 (baseline) | 2,000 | 2,000 baseline fee |
+| 2.0 | 4,000 | 2,000 baseline + 2,000 priority |
+| 1.5 | 3,000 | 2,000 baseline + 1,000 priority |
 
 ### Fee Estimation via RPC
 
@@ -195,13 +196,13 @@ Fee rate estimates are best-effort analytical guesses. Sudden spikes in transact
 
 ### Setting a Specific Priority Fee
 
-When using the Transaction Generator, you can specify the `feeRate` parameter. If unspecified, the default is 1.0 (minimum fees).
+When using the Transaction Generator, you can specify the `feeRate` parameter. If unspecified, many examples use 1.0 as a baseline.
 
 To allocate a specific KAS amount as a priority fee:
 
-1. Run the generator with a fee rate of 1.0 to determine the total transaction mass.
+1. Run the generator with a baseline fee rate (for example, 1.0) to determine the total transaction mass.
 2. Divide your desired priority fee (in sompi) by the total mass.
-3. Add 1.0 to the result.
+3. Add the baseline fee rate to the result.
 
 **Example**: To add 5 KAS in priority fees to a transaction with 2,043 grams of mass:
 
@@ -219,16 +220,16 @@ fee_rate = (5 / 2_043) + 1.0 = 1.002448
 
 When constructing transactions, the change output amount requires careful consideration. The key rule:
 
-**If the change output amount falls below 0.02 KAS, the output should be removed** and that amount should instead be added to the transaction fee.
+**If the change output would be below your policy-derived dust floor, omit it** and add that amount to the fee.
 
 This matters for several reasons:
 
 - **Dust avoidance**: Creating an output with a tiny value (dust) increases storage mass and is wasteful for the network. Sacrificing small change amounts to fees is more economical.
 - **UTXO management**: While you could add additional inputs to raise the change output above the threshold, this increases compute mass and makes the transaction more expensive overall.
-- **Algorithmic complexity**: UTXO selection algorithms become more complex when trying to optimize change output amounts. Keeping the threshold simple (0.02 KAS) avoids unnecessary overhead.
+- **Algorithmic complexity**: UTXO selection algorithms become more complex when trying to optimize tiny change outputs. Using a policy-derived threshold keeps logic predictable.
 
 <Callout type="info">
-When building transactions, always check the change output amount. If it is below 0.02 KAS, omit the change output and let the remainder go to fees. This keeps transactions smaller and avoids creating dust UTXOs.
+When building transactions, always compare change against a dust threshold derived from current relay policy. If it is below that threshold, omit the change output and let the remainder go to fees.
 </Callout>
 
 ## Batch and Compound Transactions
@@ -259,12 +260,12 @@ The Kaspa mempool accepts transactions whose inputs reference other transactions
 When referencing an unsubmitted transaction's output, create a **virtual UTXO** using the previous transaction's outpoint (transaction ID plus output index) and set the DAA score to the maximum `u64` value.
 
 <Callout type="warn">
-Chained transactions cannot appear in the same mined block and require at least one DAA score interval per transaction in the chain.
+Dependent transactions cannot be mined together in the same block, but they can be chained in the mempool. Confirmation timing then depends on subsequent block inclusion.
 </Callout>
 
 ### Parallel Compounding
 
-You can parallelize compounding to reduce the number of required DAA intervals. Instead of a sequential chain of A then B then C, you can process independent branches simultaneously:
+You can parallelize compounding to reduce sequential confirmation rounds. Instead of a strict chain of A then B then C, you can process independent branches simultaneously:
 
 ```
 Branch 1: 80 UTXOs -> A
@@ -272,7 +273,7 @@ Branch 2: 80 UTXOs -> B
 Final:    A + B    -> C
 ```
 
-This requires only 2 DAA intervals instead of 3, since A and B can be processed concurrently before the final consolidation in C.
+This can reduce sequential rounds (for example, A and B first, then C), though exact timing still depends on mempool and miner inclusion behavior.
 
 ## Miner Transaction Selection
 
@@ -288,7 +289,7 @@ This gives rise to the concept of **Effective TPS** (Effective Transactions Per 
 
 ### Typical Fees
 
-For a standard transaction (1 input, 2 outputs) with a fee rate of 1.0 (minimum):
+For a standard transaction (1 input, 2 outputs) with a fee rate of 1.0 (baseline):
 
 ```
 Compute mass:  ~1,300 (1 sigop * 1000 + ~300 bytes + script overhead)
@@ -303,12 +304,12 @@ Standard Kaspa transactions have extremely low fees -- fractions of a cent.
 
 - **Network congestion**: When the mempool is full, higher fee rates ensure faster inclusion.
 - **Time-sensitive transactions**: Exchange deposits, payments with deadlines, or arbitrage operations benefit from priority fees.
-- **Normal conditions**: A fee rate of 1.0 is sufficient. Most transactions confirm within seconds.
+- **Normal conditions**: Baseline fee rates are often sufficient, but confirmation speed still depends on current mempool conditions.
 
 ### Best Practices
 
 1. **Use `getFeeEstimate()`** to determine appropriate fee rates rather than hardcoding values.
-2. **Check change outputs**: Remove any change output below 0.02 KAS and add the amount to fees.
+2. **Check change outputs**: Remove any change output below your policy-derived dust floor and add the amount to fees.
 3. **Plan for UTXO consolidation**: If your wallet accumulates many small UTXOs, periodically consolidate them using batch transactions during low-fee periods.
 4. **Avoid unnecessary fan-out**: Creating many small outputs dramatically increases storage mass.
 5. **Use chained transactions** when you need to spend more UTXOs than fit in a single transaction.

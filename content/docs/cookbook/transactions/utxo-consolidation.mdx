@@ -72,7 +72,7 @@ async function consolidateUtxos() {
 
   // 5. Analyze UTXO distribution
   const amounts = utxoResponse.entries.map(
-    (entry) => entry.utxoEntry.amount
+    (entry) => entry.amount
   );
   amounts.sort((a, b) => Number(a - b));
 
@@ -215,7 +215,7 @@ Each transaction input adds to the transaction's mass:
 - **Compute mass**: Each input requires one signature verification (1,000 mass per sigop)
 - **Transactional mass**: Each input adds roughly 70--80 bytes to the serialized size
 
-With a maximum transaction mass of 100,000, a single transaction can include roughly 80--90 inputs. If your wallet has 500 UTXOs, you cannot spend them all in one transaction. The SDK solves this by producing a **chain of compound transactions** that progressively consolidate UTXOs.
+With a maximum transaction mass of 100,000, the number of inputs that fit in one transaction depends on script and transaction composition. If your wallet has many UTXOs, you may not be able to spend all of them in one transaction. The SDK solves this by producing a **chain of compound transactions** that progressively consolidate UTXOs.
 
 ### How compound transactions work
 

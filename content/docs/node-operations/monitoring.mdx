@@ -14,18 +14,25 @@ Monitoring your Kaspa node ensures it remains synced, connected, and performing 
 The `GetInfo` RPC method returns basic information about the running node:
 
 - **Server version**: The kaspad software version.
-- **Network name**: The active network (mainnet, testnet, simnet).
 - **Is synced**: Whether the node considers itself fully synced with the network.
-- **Virtual DAA score**: The current difficulty adjustment algorithm score, which correlates with DAG height.
+- **Mempool size**: Current count of mempool transactions.
 
-This is the simplest health check. If `GetInfo` responds and reports `is_synced: true`, the node is operational.
+This is the simplest health check. If `GetInfo` responds and reports `isSynced: true`, the node is operational.
+
+### GetServerInfo
+
+`GetServerInfo` provides server/network metadata that is not included in `GetInfo`, including:
+
+- `networkId` (for example `mainnet`, `testnet-10`, `simnet`)
+- `virtualDaaScore`
+- RPC API version/revision
 
 ### GetSyncStatus
 
-`GetSyncStatus` provides detailed information about the node's sync state, including whether the node is currently performing header sync, UTXO sync, or block body sync. During initial sync, this method shows progress through each phase.
+`GetSyncStatus` currently returns a single boolean field: `isSynced`.
 
 <Callout type="info">
-A node can report `is_synced: false` temporarily during normal operation if it briefly falls behind the DAG tip. This is common during high-load periods. If the node remains unsynced for more than a few minutes, investigate potential issues.
+A node can report `isSynced: false` temporarily during normal operation if it briefly falls behind the DAG tip. This is common during high-load periods. If the node remains unsynced for more than a few minutes, investigate potential issues.
 </Callout>
 
 ### GetMetrics
@@ -38,8 +45,7 @@ The `GetMetrics` RPC method returns comprehensive operational metrics organized 
 - File descriptor count
 
 **Connection Metrics**:
-- Number of active peer connections (inbound and outbound)
-- Number of known addresses in the peer database
+- Number of active peer connections
 
 **Bandwidth Metrics**:
 - Bytes sent and received per second
@@ -67,32 +73,34 @@ kaspad --utxoindex --perf-metrics --perf-metrics-interval-sec=30
 This outputs metrics to the log at the specified interval, including CPU usage, memory consumption, peer count, and bandwidth statistics. Example log output:
 
 ```
-[INF] PERF: cpu: 2.1 cores, mem: 4.2 GB, peers: 42, bandwidth: 12.5 MB/s in / 8.3 MB/s out
+Processed 418 blocks and 425 headers in the last 10.00s (...)
 ```
 
 <Callout>
-Performance metrics logging is lightweight and recommended for production nodes. The overhead is negligible, and the data is valuable for diagnosing performance regressions or resource exhaustion.
+Performance metrics logging is generally low-overhead and recommended for production nodes. Validate impact on your environment and logging volume.
 </Callout>
 
 ## Key Metrics to Watch
 
-| Metric | Healthy Range | Action If Out of Range |
+| Metric | Starter Range | Action If Out of Range |
 |---|---|---|
 | Peer count | 10-100+ | Check firewall, network connectivity, `--outpeers` setting |
-| Sync status | `is_synced: true` | Verify network connectivity and system resources |
+| Sync status | `isSynced: true` | Verify network connectivity and system resources |
 | Mempool size | Varies with network activity | Sustained growth may indicate transaction processing issues |
 | CPU usage | Below 80% of available cores | Consider increasing resources or reducing `--ram-scale` |
 | Memory usage | Below container/system limit | Adjust `--ram-scale` downward |
 | Bandwidth | Consistent with peer count | Check for network issues if bandwidth drops to zero |
 
+Treat these values as operational starting points, not protocol-level invariants.
+
 ## Log Analysis
 
 kaspad writes structured log output to both stdout and log files (unless `--nologfiles` is set). Key log messages to watch for:
 
-- **`[INF] Blue score:`** — Indicates sync progress during initial sync. The blue score should steadily increase.
+- **`Processed ... blocks and ... headers in the last ...`** — Indicates consensus pipeline progress.
 - **`[WRN]`** — Warnings about non-critical issues such as peer disconnections or temporary errors.
 - **`[ERR]`** — Errors that may require attention, such as database issues or validation failures.
-- **`[INF] Accepted block`** — Indicates the node is processing new blocks from the network.
+- **Performance monitor output** (when enabled) — CPU, memory, and I/O counters useful for capacity tuning.
 
 <Callout type="warn">
 Persistent `[ERR]` messages in the logs should be investigated promptly. While isolated errors are often transient (e.g., a peer sending malformed data), repeated errors can indicate database corruption, resource exhaustion, or software bugs.
@@ -102,7 +110,7 @@ Persistent `[ERR]` messages in the logs should be investigated promptly. While i
 
 For production deployments, set up automated monitoring and alerting:
 
-1. **Sync status check**: Poll `GetInfo` periodically and alert if `is_synced` is `false` for more than 5 minutes.
+1. **Sync status check**: Poll `GetInfo`/`GetSyncStatus` periodically and alert if `isSynced` is `false` for more than 5 minutes.
 2. **Peer count check**: Alert if the peer count drops below a minimum threshold (e.g., fewer than 5 peers).
 3. **Process liveness**: Monitor the kaspad process and alert if it exits unexpectedly.
 4. **Resource usage**: Monitor system-level CPU, memory, and disk usage. Alert before resources are exhausted.

@@ -9,7 +9,7 @@ No parameters required.
 
 ## Response
 
-Empty response on success (the node begins shutdown immediately after responding).
+Empty response on success (shutdown is triggered after the response, with a short delay).
 
 ## Example
 
@@ -27,10 +27,9 @@ Empty response on success (the node begins shutdown immediately after responding
 ## Notes
 
 <Callout>
-This is an administrative method that immediately begins a graceful shutdown of the node process. Ensure RPC access is restricted to prevent unauthorized shutdown.
+This is an administrative method and is unavailable in safe RPC mode. Run the node with `--unsaferpc` to call it. Ensure RPC access is restricted to prevent unauthorized shutdown.
 </Callout>
 
-- The node will stop accepting new connections, flush pending data to disk, and terminate.
+- The service schedules shutdown shortly after responding (currently about 1 second) so the caller can receive the response.
 - Any in-flight RPC requests from other clients may not receive responses.
-- The graceful shutdown process allows the node to persist its state so it can resume quickly on restart.
 - This method does not require confirmation. Once called, the shutdown proceeds immediately.

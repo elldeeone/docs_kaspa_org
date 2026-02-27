@@ -19,6 +19,7 @@ The following example demonstrates signing an arbitrary message and verifying th
 ```typescript
 import {
   PrivateKey,
+  Keypair,
   PublicKey,
   Mnemonic,
   XPrv,
@@ -71,7 +72,8 @@ function signAndVerifyExample() {
 // Standalone key pair (not derived from mnemonic)
 function signWithStandaloneKey() {
   // Generate a random key pair
-  const privateKey = PrivateKey.random();
+  const keypair = Keypair.random();
+  const privateKey = keypair.privateKey;
   const publicKey = privateKey.toPublicKey();
   const address = publicKey.toAddress("mainnet").toString();
 
@@ -115,14 +117,14 @@ function authenticationExample() {
 
   // Server verifies:
   // 1. The public key matches the claimed address
-  const derivedAddress = PublicKey.fromString(response.publicKey)
+  const derivedAddress = new PublicKey(response.publicKey)
     .toAddress("mainnet")
     .toString();
   const addressMatches = derivedAddress === response.address;
   console.log("Address matches public key:", addressMatches);
 
   // 2. The signature is valid for the challenge
-  const serverPubKey = PublicKey.fromString(response.publicKey);
+  const serverPubKey = new PublicKey(response.publicKey);
   const signatureValid = verifyMessage({
     message: challenge,
     signature,

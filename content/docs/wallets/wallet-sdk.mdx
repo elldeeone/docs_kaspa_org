@@ -49,7 +49,7 @@ There should be exactly one `UtxoProcessor` per RPC connection. It receives raw 
 ```typescript
 const processor = new UtxoProcessor({
   rpc: rpcClient,       // RpcClient instance
-  networkId: "mainnet"  // Network identifier (e.g., "mainnet", "testnet-11")
+  networkId: "mainnet"  // Network identifier (e.g., "mainnet", "testnet-10", "simnet")
 });
 ```
 
@@ -113,7 +113,7 @@ UtxoProcessor.setCoinbaseTransactionMaturityDAA("mainnet", 100n);
 ```
 
 <Callout type="warn">
-Coinbase transactions have network-enforced minimum maturity thresholds that cannot be reduced below the protocol minimum (100 DAA score at 1 BPS, 1000 DAA score at 10 BPS). The configuration methods only control when the SDK emits maturity events, not the network consensus rules.
+These settings control wallet-SDK maturity event behavior, not consensus spendability rules. Use values aligned with network consensus maturity thresholds; setting values too low can make local wallet state appear spendable before the network accepts spending.
 </Callout>
 
 ---
@@ -280,7 +280,7 @@ console.log(`Total fees: ${summary.fees} sompi`);
 
 #### Compound Transactions
 
-When a wallet holds many small UTXOs (common for mining payouts), a single transaction cannot consume them all due to the maximum transaction mass limit (approximately 84 inputs per transaction). The Generator automatically handles this by creating a chain of compound transactions:
+When a wallet holds many small UTXOs (common for mining payouts), a single transaction may not consume them all because of transaction mass limits. The exact input count depends on scripts and transaction composition. The Generator automatically handles this by creating a chain of compound transactions:
 
 1. **Batch transactions**: Consolidate UTXOs into fewer, larger outputs. Each batch transaction sends its output to the change address.
 2. **Final transaction**: The last transaction in the chain sends the requested amount to the destination address(es).

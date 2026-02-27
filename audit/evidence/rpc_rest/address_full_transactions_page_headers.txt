@@ -1,0 +1,16 @@
+HTTP/2 200 
+date: Fri, 27 Feb 2026 09:33:47 GMT
+content-type: application/json
+server: cloudflare
+x-page-count: 1
+x-next-page-before: 1772184825747
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+vary: Accept-Encoding
+cache-control: public, max-age=8
+handled-by: 206
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=3aUd15WyJsI9EpfzI5xHIJFYOGSxMqocvGXMXTXFvgAEWryShtNWknZgN66P8MjBD%2BNf24HnVbjOkahpkkBM6LJ6shIFNMtGxo8%3D"}]}
+last-modified: Fri, 27 Feb 2026 09:33:47 GMT
+set-cookie: __cflb=0H28vqFVfwxFDFrkeFZdTZx8XYiYYhzXjyJcV6NjKqf; HttpOnly; SameSite=Lax; Path=/; Expires=Fri, 27 Feb 2026 10:03:47 GMT
+cf-cache-status: MISS
+cf-ray: 9d46aec54b2e7d6d-SYD
+

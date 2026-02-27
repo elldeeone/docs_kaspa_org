@@ -30,7 +30,7 @@ No parameters required.
 
 ## Notes
 
-- The blue score is the number of blue blocks in the selected parent chain up to and including the sink.
+- The returned value is the GHOSTDAG blue score of the current sink (virtual selected parent).
 - Blue score increases monotonically and can be used as a rough measure of chain progress.
-- At 10 BPS, the blue score increases by approximately 10 per second under normal conditions.
+- Blue score growth rate is network- and conditions-dependent.
 - This is a lightweight call suitable for frequent polling.

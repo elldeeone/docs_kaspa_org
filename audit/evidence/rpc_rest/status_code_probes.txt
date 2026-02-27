@@ -1,0 +1,25 @@
+# Generated: 2026-02-27T09:33:48Z
+GET /addresses/not-an-address/balance
+HTTP 422
+{"detail":[{"loc":["path","kaspaAddress"],"msg":"string does not match regex \"^kaspa:[a-z0-9]{61,63}$\"","type":"value_error.str.regex","ctx":{"pattern":"^kaspa:[a-z0-9]{61,63}$"}}]}
+GET /addresses/kaspa:qrcz0ha5krc2y3snq6vm6quyqdh7fcs8gkx0f5z5v4ld0s32l4p850cvk8udv/full-transactions-page?page=0&limit=25
+HTTP 422
+{"detail":[{"loc":["query","page"],"msg":"Unknown query parameter in request: page","type":"value_error","input":"page=0","ctx":{"available_parameters":["limit","before","after","fields","resolve_previous_outpoints","acceptance"]}}]}
+GET /transactions/not-a-txid
+HTTP 422
+{"detail":[{"loc":["path","transaction_id"],"msg":"string does not match regex \"[a-f0-9]{64}\"","type":"value_error.str.regex","ctx":{"pattern":"[a-f0-9]{64}"}}]}
+GET /transactions/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+HTTP 404
+{"detail":"Transaction not found"}
+GET /blocks/not-a-hash
+HTTP 422
+{"detail":[{"loc":["path","blockId"],"msg":"string does not match regex \"[a-f0-9]{64}\"","type":"value_error.str.regex","ctx":{"pattern":"[a-f0-9]{64}"}}]}
+GET /blocks/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+HTTP 404
+{"detail":"Block not found"}
+GET /virtual-chain-from-block/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+HTTP 404
+{"detail":"Not Found"}
+GET /addresses/kaspa:addr1,kaspa:addr2/balance
+HTTP 422
+{"detail":[{"loc":["path","kaspaAddress"],"msg":"string does not match regex \"^kaspa:[a-z0-9]{61,63}$\"","type":"value_error.str.regex","ctx":{"pattern":"^kaspa:[a-z0-9]{61,63}$"}}]}

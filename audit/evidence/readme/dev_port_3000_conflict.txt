@@ -1,0 +1,16 @@
+# npm run dev -- --port 3000 (conflict check during audit)
+
+> docs_kaspa_org@0.0.0 dev
+> next dev --port 3000
+
+⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use :::3000
+    at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+    at new Promise (<anonymous>) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+[?25h

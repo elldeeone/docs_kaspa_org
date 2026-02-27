@@ -91,7 +91,7 @@ function generateAddressesFromXPub(
   count: number = 10,
   startIndex: number = 0
 ) {
-  const xpub = XPub.fromString(xpubString);
+  const xpub = new XPub(xpubString);
 
   const addresses: { index: number; address: string }[] = [];
 

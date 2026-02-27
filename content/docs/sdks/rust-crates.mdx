@@ -5,7 +5,7 @@ description: "Use Kaspa's Rust crate ecosystem for native applications — conse
 
 ## Overview
 
-The [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) repository is a Cargo workspace containing dozens of interconnected crates that implement Kaspa's full node, wallet, RPC layer, and consensus engine. As an application developer, you can depend on individual crates to build native tools, services, and integrations without pulling in the entire node. Because these crates are the canonical implementation, the WASM and Python SDKs are both derived from them.
+The [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) repository is a Cargo workspace containing dozens of interconnected crates that implement Kaspa's full node, wallet, RPC layer, and consensus engine. As an application developer, you can depend on individual crates to build native tools, services, and integrations without pulling in the entire node. These crates are the canonical implementation used directly by the node and official WASM bindings.
 
 ## Crate Taxonomy
 
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     client.connect(None).await?;
 
     let info = client.get_block_dag_info().await?;
-    println!("Network: {}", info.network_name);
+    println!("Network: {}", info.network);
     println!("Block count: {}", info.block_count);
     println!("Virtual DAA score: {}", info.virtual_daa_score);
 
@@ -150,9 +150,10 @@ Choose **Rust crates** when building infrastructure (mining pools, indexers, cus
 
 ## API Documentation
 
-Auto-generated TypeDoc-style API documentation for the Kaspa Rust/WASM crates is available at [kaspa.aspectron.org/docs](https://kaspa.aspectron.org/docs/). This provides browsable type definitions, method signatures, and module documentation derived from the source code.
+Use primary-source references for crate APIs:
 
-[DeepWiki](https://deepwiki.com/kaspanet/rusty-kaspa) provides a community-generated index of the rusty-kaspa codebase with AI-assisted navigation, making it easier to explore the source code and understand module relationships.
+- [docs.rs crate index for `kaspa-*`](https://docs.rs/releases/search?query=kaspa-)
+- [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa)
 
 ## PSKT Multisig Example
 

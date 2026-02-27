@@ -1,0 +1,6 @@
+content/docs/mining/block-rewards.mdx
+content/docs/mining/difficulty-adjustment.mdx
+content/docs/mining/hardware.mdx
+content/docs/mining/kheavyhash.mdx
+content/docs/mining/pool-mining.mdx
+content/docs/mining/solo-mining.mdx

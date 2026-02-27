@@ -5,116 +5,21 @@ description: "Essential security practices for Kaspa users — protecting your f
 
 ## Overview
 
-Kaspa transactions are irreversible. Once you send KAS, there is no "undo" button and no customer support to reverse the transaction. This makes security your personal responsibility. This page covers the most important practices for protecting your funds.
+Kaspa transactions are irreversible at the protocol level once confirmed on chain. This page intentionally stays within canonical scope and links to authoritative sources.
 
-## Seed Phrase Security
+## Canonical Scope
 
-Your 24-word seed phrase is the master key to all your funds. Anyone who has it can spend everything in your wallet from any device.
+The `rusty-kaspa` and `kips` repositories define protocol behavior and node implementation details. They do not define a single mandatory end-user operational-security policy.
 
-### Do
+Operational guidance such as seed backup procedures, anti-phishing checklists, device hygiene, and wallet-specific workflows is out of canonical protocol scope and should be taken from the official documentation of the wallet, service, or software you use.
 
-- **Write it on paper** (or stamp it on metal for fire/water resistance).
-- **Store it in a secure physical location** — a safe, a bank safety deposit box, or a similarly protected place.
-- **Make one or two backup copies** and store them in separate locations.
-- **Verify your backup** by restoring the wallet from the seed phrase before depositing significant funds.
+## Canonical Sources
 
-### Do Not
-
-- **Never store your seed phrase digitally** — not in a text file, not in a notes app, not in cloud storage, not in an email draft, not in a screenshot.
-- **Never type it into any website** unless you are absolutely certain it is the genuine wallet application (and even then, be cautious).
-- **Never share it with anyone** — no legitimate project, support team, or developer will ever ask for your seed phrase.
-- **Never take a photo of it** — photos sync to cloud services and can be accessed if your account is compromised.
-
-<Callout>
-If anyone asks for your seed phrase, it is a scam. No exceptions. Kaspa developers, moderators, and support volunteers will never request your seed phrase.
-</Callout>
-
-## Common Scams
-
-### Fake Wallets
-
-Scammers create fake wallet applications that look like legitimate Kaspa wallets but are designed to steal your seed phrase or private keys. They distribute these through:
-
-- Fake websites that mimic the official wallet site.
-- Cloned mobile apps on unofficial app stores.
-- Links shared in social media or messaging groups.
-
-**Protection**: Only download wallets from official sources. The official web wallet is at [wallet.kaspanet.io](https://wallet.kaspanet.io). The official CLI wallet is built from the [rusty-kaspa GitHub repository](https://github.com/kaspanet/rusty-kaspa).
-
-### Phishing Sites
-
-Phishing sites replicate the appearance of legitimate services (wallets, exchanges, explorers) and ask you to enter your seed phrase or private key.
-
-**Protection**: Always verify the URL in your browser's address bar. Bookmark official sites and use bookmarks rather than clicking links. Look for subtle misspellings in domain names.
-
-### Impersonation
-
-Scammers impersonate Kaspa team members, moderators, or well-known community figures on social media and messaging platforms. They may:
-
-- Send you direct messages offering "help" or "support."
-- Ask you to visit a website or download software.
-- Claim there is an urgent issue with your wallet.
-
-**Protection**: Kaspa team members will never DM you first offering unsolicited help. If someone contacts you claiming to be from the Kaspa team, verify their identity through official channels.
-
-### Fake Airdrops and Giveaways
-
-"Send us X KAS and we will send you 2X back" — these are always scams. No legitimate project runs giveaways that require you to send funds first.
-
-**Protection**: Never send KAS to participate in a "giveaway" or "airdrop." If it sounds too good to be true, it is.
-
-<Callout type="warn">
-Scammers are creative and constantly invent new tactics. The common thread is always the same: they want your seed phrase, your private keys, or your funds. Be skeptical of any unsolicited request that involves any of these.
-</Callout>
-
-### "Support" DMs
-
-If you post a question in a public forum or Discord channel, scammers may immediately DM you pretending to be support staff. They typically direct you to a fake "support portal" that asks for your seed phrase.
-
-**Protection**: Legitimate support happens in public channels, not in DMs. Ignore unsolicited DMs from anyone claiming to be support.
-
-## Verifying Software Authenticity
-
-When downloading Kaspa software:
-
-1. **Use official sources**: Download from [github.com/kaspanet](https://github.com/kaspanet) or the official Kaspa website.
-2. **Verify checksums**: Compare the SHA-256 checksum of the downloaded file against the checksum published on the official release page.
-3. **Check signatures**: If the release is GPG-signed, verify the signature against the project's published public key.
-4. **Build from source**: For maximum assurance, clone the repository and build the software yourself.
-
-## Safe Transaction Practices
-
-- **Double-check addresses**: Before sending, verify the first and last several characters of the recipient address. Malware can replace clipboard contents with an attacker's address.
-- **Test with a small amount**: When sending to a new address for the first time, send a small test amount first and verify it arrives before sending the full amount.
-- **Use address book features**: If your wallet supports saving addresses, use this feature to avoid manual entry.
-- **Verify on hardware wallet screen**: If using a Ledger, always confirm the address and amount on the device's physical screen.
-
-## Browser Security for Web Wallets
-
-If you use the Kaspa Web Wallet or KasVault browser extension:
-
-- **Use a clean browser profile** dedicated to cryptocurrency. Do not install unnecessary extensions.
-- **Keep your browser updated** to receive security patches.
-- **Be cautious with browser extensions** — malicious extensions can read and modify web page content, including wallet interfaces.
-- **Lock your wallet** when not actively using it.
-- **Clear browser data** on shared or public computers (or better yet, do not use shared computers for wallet operations).
-
-<Callout type="info">
-Consider using a dedicated device (even an inexpensive one) solely for cryptocurrency operations. This reduces the attack surface dramatically compared to a daily-use computer loaded with various software.
-</Callout>
-
-## Social Engineering Awareness
-
-Social engineering attacks rely on manipulating human psychology rather than exploiting technical vulnerabilities. Be aware of:
-
-- **Urgency**: "Act now or lose your funds" — legitimate services do not pressure you into immediate action.
-- **Authority**: "I'm from the Kaspa team" — verify identity through official channels.
-- **Reciprocity**: "I helped you, now help me by..." — do not feel obligated to share sensitive information.
-- **Scarcity**: "Only the first 100 people get this opportunity" — artificial scarcity is a manipulation tactic.
+- [kaspanet organization on GitHub](https://github.com/kaspanet) — canonical project repositories and release artifacts.
+- [KIPs repository](https://github.com/kaspanet/kips) — proposal and status metadata for protocol evolution.
+- [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa) — reference node implementation.
 
 ## Further Reading
 
 - [Security Model](/docs/security/security-model) — Understanding Kaspa's protocol-level security guarantees.
-- [Hardware Wallets](/docs/wallets/hardware-wallets) — The strongest key protection for end users.
-- [Wallet Overview](/docs/wallets/overview) — Choosing the right wallet for your security needs.
 - [Responsible Disclosure](/docs/security/responsible-disclosure) — Reporting security vulnerabilities.

@@ -5,7 +5,7 @@ description: "NotifyBlockAdded — subscribe to new blocks added to the Kaspa DA
 
 ## Overview
 
-The `notifyBlockAdded` subscription notifies your application every time a new block is added to the DAG. At Kaspa's current rate of 10 blocks per second, this is one of the highest-frequency subscription types.
+The block-added subscription notifies your application every time a new block is added to the DAG. At Kaspa's current rate of 10 blocks per second, this is one of the highest-frequency subscription types.
 
 ## Subscribe
 
@@ -13,14 +13,7 @@ The `notifyBlockAdded` subscription notifies your application every time a new b
 await rpc.subscribeBlockAdded();
 ```
 
-**RPC request:**
-
-```json
-{
-  "method": "notifyBlockAdded",
-  "params": {}
-}
-```
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `BlockAdded` scope payload. gRPC uses `NotifyBlockAddedRequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
 ## Unsubscribe
 

@@ -12,7 +12,7 @@ A productive Kaspa development environment lets you build, test, and iterate loc
 | Operating system | Linux, macOS, or WSL2 on Windows |
 | Git | 2.x+ |
 | Node.js (for WASM SDK) | 18+ |
-| Disk space | 10 GB free (build artifacts) |
+| Disk space | ~10 GB+ typical (build artifacts) |
 
 ## Step 1 -- Install the Rust Toolchain
 
@@ -64,9 +64,9 @@ In a second terminal, connect the wallet:
 
 ```bash
 kaspa-wallet
-wallet> connect 127.0.0.1:17510
-wallet> create
-wallet> address
+wallet connect 127.0.0.1:17510
+wallet create
+wallet address
 ```
 
 <Callout type="warn">
@@ -97,8 +97,9 @@ async function main() {
   });
   await rpc.connect();
 
+  const network = await rpc.getCurrentNetwork();
   const info = await rpc.getInfo();
-  console.log("Network:", info.networkId);
+  console.log("Network:", network.network);
   console.log("Synced:", info.isSynced);
 
   await rpc.disconnect();
@@ -122,8 +123,8 @@ For **VS Code**, install **rust-analyzer** (Rust language server), **CodeLLDB** 
 1. **Start simnet** -- Launch `kaspad --simnet --utxoindex` in a dedicated terminal.
 2. **Fund a wallet** -- Use the CLI wallet to mine or transfer simnet KAS.
 3. **Write SDK code** -- Build your application logic against the local node.
-4. **Test on testnet** -- Once stable, point your app at testnet-10 or testnet-11 (see [Testnet Development](/docs/guides/testnet-development)).
-5. **Deploy to mainnet** -- Switch `networkId` to `"mainnet"` and connect via wRPC Borsh port 17110 (or use the Resolver).
+4. **Test on testnet** -- Once stable, point your app at `testnet-10` (see [Testnet Development](/docs/guides/testnet-development)).
+5. **Deploy to mainnet** -- Switch `networkId` to `"mainnet"` and connect via Resolver, or use wRPC Borsh on `17110` if you explicitly enabled `--rpclisten-borsh`.
 
 ## Next Steps
 

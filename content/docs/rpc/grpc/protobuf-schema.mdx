@@ -13,13 +13,14 @@ rusty-kaspa/
     └── grpc/
         └── core/
             └── proto/
-                └── messages.proto    # gRPC service definition and all RPC request/response messages
+                ├── messages.proto    # Stream wrapper messages + gRPC service definition
+                └── rpc.proto         # RPC request/response and shared model message types
 ```
 
-The primary file for RPC client development is `rpc/grpc/core/proto/messages.proto`, which defines both the gRPC service and all request and response message types.
+For client generation, use both `messages.proto` and `rpc.proto`. The stream service and top-level `KaspadRequest`/`KaspadResponse` wrappers are in `messages.proto`; payload message definitions are in `rpc.proto`.
 
 <Callout type="info">
-Always use the `.proto` files from the same version of rusty-kaspa as the node you are connecting to. Breaking changes to message formats, while rare, are possible between major releases.
+Always use `.proto` files from the same rusty-kaspa version as the node you connect to. Regenerate stubs when upgrading node versions.
 </Callout>
 
 ## Service Definition
@@ -111,7 +112,7 @@ message RpcUtxoEntry {
   bool isCoinbase = 4;
 }
 
-message UtxosByAddressesEntry {
+message RpcUtxosByAddressesEntry {
   string address = 1;
   RpcOutpoint outpoint = 2;
   RpcUtxoEntry utxoEntry = 3;
@@ -154,7 +155,7 @@ message SubmitTransactionResponseMessage {
 
 ### Rust
 
-Rust is the native language of rusty-kaspa. The `kaspa-grpc-client` crate handles protobuf compilation internally via build scripts.
+Rust is the native language of rusty-kaspa. Protobuf code generation is handled in the gRPC core workspace (`rpc/grpc/core/build.rs`) and consumed by client/server crates.
 
 ```toml
 [dependencies]
@@ -163,7 +164,7 @@ kaspa-rpc-core = { git = "https://github.com/kaspanet/rusty-kaspa.git", branch =
 tokio = { version = "1", features = ["full"] }
 ```
 
-No manual protobuf compilation is required for Rust -- the crate's build script generates the necessary code automatically.
+No manual protobuf compilation is required when consuming the existing Rust crates from the workspace.
 
 ### Go
 
@@ -175,6 +176,7 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 # Generate Go code from proto files
 protoc --go_out=. --go-grpc_out=. \
   -I ./proto \
+  ./proto/rpc.proto \
   ./proto/messages.proto
 ```
 
@@ -189,10 +191,11 @@ python -m grpc_tools.protoc \
   -I ./proto \
   --python_out=./generated \
   --grpc_python_out=./generated \
+  ./proto/rpc.proto \
   ./proto/messages.proto
 ```
 
-This produces `messages_pb2.py` and `messages_pb2_grpc.py` in the `./generated` directory.
+This produces generated modules for both files (for example `rpc_pb2.py`, `messages_pb2.py`, and `messages_pb2_grpc.py`) in the `./generated` directory.
 
 ### TypeScript / Node.js
 
@@ -206,6 +209,7 @@ protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_out=./generated \
   --ts_proto_opt=outputServices=grpc-js \
   -I ./proto \
+  ./proto/rpc.proto \
   ./proto/messages.proto
 ```
 
@@ -217,9 +221,9 @@ When generating client code, make sure the `protoc` compiler version is compatib
 
 The protobuf schema evolves with rusty-kaspa releases. Changes follow these conventions:
 
-- **New fields** are added with new field numbers, maintaining backward compatibility with older clients.
-- **Deprecated fields** are marked with the `reserved` keyword and are not reused.
-- **Breaking changes** (field type changes, removed messages) are extremely rare and occur only in major version bumps.
+- **New fields** are typically added with new field numbers.
+- **Deprecated fields** may be marked as reserved and should not be reused by clients.
+- **Schema changes** can occur across releases, so client stubs should be regenerated during upgrades.
 
 When upgrading your node, regenerate client stubs from the updated `.proto` files to ensure compatibility. The `RPCError` field (always at field number 1000) provides a consistent error reporting mechanism across all response types.
 

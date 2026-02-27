@@ -1,0 +1,5 @@
+content/docs/rpc/rest/addresses.mdx
+content/docs/rpc/rest/blocks.mdx
+content/docs/rpc/rest/network-info.mdx
+content/docs/rpc/rest/transactions.mdx
+content/docs/rpc/rest/virtual-chain.mdx

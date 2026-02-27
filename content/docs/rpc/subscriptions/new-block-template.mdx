@@ -5,10 +5,10 @@ description: "Subscribe to notifications when a new block template is available 
 
 ## Overview
 
-Mining pools use the `notifyNewBlockTemplate` subscription to get notified whenever the
-node has a new block template ready. Templates change when new transactions enter the
-mempool, a new block is added to the DAG (changing the parent set), or the DAA score
-advances (adjusting the difficulty target).
+Mining pools use the new-block-template subscription to get notified whenever the
+node has a new block template ready. Treat this as a signal to fetch a fresh template via
+`getBlockTemplate`. In current node code, this notification is emitted during virtual-state
+processing.
 
 ## Subscribe
 
@@ -16,22 +16,9 @@ advances (adjusting the difficulty target).
 await rpc.subscribeNewBlockTemplate();
 ```
 
-**RPC request:**
+**Wire contract note:** wRPC notification control uses `subscribe` / `unsubscribe` with a `NewBlockTemplate` scope payload. gRPC uses `NotifyNewBlockTemplateRequestMessage` with `command` set to `NOTIFY_START` or `NOTIFY_STOP`.
 
-```json
-{
-  "method": "notifyNewBlockTemplate",
-  "params": {}
-}
-```
-
-**Response:**
-
-```json
-{
-  "error": null
-}
-```
+The WASM subscription call returns success/failure (`Result<()>`).
 
 ## Notification Format
 
@@ -92,9 +79,8 @@ startMiningListener().catch(console.error);
 - **Stratum servers** -- Convert Kaspa block templates into Stratum-compatible work units for mining hardware.
 
 <Callout type="warn">
-At 10 BPS, templates can update multiple times per second. Mining software must minimize
-latency between receiving the notification and beginning hash computation. Stale work
-reduces the probability of finding a valid block.
+Templates can update frequently. Mining software should minimize latency between receiving
+the notification and fetching/dispatching new work to reduce stale effort.
 </Callout>
 
 ## Further Reading

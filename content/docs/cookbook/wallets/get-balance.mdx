@@ -66,9 +66,9 @@ async function getBalanceDetailed(address: string) {
   console.log("---");
 
   for (const entry of entries) {
-    const amount = entry.utxoEntry.amount;
-    const isCoinbase = entry.utxoEntry.isCoinbase;
-    const blockDaaScore = entry.utxoEntry.blockDaaScore;
+    const amount = entry.amount;
+    const isCoinbase = entry.isCoinbase;
+    const blockDaaScore = entry.blockDaaScore;
 
     totalBalance += amount;
     console.log(

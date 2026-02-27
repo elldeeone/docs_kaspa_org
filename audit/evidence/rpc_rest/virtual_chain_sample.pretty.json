@@ -1,0 +1,156 @@
+[
+  {
+    "hash": "ca5ba52b5e191f10c6368deec4a11f9f24c00ccff2bfa738a36ee2198e841fb8",
+    "blue_score": 365813972,
+    "daa_score": 367650468,
+    "timestamp": 1772184817945,
+    "transactions": [
+      {
+        "transaction_id": "3435d8ea6f5f869e08b5b8bee83ef71c1c0d8d61fba3c09a4561f45f2556e1d3",
+        "is_accepted": true,
+        "outputs": [
+          {
+            "script_public_key": "20f027dfb4b0f0a246130699bd0384036fe4e207458cf4d054657ed7c22afd427aac",
+            "script_public_key_address": "kaspa:qrcz0ha5krc2y3snq6vm6quyqdh7fcs8gkx0f5z5v4ld0s32l4p850cvk8udv",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20deadb5e73b4257ff428e4f196dce93545811e40d58ae9c2000c483c9135d9e7bac",
+            "script_public_key_address": "kaspa:qr02md088dp90l6z3e83jmwwjd29sy0yp4v2a8pqqrzg8jgntk08ka8xm6p89",
+            "amount": 327031957
+          }
+        ]
+      },
+      {
+        "transaction_id": "f506457697e00b91e288721e79948b4eddf694bbe76b5d63b57a355dc6db84d0",
+        "is_accepted": true,
+        "inputs": [
+          {
+            "previous_outpoint_hash": "4443be3db7426a75ce1a15155e614e9abe6572db20960ad5bda0bf797e89283a",
+            "previous_outpoint_index": 0,
+            "signature_script": "41d2c7829efb6c56ead4f3aa67926f9d70de0c81abbbf3e3e38cf8f83f4c38049f1272123a2f9877c739f483e111c193aa0ce9aff035c5012034abd8610f683d4a01"
+          }
+        ],
+        "outputs": [
+          {
+            "script_public_key": "20aa3ff0e514a028bd5cf6836efb93f66508954f8857ba3af1bae45e4d4fb5166dac",
+            "script_public_key_address": "kaspa:qz4rlu89zjsz302u76pka7un7ejs39203ptm5wh3htj9un20k5tx69rvc5sc4",
+            "amount": 992310380
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "hash": "0355da3d255c2045689d3e9659ed6fb2fcbbd243fab60cecec56a42696a9ce60",
+    "blue_score": 365813978,
+    "daa_score": 367650474,
+    "timestamp": 1772184818303,
+    "transactions": [
+      {
+        "transaction_id": "52f8821f02db648ff80f43aa48c18ea274fc994ba1e6770c1a0a46c0a61ff813",
+        "is_accepted": true,
+        "outputs": [
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327053557
+          },
+          {
+            "script_public_key": "20d809eaac35b196372cd5944a961f33abf853d8909a0d82d845caee78db45ed4fac",
+            "script_public_key_address": "kaspa:qrvqn64vxkcevdev6k2y49slxw4ls57cjzdqmqkcgh9wu7xmghk57v4ehla0t",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20d809eaac35b196372cd5944a961f33abf853d8909a0d82d845caee78db45ed4fac",
+            "script_public_key_address": "kaspa:qrvqn64vxkcevdev6k2y49slxw4ls57cjzdqmqkcgh9wu7xmghk57v4ehla0t",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20aa952d08f6c76880d51774d82cce099dd4d47d159482fb85b74346476b00dabbac",
+            "script_public_key_address": "kaspa:qz4f2tgg7mrk3qx4za6dstxwpxwaf4razk2g97u9kap5v3mtqrdtkm8s2tayh",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "204a36164c32ac44e9dcaff81e0f9c982828720221a0f68e3f39732f3a08854f20ac",
+            "script_public_key_address": "kaspa:qp9rv9jvx2kyf6wu4lupuruunq5zsuszyxs0dr3l89ej7wsgs48jqkewy6xtl",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20282c33dae830809c8456dd1c251ca0ed298c24c60deb60031d27a3d9f8ff19c8ac",
+            "script_public_key_address": "kaspa:qq5zcv76aqcgp8yy2mw3cfgu5rkjnrpyccx7kcqrr5n68k0cluvus3huyendt",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20f027dfb4b0f0a246130699bd0384036fe4e207458cf4d054657ed7c22afd427aac",
+            "script_public_key_address": "kaspa:qrcz0ha5krc2y3snq6vm6quyqdh7fcs8gkx0f5z5v4ld0s32l4p850cvk8udv",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "2048757b951d6370c753e29de3b437720521c725335ce66fd6f37bf25c29b0cf50ac",
+            "script_public_key_address": "kaspa:qpy827u4r43hp36nu2w78dphwgzjr3e9xdwwvm7k7dalyhpfkr84qucn4ecud",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20f027dfb4b0f0a246130699bd0384036fe4e207458cf4d054657ed7c22afd427aac",
+            "script_public_key_address": "kaspa:qrcz0ha5krc2y3snq6vm6quyqdh7fcs8gkx0f5z5v4ld0s32l4p850cvk8udv",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          },
+          {
+            "script_public_key": "20ec56e7099fea3e9339407486c578d69f417598fd83c6d241f1fa6eae93eec217ac",
+            "script_public_key_address": "kaspa:qrk9decfnl4rayeegp6gd3tc6605zavclkpud5jp78axat5namppwt050d57j",
+            "amount": 327031957
+          }
+        ]
+      },
+      {
+        "transaction_id": "56dee01b3f5f62e023b56fc381ef432eca0257df2bcd3d32eba35254e13232a4",
+        "is_accepted": true,
+        "inputs": [
+          {
+            "previous_outpoint_hash": "f506457697e00b91e288721e79948b4eddf694bbe76b5d63b57a355dc6db84d0",
+            "previous_outpoint_index": 0,
+            "signature_script": "411ead0dc09684279ee37ebde5ebaad2382090b95fae016cd8e6dfd6210cc8003e7ea09cb37b58ced95535eacbc9049971d03947e643d5d25df45a3b0a8cae73cc01"
+          }
+        ],
+        "outputs": [
+          {
+            "script_public_key": "20aa3ff0e514a028bd5cf6836efb93f66508954f8857ba3af1bae45e4d4fb5166dac",
+            "script_public_key_address": "kaspa:qz4rlu89zjsz302u76pka7un7ejs39203ptm5wh3htj9un20k5tx69rvc5sc4",
+            "amount": 992288780
+          }
+        ]
+      }
+    ]
+  }
+]

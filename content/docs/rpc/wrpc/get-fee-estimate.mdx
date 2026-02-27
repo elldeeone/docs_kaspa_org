@@ -12,7 +12,7 @@ No parameters required.
 | Field | Type | Description |
 |-------|------|-------------|
 | `estimate` | object | The fee estimate object containing priority buckets. |
-| `estimate.priorityBucket` | object | Fee rate for high-priority (next block) inclusion. |
+| `estimate.priorityBucket` | object | Fee rate for top-priority, sub-second inclusion targeting. |
 | `estimate.priorityBucket.feerate` | number | Recommended fee rate in sompi per gram of mass. |
 | `estimate.priorityBucket.estimatedSeconds` | number | Estimated time to confirmation at this fee rate. |
 | `estimate.normalBuckets` | object[] | Fee rate buckets for normal-priority transactions. |
@@ -50,10 +50,9 @@ Each bucket contains `feerate` (number) and `estimatedSeconds` (number).
 ## Notes
 
 <Callout type="info">
-Fee estimates are based on current mempool conditions and recent block data. During periods of high network activity, fee rates will be higher. During low activity, even the minimum fee rate is sufficient.
+Fee estimates come from the node's current fee-estimation engine and can change with network conditions.
 </Callout>
 
 - Use the `priorityBucket` fee rate for time-sensitive transactions that need to be confirmed as quickly as possible.
 - The `normalBuckets` provide a range of fee/time trade-offs for typical transactions.
 - Fee rates are expressed in sompi per gram of transaction mass.
-- Under normal network conditions, Kaspa fees are extremely low. Fee estimation becomes important primarily during congestion.

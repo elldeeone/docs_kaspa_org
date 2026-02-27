@@ -91,7 +91,7 @@ The UTXO commitment serves several purposes:
 
 - **New node sync**: A node joining the network can download the UTXO set from a peer and verify it against the commitment in the block headers, ensuring correctness without replaying all historical transactions.
 - **Consistency verification**: Nodes can verify that their local UTXO set matches the consensus state by checking against the header commitment.
-- **SPV support**: Light clients can use UTXO commitments to verify the existence of specific UTXOs without downloading the full set.
+- **Light-client support**: UTXO commitments can support snapshot-validation workflows for light clients, but additional trust/proof mechanisms are still needed for specific historical inclusion claims.
 
 ## UTXO Growth and Pruning
 

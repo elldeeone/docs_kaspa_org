@@ -9,7 +9,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 Solo mining means you run your own Kaspa full node and mine directly against the network without sharing rewards with a pool. When you find a block, you receive the entire block reward. However, because you are competing against the total network hashrate, solo mining is only practical if you have sufficient hashing power to find blocks at a reasonable frequency.
 
-With Kaspa producing 10 blocks per second, solo miners with moderate hashrate can find blocks more frequently than on slower blockchains, making solo mining more viable than it is on networks like Bitcoin.
+Because Kaspa targets 10 blocks per second, solo miners can observe shorter wall-clock intervals between possible block opportunities than on slower-block-interval networks. Actual outcomes still depend on your share of total network hashrate and variance.
 
 <Callout type="warn">
 Solo mining requires running a full Kaspa node and keeping it synced at all times. If your node falls behind the DAG tip, your mined blocks will be rejected by the network.
@@ -19,12 +19,12 @@ Solo mining requires running a full Kaspa node and keeping it synced at all time
 
 Before you begin, ensure you have the following:
 
-- **Hardware**: A GPU with sufficient hashrate (see the [Hardware](/docs/mining/hardware) page for recommendations) or an ASIC miner.
+- **Hardware**: Mining-capable hardware supported by your chosen miner implementation.
 - **Full node**: A running and fully synced instance of `kaspad` (the Kaspa full node daemon).
-- **Mining software**: A compatible miner such as `kaspa-miner`, BzMiner, lolMiner, or another kHeavyHash-compatible GPU/ASIC miner.
-- **Kaspa wallet address**: A Kaspa address to receive block rewards. You can generate one using the Kaspa CLI wallet (`kaspa-wallet`), the Kaspa desktop wallet, or the KDX application.
+- **Mining software**: A miner that supports Kaspa-compatible solo mode for your hardware and current node version.
+- **Kaspa wallet address**: A Kaspa address to receive block rewards.
 - **Stable internet connection**: Low latency is important at 10 BPS to ensure your blocks propagate quickly.
-- **Sufficient disk space**: The Kaspa UTXO set and DAG headers require storage. Plan for at least 50 GB of free disk space, with room to grow.
+- **Sufficient disk space**: The Kaspa UTXO set and DAG data require ongoing storage growth. Check current node-operations guidance for up-to-date sizing before deployment.
 
 ## Step 1: Set Up kaspad
 
@@ -35,23 +35,23 @@ Solo mining is a two-step process: first you run a `kaspad` full node, then you 
 ### Running kaspad
 
 ```bash
-kaspad --utxoindex
+kaspad
 ```
 
 **Key flags:**
 
 | Flag | Purpose |
 |---|---|
-| `--utxoindex` | Enables the UTXO index, which is required for mining and wallet operations. Without this flag, the node cannot serve block templates to miners. |
+| `--utxoindex` | Enables address/UTXO-indexed RPC queries. Useful for wallet and explorer workflows, but not required for basic `getBlockTemplate` solo mining. |
 
 <Callout type="info">
-The `--utxoindex` flag causes `kaspad` to maintain an additional index over the UTXO set. This increases disk usage and initial sync time but is mandatory for mining. If you previously ran `kaspad` without this flag, you may need to re-sync from scratch or use `--reset-db` to rebuild the database with the index.
+The `--utxoindex` flag causes `kaspad` to maintain an additional index over the UTXO set. This increases disk usage and initial sync time. Enable it when you need address/UTXO-indexed RPC methods; solo mining itself can run without it.
 </Callout>
 
 ### Optional Flags
 
 ```bash
-kaspad --utxoindex \
+kaspad \
   --rpclisten=0.0.0.0:16110 \
   --listen=0.0.0.0:16111
 ```
@@ -80,57 +80,22 @@ Mining before the node is fully synced will result in rejected blocks.
 
 Once `kaspad` is running and synced, connect your mining software to the node's gRPC endpoint.
 
-### Using a GPU Miner
+### Miner Configuration
 
-Several GPU miners support kHeavyHash for Kaspa. Each miner has its own flags — consult the miner's documentation for exact usage. A typical invocation passes your mining address and the kaspad gRPC endpoint:
+Miner binaries, transport modes, and flag names are software-specific and outside canonical `rusty-kaspa`/`kips` scope. For solo mining, configure your miner with:
 
-```bash
-# Example (flags vary by miner — check your miner's docs)
-<miner-binary> --mining-address kaspa:qr...your_address_here \
-  --kaspad-address 127.0.0.1:16110
-```
-
-| Flag (typical) | Purpose |
-|---|---|
-| `--mining-address` | Your Kaspa wallet address for receiving block rewards. |
-| `--kaspad-address` | The gRPC address of your running `kaspad` instance. |
+- A Kaspa payout address
+- The gRPC endpoint of your synced `kaspad` node (default local endpoint: `127.0.0.1:16110`)
 
 <Callout type="info">
-GPU miner flags vary by software. The flags shown above are illustrative. Always refer to your specific miner's documentation for the correct command-line arguments.
+Use your miner's official documentation for exact command syntax and required solo-mode options.
 </Callout>
-
-### Using BzMiner
-
-BzMiner supports kHeavyHash natively. For solo mining, point it at your local `kaspad` gRPC endpoint:
-
-```bash
-bzminer -a kaspa -w kaspa:qr...your_address_here \
-  -p 127.0.0.1:16110 --no_stratum
-```
-
-<Callout type="info">
-When solo mining with BzMiner or similar multi-algorithm miners, ensure you specify `kaspa` (or `kheavyhash`) as the algorithm. The `--no_stratum` or equivalent flag tells the miner to use gRPC directly rather than the stratum pool protocol.
-</Callout>
-
-### Using lolMiner
-
-```bash
-lolMiner --algo KASPA --pool 127.0.0.1:16110 \
-  --user kaspa:qr...your_address_here --solo
-```
 
 ## Step 3: Monitor Your Mining
 
 ### Hashrate Monitoring
 
-Your mining software will report the current hashrate in its console output. Typical output looks like:
-
-```
-[INFO] GPU #0: 580 MH/s | GPU #1: 575 MH/s | Total: 1.155 GH/s
-[INFO] Shares: 42 accepted, 0 rejected
-```
-
-For solo mining, "shares" or "blocks" found represents actual blocks submitted to the network.
+Your mining software will report hashrate and status in miner-specific output formats. Treat node-side acceptance and chain inclusion as canonical, and miner-side counters as local telemetry.
 
 ### Checking Block Rewards
 
@@ -138,7 +103,6 @@ You can verify that blocks you mined are being accepted by checking your wallet 
 
 - **Using the CLI wallet**: Open `kaspa-wallet`, connect to your node, and run the `list` command to see your account balances.
 - **Using the wRPC API**: Query the `getBalanceByAddress` method via the wRPC interface (see the [wRPC API](/docs/developer-guide) documentation).
-- **Using a block explorer**: Search your mining address on a Kaspa block explorer to confirm that mined blocks appear with your address as the coinbase recipient.
 
 ### Expected Block Frequency
 
@@ -166,12 +130,11 @@ Solo mining income is highly variable. You may go long periods without finding a
 |---|---|---|
 | Miner cannot connect to kaspad | gRPC port not accessible | Check `--rpclisten` flag and firewall rules. |
 | Blocks found but not accepted | Node not fully synced | Wait for full sync before mining. |
-| Low hashrate | Incorrect GPU thread configuration | Experiment with `--gpu-threads-per-device` values. |
-| "UTXO index not available" error | Missing `--utxoindex` flag | Restart `kaspad` with `--utxoindex`. May require `--reset-db`. |
+| Unexpected hashrate telemetry | Miner/hardware tuning is implementation-specific | Use your miner or hardware vendor docs for tuning guidance. |
+| "UTXO index not available" error | Missing `--utxoindex` for address-index RPC | Restart `kaspad` with `--utxoindex` if your workflow requires those RPC methods. |
 
 ### Performance Tips
 
-- **Dedicated machine**: Run `kaspad` on a machine with low-latency internet and an SSD for best DAG sync performance.
-- **Separate miner and node**: If running on separate machines, ensure the network link between them has minimal latency (ideally same LAN).
-- **Keep software updated**: Kaspa node software and miners are actively developed. New releases often include performance improvements and bug fixes.
-- **Monitor DAG sync**: If your node falls behind the DAG tip, blocks you mine will be stale. Set up monitoring to alert you if the node stops syncing.
+- Keep the node fully synced and monitor `kaspad` logs as canonical sync/health indicators.
+- Keep RPC connectivity between miner and node stable.
+- Re-validate miner settings after upgrades.

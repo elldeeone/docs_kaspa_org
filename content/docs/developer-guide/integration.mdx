@@ -19,8 +19,8 @@ Kaspa is a proof-of-work cryptocurrency built on a blockDAG (Directed Acyclic Gr
 | Address format | Bech32 with `kaspa:` prefix |
 | Smallest unit | Sompi (1 KAS = 10^8 sompi) |
 | Confirmation metric | Blue score / DAA score depth |
-| Recommended confirmations | 10+ for standard, 100+ for high-value |
-| Max supply | 28.7 billion KAS |
+| Recommended confirmations | Operator policy (common examples: 10+ standard, 100+ high-value) |
+| Max supply | ~28.7 billion KAS (effective emission; `maxSompi` is 29B KAS-equivalent) |
 
 ## Running a Node
 
@@ -48,7 +48,7 @@ The `--utxoindex` flag is required for exchange integration. Without it, UTXO qu
 
 The node exposes two interfaces:
 
-- **wRPC (WebSocket)** on port **17110** — Recommended for most integrations
+- **wRPC (WebSocket)** on port **17110** — Recommended for most integrations (enable explicitly with `--rpclisten-borsh` or `--rpclisten-json`)
 - **gRPC** on port **16110** — Alternative for high-performance backends
 
 ### Node Requirements
@@ -61,6 +61,8 @@ The node exposes two interfaces:
 | Network | 50 Mbps | 100+ Mbps |
 
 Initial sync from genesis takes several hours depending on hardware and network conditions.
+
+These values are operational starting points, not protocol limits. Size for your workload and adjust after observing sync and query behavior.
 
 ## Address Format
 
@@ -83,14 +85,15 @@ prefix                        encoded data
 
 ### Address Types
 
-The character immediately following the prefix indicates the address type:
+Kaspa currently supports these address versions:
 
-| Prefix Character | Type | Description |
+| Version | Name | Description |
 |-----------------|------|-------------|
-| `q` | P2PK (Pay-to-Public-Key) | Standard Schnorr public key address |
-| `p` | P2SH (Pay-to-Script-Hash) | Script hash address |
+| `0` | `PubKey` | Standard Schnorr public key address |
+| `1` | `PubKeyECDSA` | ECDSA public key address |
+| `8` | `ScriptHash` | Script hash address |
 
-The vast majority of Kaspa addresses are P2PK (Schnorr) addresses.
+Most user-facing addresses are `PubKey` (Schnorr).
 
 ### Address Validation
 
@@ -114,7 +117,7 @@ function validateKaspaAddress(addressStr: string): boolean {
 ```
 
 <Callout type="info">
-Kaspa addresses are case-insensitive for the Bech32 portion (after the prefix), but by convention they are represented in lowercase. Always store and compare addresses in lowercase.
+Use canonical lowercase addresses. The parser expects lowercase network prefixes (`kaspa`, `kaspatest`, `kaspasim`, `kaspadev`), and mixed/uppercase forms are not guaranteed to parse.
 </Callout>
 
 ## Deposit Detection
@@ -237,6 +240,8 @@ rpc.addEventListener("virtual-daa-score-changed", (event) => {
 Kaspa uses the DAA (Difficulty Adjustment Algorithm) score and blue score as confirmation metrics, rather than traditional "block confirmations."
 
 ### Recommended Confirmation Depths
+
+These are example risk-policy defaults for custodial operations, not protocol constants.
 
 | Transaction Type | Recommended Confirmations | Approximate Time |
 |-----------------|--------------------------|-------------------|
@@ -452,7 +457,7 @@ class UtxoLock {
 }
 ```
 
-**Transaction finality** — In Kaspa's DAG, transactions reach practical finality very quickly (10+ confirmations in ~1 second). There are no "pending" states like Ethereum's mempool — once a transaction is included in a DAG block, it is almost certainly going to be accepted.
+**Transaction finality** — In Kaspa's DAG, acceptance confidence increases quickly with DAA depth. Kaspa still has a mempool for unconfirmed transactions; treat deposits as pending until your confirmation policy is met.
 
 **No nonce management** — Since Kaspa uses UTXOs, there is no nonce to manage. Each transaction references specific UTXOs, and the node validates that those UTXOs have not been spent.
 

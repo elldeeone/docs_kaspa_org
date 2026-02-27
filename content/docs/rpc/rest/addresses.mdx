@@ -22,14 +22,14 @@ Returns the total balance for a single address, calculated by summing all of its
 **Request:**
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/balance
+GET https://api.kaspa.org/addresses/kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73/balance
 ```
 
 **Response:**
 
 ```json
 {
-  "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+  "address": "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
   "balance": 500000000000
 }
 ```
@@ -45,7 +45,7 @@ Returns all unspent transaction outputs (UTXOs) for the given address.
 **Request:**
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/utxos
+GET https://api.kaspa.org/addresses/kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73/utxos
 ```
 
 **Response:**
@@ -53,7 +53,7 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
 ```json
 [
   {
-    "address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+    "address": "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
     "outpoint": {
       "transactionId": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
       "index": 0
@@ -63,7 +63,7 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
       "scriptPublicKey": {
         "scriptPublicKey": "2011a7215f668e921013eb7aac9b7e64b9ec6e757c1b648a89f32cb449a084850aac"
       },
-      "blockDaaScore": 52345000,
+      "blockDaaScore": "52345000",
       "isCoinbase": false
     }
   }
@@ -77,7 +77,7 @@ Returns the full transaction history for an address, including both inputs and o
 **Request:**
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/full-transactions
+GET https://api.kaspa.org/addresses/kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73/full-transactions
 ```
 
 **Query Parameters:**
@@ -86,7 +86,7 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
 |---|---|---|
 | `limit` | integer | Maximum number of transactions to return (default: 50) |
 | `offset` | integer | Number of transactions to skip for pagination |
-| `resolve_previous_outpoints` | string | Set to `light` or `full` to include previous outpoint data |
+| `resolve_previous_outpoints` | string | Previous outpoint lookup mode: `no` (default), `light`, or `full` |
 
 **Response:**
 
@@ -118,7 +118,7 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
       {
         "amount": 100000000,
         "script_public_key": "2011a7...",
-        "script_public_key_address": "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev",
+        "script_public_key_address": "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
         "script_public_key_type": "pubkey"
       }
     ]
@@ -128,25 +128,27 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
 
 ## GET /addresses/\{address\}/full-transactions-page
 
-Returns a paginated view of full transactions for an address, designed for building explorer-style interfaces with page-based navigation.
+Returns a cursor-style paginated view of full transactions for an address.
 
 **Request:**
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:qr35enn.../full-transactions-page?page=0&limit=25&resolve_previous_outpoints=light
+GET https://api.kaspa.org/addresses/kaspa:qr35enn.../full-transactions-page?limit=50&before=1772184825747&resolve_previous_outpoints=light
 ```
 
 **Query Parameters:**
 
 | Parameter | Type | Description |
 |---|---|---|
-| `page` | integer | Page number (0-indexed) |
-| `limit` | integer | Number of transactions per page (default: 25, max: 500) |
-| `resolve_previous_outpoints` | string | `light` or `full` for previous outpoint resolution |
+| `limit` | integer | Maximum number of records to return (default: `50`, max: `500`) |
+| `before` | integer | Include only transactions with `block_time` before this epoch-millis value |
+| `after` | integer | Include only transactions with `block_time` after this epoch-millis value |
+| `resolve_previous_outpoints` | string | Previous outpoint lookup mode: `no`, `light`, or `full` |
+| `acceptance` | string | Optional acceptance filter |
 
 **Response:**
 
-The response includes the same transaction format as `/full-transactions` but is wrapped with pagination metadata.
+The response is a JSON array of transactions (same shape as `/full-transactions`), and pagination cursors are returned via HTTP headers such as `x-next-page-before`.
 
 ## GET /addresses/\{address\}/transactions-count
 
@@ -155,7 +157,7 @@ Returns the total number of transactions associated with an address.
 **Request:**
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35ennsep3hxfe7lkaspadev/transactions-count
+GET https://api.kaspa.org/addresses/kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73/transactions-count
 ```
 
 **Response:**
@@ -168,49 +170,69 @@ GET https://api.kaspa.org/addresses/kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn35en
 
 ## Querying Multiple Addresses
 
-Some address endpoints support querying multiple addresses in a single request by passing a comma-separated list:
+For multiple addresses, use the dedicated POST endpoints:
 
 ```
-GET https://api.kaspa.org/addresses/kaspa:addr1,kaspa:addr2,kaspa:addr3/balance
+POST https://api.kaspa.org/addresses/balances
+Content-Type: application/json
 ```
-
-**Response:**
 
 ```json
 {
-  "address": "kaspa:addr1,kaspa:addr2,kaspa:addr3",
-  "balance": 750000000000
+  "addresses": [
+    "kaspa:addr1",
+    "kaspa:addr2",
+    "kaspa:addr3"
+  ]
 }
 ```
 
-## Rate Limits
+For UTXOs:
 
-The public API enforces rate limits to ensure fair usage:
+```
+POST https://api.kaspa.org/addresses/utxos
+Content-Type: application/json
+```
 
-- Requests are rate-limited per IP address.
-- Exceeding the rate limit returns HTTP `429 Too Many Requests`.
-- Include appropriate backoff and retry logic in your application.
+```json
+{
+  "addresses": [
+    "kaspa:addr1",
+    "kaspa:addr2"
+  ]
+}
+```
+
+`/addresses/balances` returns an array of `{ address, balance }` entries, and `/addresses/utxos` returns an array of UTXO entries for the requested addresses.
+
+## Service Limits
+
+Public `api.kaspa.org` usage policies can change over time and may vary by endpoint or infrastructure conditions. For sustained high-volume traffic, run your own REST server instance.
 
 <Callout type="info">
-For high-volume use cases such as exchange integrations, wallet backends, or analytics platforms, deploy your own REST API server. This eliminates rate limit concerns and gives you full control over availability and performance.
+For high-volume use cases such as exchange integrations, wallet backends, or analytics platforms, deploy your own REST API server. This gives you full control over availability and performance.
 </Callout>
 
 ## Error Responses
 
-Errors are returned with appropriate HTTP status codes:
+Errors are returned with endpoint-specific HTTP status codes:
 
 | Status Code | Meaning |
 |---|---|
 | `200` | Success |
-| `400` | Bad request (e.g., invalid address format) |
-| `404` | Address not found or no data available |
-| `429` | Rate limit exceeded |
-| `500` | Internal server error |
+| `404` | Resource not found (endpoint dependent) |
+| `422` | Validation error (invalid address format, unknown query parameter, etc.) |
 
-Error bodies include a descriptive message:
+Validation errors follow a `detail` schema:
 
 ```json
 {
-  "error": "Invalid address format"
+  "detail": [
+    {
+      "loc": ["path", "kaspaAddress"],
+      "msg": "string does not match regex \"^kaspa:[a-z0-9]{61,63}$\"",
+      "type": "value_error.str.regex"
+    }
+  ]
 }
 ```

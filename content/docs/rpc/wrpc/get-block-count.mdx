@@ -1,6 +1,6 @@
 ---
 title: "GetBlockCount"
-description: "Get the total number of blocks and headers known to the node."
+description: "Get estimated counts of blocks and headers in the node database."
 ---
 
 ## Request
@@ -11,8 +11,8 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `headerCount` | u64 | Total number of block headers the node has received. |
-| `blockCount` | u64 | Total number of full blocks (with body data) the node holds. |
+| `headerCount` | u64 | Estimated number of stored headers. |
+| `blockCount` | u64 | Estimated number of stored full blocks (with body data). |
 
 ## Example
 
@@ -32,6 +32,7 @@ No parameters required.
 
 ## Notes
 
+- These values are DAA-score-based estimates, not exact totals.
+- Estimates exclude some data classes (for example non-DAA blocks and pruning-proof-only headers).
 - `headerCount` may be greater than `blockCount` during initial block download (IBD), when the node has received headers but has not yet downloaded all block bodies.
-- Once the node is fully synced, these values are typically equal.
 - This method is useful for monitoring sync progress.

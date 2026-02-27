@@ -1,67 +1,43 @@
 ---
 title: "Third-Party Protocols"
-description: "How third-party protocols build on Kaspa as a decentralized sequencer — KRC-20 tokens, the sequencer pattern, and the road to native smart contracts."
+description: "Integration boundaries and risk controls when consuming non-canonical protocol layers built around Kaspa transaction data."
 ---
 
-## Kaspa as a Pure L1
+## Scope Boundary
 
-Kaspa is a pure Layer 1 protocol focused on fast, secure, and scalable value transfer. The node software validates blocks, transactions, and UTXO state — but does not natively execute smart contracts or support on-chain programmability beyond standard transaction scripts.
-
-This design keeps the consensus layer lean and fast. Every node in the network validates the same minimal rule set, which is how Kaspa achieves 10 blocks per second with sub-second confirmation times.
-
-<Callout type="info">
-Native smart contract support (via a future scripting or execution layer) is on the Kaspa roadmap. Until that ships, all programmable functionality is built by third-party protocols on top of the L1.
-</Callout>
-
-## The Sequencer Pattern
-
-Third-party protocols use Kaspa as a **decentralized sequencer**. The pattern works as follows:
-
-1. **Embed metadata in transactions**: A protocol defines its own data format and encodes it in the `OP_RETURN` output or other script fields of a standard Kaspa transaction.
-2. **Kaspa orders the transactions**: Because Kaspa's GHOSTDAG consensus produces a deterministic ordering of all transactions across the DAG, anyone running a Kaspa node sees the same sequence of protocol operations.
-3. **Off-chain indexers interpret the data**: Protocol-specific indexers scan the Kaspa DAG, extract embedded metadata, validate protocol rules (e.g., token balances, minting limits), and build a derived state.
-
-The key insight is that Kaspa provides **global ordering and data availability** without needing to understand the protocol's semantics. The L1 acts as an immutable, high-throughput sequencer that all participants can independently verify.
-
-This is similar to how Ordinals and BRC-20 work on Bitcoin, but Kaspa's high block rate and fast finality make the sequencer pattern significantly more practical for real-time applications.
-
-## KRC-20 Token Standard (Kasplex)
-
-[Kasplex](https://kasplex.org) is the primary protocol building on the sequencer pattern. It defines the **KRC-20 token standard**, which enables fungible token operations (deploy, mint, transfer) on Kaspa.
-
-### How KRC-20 Works
-
-- **Token deployment**: A deploy transaction embeds metadata (token name, symbol, max supply, mint limit per transaction) in a Kaspa transaction.
-- **Minting**: Users submit mint transactions that reference a deployed token. The Kasplex indexer validates that the mint does not exceed supply or per-transaction limits.
-- **Transfers**: Token transfers are encoded as Kaspa transactions with embedded transfer metadata. The indexer updates token balances accordingly.
-- **Indexer consensus**: Anyone can run a Kasplex indexer against a Kaspa archival node and independently derive the same token state. There is no trusted third party.
-
-### Resources
-
-| Resource | URL |
-|---|---|
-| Kasplex website | [kasplex.org](https://kasplex.org) |
-| Kasplex documentation | [docs.kasplex.org](https://docs.kasplex.org) |
-| KRC-20 JavaScript apps (Coinchimp) | [github.com/coinchimp/kaspa-krc20-apps](https://github.com/coinchimp/kaspa-krc20-apps/) |
-| Kasia Indexer (K-Kluster) | [github.com/K-Kluster/kasia-indexer](https://github.com/K-Kluster/kasia-indexer) |
-
-The Coinchimp KRC-20 apps repository provides reference JavaScript implementations for interacting with KRC-20 tokens, including minting, transferring, and querying token balances.
+This documentation set is canonical for Kaspa L1 node/wallet/RPC behavior. Third-party protocol layers built around Kaspa transaction metadata are external ecosystems and are not protocol-canonical in this docs set.
 
 <Callout type="warn">
-KRC-20 tokens are managed by third-party indexers, not by the Kaspa node itself. The Kaspa node sees only standard transactions. If an indexer has a bug or applies different rules, token state may diverge. Always verify which indexer implementation you are relying on.
+Treat third-party protocol rules, token/indexer state, and roadmap claims as external dependencies. Validate them directly with their maintainers and documentation before integrating.
 </Callout>
 
-## Smart Contracts on the Roadmap
+## Integration Pattern (Generic)
 
-The Kaspa project has smart contract support on its long-term roadmap. Potential approaches under discussion include:
+External protocols commonly:
 
-- **A dedicated execution layer** that leverages the DAG's ordering guarantees for contract state transitions.
-- **Enhanced scripting capabilities** that extend the existing transaction script engine with additional opcodes.
+1. Encode metadata into standard Kaspa transactions.
+2. Read ordered transaction history from Kaspa nodes.
+3. Build derived state in external indexers/services.
 
-Until native smart contracts are available, the sequencer pattern and protocols like KRC-20 remain the primary way to build programmable applications on Kaspa.
+Kaspa nodes remain authoritative for L1 transaction/block validity, while protocol-specific derived state is maintained by third-party software.
+
+## Due-Diligence Checklist
+
+- Verify protocol specification ownership and versioning.
+- Verify deterministic replay rules for derived state.
+- Verify indexer behavior across reorgs and node restarts.
+- Verify operational SLOs (latency, data freshness, rollback handling).
+- Verify security model and upgrade governance.
+
+## Operational Recommendations
+
+- Keep a local archival/indexing pipeline if your product depends on derived state.
+- Pin exact protocol/indexer versions in production.
+- Instrument cross-checks between node data and derived-state data.
+- Plan explicit incident playbooks for indexer divergence.
 
 ## Further Reading
 
-- [Exchange Integration](/docs/integrations/exchange-integration) — Integrating Kaspa for deposits and withdrawals.
-- [Payment Processing](/docs/integrations/payment-processing) — Monitoring addresses for incoming payments.
-- [Transactions](/docs/core-concepts/transactions) — How Kaspa transactions and scripts work at the protocol level.
+- [Exchange Integration](/docs/integrations/exchange-integration) — Canonical node-backed integration.
+- [Payment Processing](/docs/integrations/payment-processing) — Confirmation/settlement workflows.
+- [Transactions](/docs/core-concepts/transactions) — L1 transaction model.

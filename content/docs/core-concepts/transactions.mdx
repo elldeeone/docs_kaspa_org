@@ -56,10 +56,10 @@ A value that restricts when the transaction can be included in a block. It can r
 
 ### Subnetwork ID
 
-A 20-byte identifier that associates the transaction with a specific subnetwork. Most standard transactions use the native subnetwork ID. Subnetworks provide a mechanism for layer-2 protocols and specialized transaction types to operate within the Kaspa framework.
+A 20-byte identifier that associates the transaction with a specific subnetwork. Most standard transactions use the native subnetwork ID. The field is part of the transaction format, but current mainline validation behavior primarily accepts native and coinbase subnetworks.
 
 <Callout type="info">
-The subnetwork ID is a forward-looking feature. The native subnetwork (used for standard KAS transfers) has the ID `0x0000000000000000000000000000000000000000`. The coinbase subnetwork ID is `0x0100000000000000000000000000000000000000`.
+The subnetwork ID is a forward-looking format field. The native subnetwork (used for standard KAS transfers) has the ID `0x0000000000000000000000000000000000000000`, and the coinbase subnetwork ID is `0x0100000000000000000000000000000000000000`.
 </Callout>
 
 ## Schnorr Signatures
@@ -90,7 +90,7 @@ Instead of a simple byte-size limit, Kaspa uses a concept called **transaction m
 - **Transient mass** (KIP-13): The serialized size of the transaction in bytes, reflecting network propagation and mempool costs.
 - **Storage mass** (KIP-9): The impact on the UTXO set. Transactions that create many new UTXOs without consolidating existing ones incur higher storage mass.
 
-The total mass of a transaction is the **maximum** of these three components (not the sum). Each block has a maximum mass capacity, and transactions are selected by miners based on their fee-to-mass ratio.
+For policy/selection, the effective transaction mass is commonly modeled as the **maximum** of these three components (not the sum). At consensus level, block validation still enforces per-dimension mass constraints independently.
 
 <Callout>
 Transaction mass is designed to align economic incentives with resource consumption. A transaction that is expensive for the network to process (in terms of compute, bandwidth, or state growth) must pay a proportionally higher fee.
@@ -110,7 +110,7 @@ Because Kaspa operates at 10 BPS with all blocks included in the DAG, the aggreg
 
 ### Minimum Fee
 
-Every transaction must include a minimum fee to be relayed by the network. This minimum fee prevents spam and denial-of-service attacks. Transactions below the minimum fee are rejected by nodes and not propagated.
+Minimum fee is a **relay policy** setting used by nodes/miners to reduce spam and denial-of-service traffic. Transactions below a node's policy threshold may be rejected from that node's mempool and not propagated by that node.
 
 ## Transaction Lifecycle
 
@@ -125,9 +125,9 @@ A Kaspa transaction goes through the following stages:
 
 ## Coinbase Transactions
 
-Each block contains a special **coinbase transaction** that mints new KAS as a block reward. The coinbase transaction has no inputs (since it creates new coins) and its outputs distribute the block reward to the miner.
+Each block contains a special **coinbase transaction** that has no inputs and carries subsidy/reward data. In current Kaspa consensus, coinbase outputs are mergeset-aware: blue-block rewards are paid to each blue block's reported script, while red-block rewards are aggregated to the merging block miner.
 
-Kaspa's block reward follows a smooth emission schedule based on a chromatic scale (musical half-notes), decreasing the reward roughly once per year. Coinbase outputs have a maturity requirement: they cannot be spent until a certain number of confirmations have passed.
+Kaspa's block reward follows a smooth chromatic emission schedule with monthly reductions (12 steps per halving year). Coinbase outputs have a maturity requirement before they can be spent.
 
 ## Double-Spend Prevention
 
@@ -135,7 +135,7 @@ In a BlockDAG, two blocks might contain conflicting transactions (transactions t
 
 1. The canonical ordering produced by GHOSTDAG determines which transaction is seen first.
 2. The first transaction in the ordering is accepted; the conflicting transaction in a later block is rejected.
-3. The block containing the rejected transaction is still included in the DAG (and the miner still receives the block reward), but the conflicting transaction within it has no effect.
+3. The block containing the rejected transaction can still be included in the DAG, but reward payout follows blue/red mergeset coinbase rules rather than a universal immediate "block owner gets reward" rule.
 
 This approach ensures that double-spend attempts are always resolved in a consistent manner across all nodes.
 

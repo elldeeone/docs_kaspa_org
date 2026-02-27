@@ -23,7 +23,7 @@ In a traditional blockchain, a 51% attacker can create a secret chain longer tha
 
 - **Parallel blocks are included**: The DAG includes all blocks, not just those on a single chain. An attacker cannot simply "orphan" honest blocks — they become part of the DAG structure.
 - **GHOSTDAG voting**: GHOSTDAG uses the DAG's structure to identify which blocks are "blue" (honest) and which are "red" (adversarial). A block that is well-connected to the majority of recent blocks is more likely to be blue.
-- **Higher threshold in practice**: Because honest blocks are incorporated into the DAG rather than orphaned, the effective threshold for a successful attack is higher than in a simple longest-chain system.
+- **Utilization effects**: Because honest blocks are incorporated into the DAG rather than discarded, honest hashrate utilization can improve versus chain-only designs. Exact attack thresholds still depend on the formal model and assumptions used.
 
 <Callout type="info">
 In a blockchain, honest blocks that lose the race are orphaned and wasted. In Kaspa's DAG, honest blocks are still included and contribute to the security of the selected parent chain. This improves both security and miner fairness.
@@ -53,36 +53,23 @@ If you are running a mining operation, ensure your node has good network connect
 
 ## Confirmation Depth and Probability of Reversal
 
-The probability that a confirmed transaction is reversed decreases exponentially with confirmation depth (measured in blue score). For a given attacker hashrate share `q` (where `q < 0.5`), the probability of reversing a transaction with `d` confirmations is approximately:
+Reversal probability decreases with confirmation depth, but the exact curve depends on the adversarial model, network-delay assumptions, and the specific approximation used. Treat fixed "depth vs probability" tables as illustrative unless they are derived from a cited formal analysis.
 
-```
-P(reversal) ≈ (q / (1-q))^d
-```
-
-This exponential decay means:
-
-| Attacker hashrate | Depth for < 0.1% reversal probability |
-|---|---|
-| 10% | ~7 blue score |
-| 20% | ~14 blue score |
-| 30% | ~25 blue score |
-| 40% | ~72 blue score |
-| 49% | ~920 blue score |
-
-At Kaspa's 10 BPS rate, even conservative confirmation depths are reached in seconds.
+At Kaspa's 10 BPS rate, practical confirmation depths are reached quickly in wall-clock time.
 
 ## Finality Depth
 
 Kaspa defines a **finality depth** of **432,000 blue score** (approximately 12 hours at 10 BPS). After this depth:
 
-- The pruning mechanism removes old block data below the finality point.
+- Finality rules reject deep reorg attempts below the finality point.
+- Pruning is managed by a separate pruning-depth/pruning-point mechanism (configured deeper than finality depth).
 - Transactions below the finality depth are considered irreversible by all nodes.
 - Reorgs deeper than the finality depth are rejected by the protocol, even if an attacker presents a heavier chain.
 
 This provides a hard finality guarantee that does not exist in Bitcoin (where, in theory, arbitrarily deep reorgs are possible if an attacker has sufficient hashrate).
 
 <Callout>
-The finality depth of 432,000 blue score provides a strong guarantee: once a transaction is buried this deep, it cannot be reversed even by an attacker with majority hashrate. This is a stronger guarantee than Bitcoin's probabilistic finality.
+The finality depth of 432,000 blue score provides a strong protocol-level guarantee against deep reorgs under the deployed consensus rules. This is distinct from Bitcoin's purely probabilistic depth model.
 </Callout>
 
 ## GHOSTDAG Security Analysis
@@ -103,17 +90,16 @@ The DAG structure allows high throughput (10 BPS) without sacrificing security, 
 | Orphan rate | Near zero (blocks are merged) | Increases with block rate |
 | Confirmation time | Seconds | Minutes to hours |
 | Finality | Hard finality at 432,000 blue score | Probabilistic only |
-| Attack threshold | >50% hashrate (enhanced by DAG) | >50% hashrate |
+| Attack threshold | Honest-majority model; formal threshold depends on assumptions | Honest-majority model |
 | Throughput | 10 BPS without security loss | ~1 block/600 seconds |
 
 ## Practical Security Recommendations
 
-For different transaction values, consider these confirmation depth guidelines:
+Kaspa does not define a protocol-mandated "amount -> confirmations" policy table. In practice:
 
-- **Casual transactions** (small amounts): 10-100 blue score (1-10 seconds). Sufficient for everyday purchases.
-- **Significant transactions** (moderate amounts): 1,000 blue score (~100 seconds). Appropriate for most commercial transactions.
-- **Large transactions** (high-value transfers): 10,000+ blue score (~17 minutes). Provides very strong assurance.
-- **Critical or irreversible decisions**: Wait for finality depth (432,000 blue score, ~12 hours). Recommended for exchange deposits of very large amounts.
+- Use the receiver's risk policy (exchange, merchant, treasury, internal ops) as the primary confirmation target.
+- Treat confirmation depth as a risk-management parameter, not a fixed protocol guarantee.
+- For maximal protocol-level assurance under current rules, wait for finality depth (`432,000` blue score, ~12 hours at 10 BPS).
 
 ## Further Reading
 

@@ -6,16 +6,16 @@ description: "Monitor transaction confirmation depth using blue score changes."
 ## Prerequisites
 
 - **Kaspa WASM SDK** installed (`npm install kaspa-wasm`)
-- **A transaction ID** to track (obtained after submitting a transaction)
+- **Either** a known inclusion DAA score (from your own submission pipeline) **or** a recipient address/expected amount to detect inclusion via UTXO events
 - **Understanding of DAA score** -- Kaspa uses the DAA (Difficulty Adjustment Algorithm) score as its logical clock, incrementing roughly once per block (10 times per second at 10 BPS)
 
 <Callout type="info">
-In Kaspa's BlockDAG, confirmations are measured by the difference between the current virtual DAA score and the DAA score of the block that included the transaction. A higher difference means more blocks have built on top, increasing finality. Under DAGKnight, 10 confirmations provide strong security guarantees for most use cases.
+In Kaspa's BlockDAG, confirmations are measured by the difference between the current virtual DAA score and the DAA score of the block that included the transaction. A higher difference means more blocks have built on top, increasing finality.
 </Callout>
 
 ## Code
 
-The following example subscribes to DAA score updates and monitors confirmation depth for a submitted transaction:
+The following example shows two accurate patterns: tracking by a known inclusion DAA score, or detecting inclusion first via UTXO notifications and then counting depth.
 
 ```typescript
 import {
@@ -24,7 +24,10 @@ import {
   Encoding,
 } from "kaspa-wasm";
 
-async function trackConfirmation(targetTxId: string, requiredConfirmations: number = 10) {
+async function trackByKnownInclusionScore(
+  inclusionDaaScore: bigint,
+  requiredConfirmations: number = 10
+) {
   // 1. Connect to a Kaspa node
   const rpc = new RpcClient({
     resolver: new Resolver(),
@@ -33,51 +36,20 @@ async function trackConfirmation(targetTxId: string, requiredConfirmations: numb
   });
   await rpc.connect();
 
-  // 2. Track the transaction's inclusion via DAA score changes
-  //    Note: There is no RPC method to look up transactions by address directly.
-  //    Use subscribeUtxosChanged to detect when the transaction is accepted,
-  //    or use the REST API (GET /transactions/address/{address}) if available.
-  let inclusionDaaScore: bigint | null = null;
-
-  // 3. Subscribe to virtual DAA score changes
+  // 2. Subscribe to virtual DAA score changes
   await rpc.subscribeVirtualDaaScoreChanged();
 
   return new Promise<void>((resolve) => {
     rpc.addEventListener("virtual-daa-score-changed", async (event) => {
       const currentDaaScore = event.data.virtualDaaScore;
 
-      // On first update, if we don't have the inclusion score yet,
-      // try to find the transaction
-      if (inclusionDaaScore === null) {
-        try {
-          // Check the current chain state for the transaction
-          const info = await rpc.getBlockDagInfo();
-          // For simplicity, use the current score minus a buffer
-          // In production, track this from the submission time
-          console.log(
-            `Waiting for transaction ${targetTxId} to appear in a block...`
-          );
-          console.log(`Current DAA score: ${currentDaaScore}`);
-
-          // Record the approximate inclusion DAA score
-          inclusionDaaScore = currentDaaScore;
-        } catch (err) {
-          console.log("Transaction not yet in a block, waiting...");
-          return;
-        }
-      }
-
-      // 4. Calculate confirmation depth
+      // 3. Calculate confirmation depth from the known inclusion score
       const confirmations = Number(currentDaaScore - inclusionDaaScore);
-      console.log(
-        `Transaction ${targetTxId}: ${confirmations} confirmations (DAA score: ${currentDaaScore})`
-      );
+      console.log(`Confirmations: ${confirmations} (virtual DAA: ${currentDaaScore})`);
 
-      // 5. Check if we have reached the required depth
+      // 4. Check if we have reached the required depth
       if (confirmations >= requiredConfirmations) {
-        console.log(
-          `Transaction confirmed with ${confirmations} confirmations.`
-        );
+        console.log(`Target reached with ${confirmations} confirmations.`);
         await rpc.unsubscribeVirtualDaaScoreChanged();
         await rpc.disconnect();
         resolve();
@@ -107,11 +79,11 @@ async function trackViaUtxoChanges(
 
   rpc.addEventListener("utxos-changed", (event) => {
     for (const added of event.data.added) {
-      if (added.utxoEntry.amount === expectedAmount) {
+      if (added.amount === expectedAmount) {
         console.log(
-          `Detected incoming payment of ${added.utxoEntry.amount} sompi`
+          `Detected incoming payment of ${added.amount} sompi`
         );
-        detectedDaaScore = added.utxoEntry.blockDaaScore;
+        detectedDaaScore = added.blockDaaScore;
       }
     }
   });
@@ -129,8 +101,13 @@ async function trackViaUtxoChanges(
   });
 }
 
-// Usage
-trackConfirmation("abcdef1234567890...", 10).catch(console.error);
+// Usage:
+// If your submission pipeline already knows inclusionDaaScore, use:
+trackByKnownInclusionScore(123456789n, 10).catch(console.error);
+
+// Note:
+// RPC does not expose confirmed-chain history by address as a single call.
+// For address-based pending-transaction checks, use getMempoolEntriesByAddresses.
 ```
 
 ## Explanation
@@ -145,9 +122,9 @@ Unlike linear blockchains where confirmation count equals the number of blocks b
 | **Blue score** | The number of blue blocks in the selected chain up to a given point. Closely related to DAA score. |
 | **Confirmation depth** | The difference between the current DAA score and the DAA score when the transaction's block was accepted. |
 
-### Approach 1: DAA score polling
+### Approach 1: Track from known inclusion DAA score
 
-Subscribe to `virtual-daa-score-changed` events. Each event fires when the virtual (tip) DAA score increases. Compare the current score against the score at which the transaction was included to compute confirmation depth.
+Subscribe to `virtual-daa-score-changed` events. Each event fires when the virtual (tip) DAA score increases. Compare the current score against the known inclusion score to compute confirmation depth.
 
 ### Approach 2: UTXO change detection
 
@@ -157,16 +134,16 @@ Subscribe to `utxos-changed` for the recipient address. When a matching UTXO app
 For payment applications, the UTXO change approach is generally more reliable because it directly detects when the payment arrives, rather than requiring you to look up the transaction by ID. It also provides the exact DAA score of the accepting block.
 </Callout>
 
-### How many confirmations are enough?
+### Example risk policy (not a protocol rule)
 
-| Use Case | Suggested Confirmations | Approximate Wait |
-|---|---|---|
-| Low-value payments (< 10 KAS) | 1--3 | < 1 second |
-| Medium-value payments | 10 | ~1 second |
-| High-value payments (exchanges) | 50--100 | 5--10 seconds |
-| Maximum security | 200+ | ~20 seconds |
+| Use Case | Example Confirmations |
+|---|---|
+| Low-value payments | 1--3 |
+| Medium-value payments | 10 |
+| High-value payments (exchanges) | 50--100 |
+| Maximum security | 200+ |
 
-Because Kaspa operates at 10 BPS, even conservative confirmation targets require only seconds rather than minutes or hours.
+Choose confirmation depth based on your own risk model, reorg tolerance, and operational policy.
 
 ## Further Reading
 

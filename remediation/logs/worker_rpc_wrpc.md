@@ -1,0 +1,71 @@
+# worker_rpc_wrpc remediation log
+
+## Files changed
+- content/docs/rpc/wrpc/add-peer.mdx
+- content/docs/rpc/wrpc/ban.mdx
+- content/docs/rpc/wrpc/estimate-network-hashes-per-second.mdx
+- content/docs/rpc/wrpc/get-block-count.mdx
+- content/docs/rpc/wrpc/get-block-dag-info.mdx
+- content/docs/rpc/wrpc/get-block-template.mdx
+- content/docs/rpc/wrpc/get-block.mdx
+- content/docs/rpc/wrpc/get-blocks.mdx
+- content/docs/rpc/wrpc/get-coin-supply.mdx
+- content/docs/rpc/wrpc/get-connected-peer-info.mdx
+- content/docs/rpc/wrpc/get-connections.mdx
+- content/docs/rpc/wrpc/get-current-block-color.mdx
+- content/docs/rpc/wrpc/get-current-network.mdx
+- content/docs/rpc/wrpc/get-fee-estimate-experimental.mdx
+- content/docs/rpc/wrpc/get-fee-estimate.mdx
+- content/docs/rpc/wrpc/get-headers.mdx
+- content/docs/rpc/wrpc/get-mempool-entries-by-addresses.mdx
+- content/docs/rpc/wrpc/get-mempool-entries.mdx
+- content/docs/rpc/wrpc/get-mempool-entry.mdx
+- content/docs/rpc/wrpc/get-metrics.mdx
+- content/docs/rpc/wrpc/get-peer-addresses.mdx
+- content/docs/rpc/wrpc/get-server-info.mdx
+- content/docs/rpc/wrpc/get-sink-blue-score.mdx
+- content/docs/rpc/wrpc/get-subnetwork.mdx
+- content/docs/rpc/wrpc/get-sync-status.mdx
+- content/docs/rpc/wrpc/get-system-info.mdx
+- content/docs/rpc/wrpc/get-utxos-by-addresses.mdx
+- content/docs/rpc/wrpc/get-virtual-chain-from-block.mdx
+- content/docs/rpc/wrpc/ping.mdx
+- content/docs/rpc/wrpc/resolve-finality-conflict.mdx
+- content/docs/rpc/wrpc/shutdown.mdx
+- content/docs/rpc/wrpc/submit-block.mdx
+- content/docs/rpc/wrpc/submit-transaction-replacement.mdx
+- content/docs/rpc/wrpc/submit-transaction.mdx
+- content/docs/rpc/wrpc/unban.mdx
+
+## Key fixes made
+- Corrected request/response schemas to match RPC core contracts:
+  - `addPeer.peerAddress` documented as network-address object (`ip`, optional `port`).
+  - Marked required booleans where required (`getBlock.includeTransactions`, `getBlocks.includeBlocks/includeTransactions`, `getVirtualChainFromBlock.includeAcceptedTransactionIds`, `submitBlock.allowNonDAABlocks`).
+  - Fixed optional/nullable field docs (`getFeeEstimateExperimental.verbose`, `getUtxosByAddresses.entries[].address`, metrics sub-objects).
+- Fixed behavior claims that contradicted implementation:
+  - Ban expiration now documented as auto-expiring (~24h) with optional `unban`.
+  - `estimateNetworkHashesPerSecond`: min window (`>=1000`) and omitted `startHash` behavior corrected.
+  - `getBlockCount` changed to estimated counts with exclusions.
+  - `getBlock` header-only/pruned behavior corrected (`isHeaderOnly`, empty transactions).
+  - `getBlocks.lowHash` inclusive pagination behavior documented.
+  - `getConnectedPeerInfo.timeConnected` corrected to connection duration (ms), not epoch timestamp.
+  - `getConnections.clients` corrected to active wRPC connections; profile-data example corrected.
+  - `getSyncStatus` rewritten to readiness heuristic semantics.
+  - `submitTransaction` orphan behavior caveat added for safe mode override.
+  - `submitTransactionReplacement` corrected from higher absolute fee to higher feerate and single double-spend owner requirement.
+  - `unban`, `shutdown`, and `resolveFinalityConflict` safe-mode restrictions documented.
+- Reworked unimplemented methods to avoid misleading success docs:
+  - `getHeaders`, `getSubnetwork`, `resolveFinalityConflict` now explicitly documented as currently returning `NotImplemented`, with error examples.
+- Corrected network ID/type examples:
+  - Removed `kaspa-` prefix where not returned.
+  - `getCurrentNetwork` now documented as network *type* (`mainnet|testnet|simnet|devnet`).
+  - `getServerInfo.networkId` example updated to unprefixed serialization (`mainnet`, `testnet-10`, etc.).
+- Replaced/softened unsupported normative guidance:
+  - Removed hard timing/threshold claims not backed by primary sources.
+  - Reworded `ping` keepalive interval guidance as environment-dependent.
+  - Reworded conceptual notes (`getCurrentBlockColor`, `getSinkBlueScore`, fees language) to implementation-accurate/non-normative phrasing.
+- Replaced `getMetrics` response docs/example with actual schema keys from model/service implementation.
+- Updated coin supply docs to current constants and clarified hardcoded cap vs effective-emission framing.
+
+## Residual unresolved claims
+- None.

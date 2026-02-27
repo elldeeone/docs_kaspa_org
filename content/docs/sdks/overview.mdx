@@ -1,103 +1,54 @@
 ---
 title: SDK Overview
-description: "Choose the right Kaspa SDK — WASM for browsers and Node.js, Rust crates for native applications, Python for scripting, and community libraries."
+description: Choose a Kaspa integration path across official SDKs and external/community wrappers.
 ---
 
-## The Kaspa SDK Ecosystem
+## SDK Layers
 
-Kaspa provides a layered SDK ecosystem rooted in the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) Rust implementation. The Rust crates form the canonical source of truth for all consensus logic, wallet operations, and RPC communication. Higher-level SDKs compile or bind to these crates, ensuring consistent behavior across languages and platforms.
+Kaspa application tooling is anchored in the `rusty-kaspa` codebase. The two canonical integration paths documented in this docs set are:
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Applications                       │
-├──────────┬──────────┬──────────┬────────────────────┤
-│  WASM    │  Python  │  Rust    │  Community SDKs    │
-│  SDK     │  SDK     │  Crates  │  (Go, C#, etc.)    │
-├──────────┴──────────┴──────────┴────────────────────┤
-│              wRPC / gRPC Transport                   │
-├─────────────────────────────────────────────────────┤
-│              Kaspa Node (rusty-kaspa)                │
-└─────────────────────────────────────────────────────┘
-```
+- **Rust crates** for native/infrastructure applications.
+- **WASM SDK** for JavaScript/TypeScript browser and Node.js applications.
 
-All SDKs communicate with the Kaspa network through a running node using either **wRPC** (WebSocket-based RPC, the default for most applications) or **gRPC** (used by infrastructure operators and some community tools). The SDKs themselves do not participate in consensus or block production; they are clients that construct transactions, query state, and subscribe to events.
+Other language wrappers may exist, but their API coverage and maintenance vary by project.
 
-## Choosing an SDK
+## Choosing an Integration Path
 
-The right SDK depends on your target platform, performance requirements, and development workflow. Use the decision matrix below as a starting point.
-
-| Use Case | Recommended SDK | Why |
+| Use Case | Preferred Path | Reason |
 |---|---|---|
-| Browser wallet or DApp | [WASM SDK](/docs/sdks/wasm-sdk) | Runs in the browser, full TypeScript support |
-| Node.js backend service | [WASM SDK](/docs/sdks/wasm-sdk) | Same WASM package works in Node.js |
-| High-performance native app | [Rust Crates](/docs/sdks/rust-crates) | Direct access to all crates, zero overhead |
-| Scripting and automation | [Python SDK](/docs/sdks/python-sdk) | Familiar syntax, fast prototyping |
-| Analytics and data pipelines | [Python SDK](/docs/sdks/python-sdk) | Integrates with numpy, pandas, Jupyter |
-| Go or C# application | [Community SDKs](/docs/sdks/community-sdks) | Community-maintained libraries |
-| Custom protocol tooling | [Rust Crates](/docs/sdks/rust-crates) | Full control over consensus primitives |
+| Browser app / frontend wallet | [WASM SDK](/docs/sdks/wasm-sdk) | Official JS/TS bindings and wallet/RPC primitives |
+| Node.js backend service | [WASM SDK](/docs/sdks/wasm-sdk) | Shared JS/TS runtime and RPC/event model |
+| Native infrastructure service | [Rust Crates](/docs/sdks/rust-crates) | Direct crate-level control and performance |
+| Language not officially covered | [Community SDKs](/docs/sdks/community-sdks) | Evaluate third-party wrappers against official behavior |
 
-## SDK Comparison
+## Capability Guidance
 
-| Feature | WASM SDK | Rust Crates | Python SDK | Community SDKs |
-|---|---|---|---|---|
-| Language | JS / TS | Rust | Python | Go, C#, others |
-| Platform | Browser, Node.js | Native (any OS) | Desktop, server | Varies |
-| Maturity | Production | Production | Beta | Varies |
-| RPC client | Yes | Yes | Yes | Partial |
-| Wallet operations | Yes | Yes | Yes | Varies |
-| Transaction construction | Yes | Yes | Yes | Varies |
-| HD key derivation | Yes | Yes | Yes | Varies |
-| Event subscriptions | Yes | Yes | Yes | Varies |
-| Consensus primitives | Exposed via WASM | Full access | Subset | Varies |
-
-## Common Capabilities
-
-Regardless of which SDK you choose, the following operations are available across all official SDKs:
-
-- **RPC communication** — Connect to a Kaspa node, query blockchain state (DAG info, block data, mempool), and submit transactions.
-- **Wallet operations** — Generate mnemonics, derive HD keys (BIP-32 with Kaspa's `m/44'/111111'/` derivation path), and manage addresses.
-- **Transaction construction** — Build transactions with automatic UTXO selection, fee calculation, and compound transaction chaining for large UTXO sets.
-- **Address handling** — Create, parse, and validate Bech32-encoded Kaspa addresses across mainnet, testnet, and simnet.
-- **Event subscriptions** — Subscribe to real-time notifications for UTXO changes, new blocks, DAA score updates, and virtual chain changes.
-- **Signing** — Sign transactions using Schnorr signatures over secp256k1.
+Capabilities such as RPC calls, transaction construction, and address handling are fully documented for Rust/WASM in this docs set. For external wrappers (including Python/community projects), treat capability claims as project-specific and verify directly in that project's repository/docs.
 
 <Callout type="info">
-All official SDKs derive from the same Rust codebase. The WASM SDK is compiled from Rust to WebAssembly, and the Python SDK uses PyO3 bindings to the Rust crates. This means consensus-critical logic is identical across SDKs.
+Rust and WASM documentation in this site tracks primary-source `rusty-kaspa` behavior. External wrappers should be validated against the same primary sources before production use.
 </Callout>
 
 ## Transport Protocols
 
-SDKs communicate with Kaspa nodes using one of two RPC protocols:
+- **wRPC**: Primary application transport for SDK integrations.
+- **gRPC**: Useful for infrastructure and generated clients in multiple languages.
 
-- **wRPC (WebSocket RPC)** — The primary protocol for application development. Supports both Borsh (binary) and JSON encodings. The WASM SDK's `Resolver` class can automatically discover public wRPC endpoints.
-- **gRPC** — Used by infrastructure tools and some community SDKs. Requires direct node access and is not available through public endpoints by default.
-
-<Callout type="warn">
-Public wRPC nodes are provided for development convenience. Production applications that process real value should always connect to a node you operate. Public nodes may impose rate limits, go offline without notice, or be operated by untrusted parties.
-</Callout>
+Both require a running Kaspa node endpoint.
 
 ## Network Identifiers
 
-When connecting to a node, you must specify the target network. All SDKs use the same network identifier strings:
+Use explicit network identifiers in SDK configs:
 
 | Network | Identifier | Address Prefix | Use |
 |---|---|---|---|
 | Mainnet | `mainnet` | `kaspa:` | Production |
-| Testnet 10 | `testnet-10` | `kaspatest:` | Testing (10 BPS) |
-| Testnet 11 | `testnet-11` | `kaspatest:` | Testing (higher BPS) |
+| Testnet | `testnet-10` | `kaspatest:` | Public testing |
 | Simnet | `simnet` | `kaspasim:` | Local development |
-
-## Getting Started
-
-Pick the SDK that matches your use case and follow the corresponding guide:
-
-- **[WASM SDK](/docs/sdks/wasm-sdk)** — Installation, connecting to a node, wallet setup, and sending transactions from JavaScript or TypeScript.
-- **[Rust Crates](/docs/sdks/rust-crates)** — Adding crates to your `Cargo.toml`, RPC connections, and transaction construction in Rust.
-- **[Python SDK](/docs/sdks/python-sdk)** — Installing via pip, scripting wallet operations, and querying the network.
-- **[Community SDKs](/docs/sdks/community-sdks)** — Go, C#, and other language bindings maintained by the community.
 
 ## Further Reading
 
-- [RPC API Reference](/docs/rpc/overview) — Full listing of available RPC methods.
-- [Building Applications](/docs/developer-guide/building-apps) — Architecture patterns and best practices for Kaspa applications.
-- [Transactions](/docs/core-concepts/transactions) — How Kaspa transactions work at the protocol level.
+- [WASM SDK](/docs/sdks/wasm-sdk) — Official JavaScript/TypeScript integration.
+- [Rust Crates](/docs/sdks/rust-crates) — Crate-level architecture and usage.
+- [Community SDKs](/docs/sdks/community-sdks) — Third-party SDK evaluation framework.
+- [RPC API Reference](/docs/rpc/overview) — Node RPC method surface.

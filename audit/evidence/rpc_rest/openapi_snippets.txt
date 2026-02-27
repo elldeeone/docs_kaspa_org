@@ -1,0 +1,1393 @@
+### /addresses single + multi address endpoints
+    15	    "/addresses/{kaspaAddress}/balance": {
+    16	      "get": {
+    17	        "tags": [
+    18	          "Kaspa addresses"
+    19	        ],
+    20	        "summary": "Get Balance From Kaspa Address",
+    21	        "description": "Get balance for a given kaspa address",
+    22	        "operationId": "get_balance_from_kaspa_address_addresses__kaspaAddress__balance_get",
+    23	        "parameters": [
+    24	          {
+    25	            "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+    26	            "required": true,
+    27	            "schema": {
+    28	              "type": "string",
+    29	              "pattern": "^kaspa:[a-z0-9]{61,63}$",
+    30	              "title": "Kaspaaddress",
+    31	              "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
+    32	            },
+    33	            "name": "kaspaAddress",
+    34	            "in": "path"
+    35	          }
+    36	        ],
+    37	        "responses": {
+    38	          "200": {
+    39	            "description": "Successful Response",
+    40	            "content": {
+    41	              "application/json": {
+    42	                "schema": {
+    43	                  "$ref": "#/components/schemas/BalanceResponse"
+    44	                }
+    45	              }
+    46	            }
+    47	          },
+    48	          "422": {
+    49	            "description": "Validation Error",
+    50	            "content": {
+    51	              "application/json": {
+    52	                "schema": {
+    53	                  "$ref": "#/components/schemas/HTTPValidationError"
+    54	                }
+    55	              }
+    56	            }
+    57	          }
+    58	        }
+    59	      }
+    60	    },
+    61	    "/addresses/{kaspaAddress}/balance/{day_or_month}": {
+    62	      "get": {
+    63	        "tags": [
+    64	          "Kaspa addresses"
+    65	        ],
+    66	        "summary": "EXPERIMENTAL - EXPECT BREAKING CHANGES: Get balance history for Kaspa addresses",
+    67	        "description": "Get balance history for address, only available for larger addresses.",
+    68	        "operationId": "get_balance_history_for_kaspa_address_addresses__kaspaAddress__balance__day_or_month__get",
+    69	        "parameters": [
+    70	          {
+    71	            "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+    72	            "required": true,
+    73	            "schema": {
+    74	              "type": "string",
+    75	              "pattern": "^kaspa:[a-z0-9]{61,63}$",
+    76	              "title": "Kaspaaddress",
+    77	              "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
+    78	            },
+    79	            "name": "kaspaAddress",
+    80	            "in": "path"
+    81	          },
+    82	          {
+    83	            "required": true,
+    84	            "schema": {
+    85	              "type": "string",
+    86	              "pattern": "^\\d{4}-\\d{2}(-\\d{2})?$",
+    87	              "title": "Day Or Month"
+    88	            },
+    89	            "name": "day_or_month",
+    90	            "in": "path"
+    91	          }
+    92	        ],
+    93	        "responses": {
+    94	          "200": {
+    95	            "description": "Successful Response",
+    96	            "content": {
+    97	              "application/json": {
+    98	                "schema": {
+    99	                  "items": {
+   100	                    "$ref": "#/components/schemas/AddressBalanceHistory"
+   101	                  },
+   102	                  "type": "array",
+   103	                  "title": "Response Get Balance History For Kaspa Address Addresses  Kaspaaddress  Balance  Day Or Month  Get"
+   104	                }
+   105	              }
+   106	            }
+   107	          },
+   108	          "422": {
+   109	            "description": "Validation Error",
+   110	            "content": {
+   111	              "application/json": {
+   112	                "schema": {
+   113	                  "$ref": "#/components/schemas/HTTPValidationError"
+   114	                }
+   115	              }
+   116	            }
+   117	          }
+   118	        },
+   119	        "strict_query_params": true
+   120	      }
+   121	    },
+   122	    "/addresses/{kaspaAddress}/utxos": {
+   123	      "get": {
+   124	        "tags": [
+   125	          "Kaspa addresses"
+   126	        ],
+   127	        "summary": "Get Utxos For Address",
+   128	        "description": "Lists all open utxo for a given kaspa address",
+   129	        "operationId": "get_utxos_for_address_addresses__kaspaAddress__utxos_get",
+   130	        "parameters": [
+   131	          {
+   132	            "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+   133	            "required": true,
+   134	            "schema": {
+   135	              "type": "string",
+   136	              "pattern": "^kaspa:[a-z0-9]{61,63}$",
+   137	              "title": "Kaspaaddress",
+   138	              "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
+   139	            },
+   140	            "name": "kaspaAddress",
+   141	            "in": "path"
+   142	          }
+   143	        ],
+   144	        "responses": {
+   145	          "200": {
+   146	            "description": "Successful Response",
+   147	            "content": {
+   148	              "application/json": {
+   149	                "schema": {
+   150	                  "items": {
+   151	                    "$ref": "#/components/schemas/UtxoResponse"
+   152	                  },
+   153	                  "type": "array",
+   154	                  "title": "Response Get Utxos For Address Addresses  Kaspaaddress  Utxos Get"
+   155	                }
+   156	              }
+   157	            }
+   158	          },
+   159	          "422": {
+   160	            "description": "Validation Error",
+   161	            "content": {
+   162	              "application/json": {
+   163	                "schema": {
+   164	                  "$ref": "#/components/schemas/HTTPValidationError"
+   165	                }
+   166	              }
+   167	            }
+   168	          }
+   169	        },
+   170	        "strict_query_params": true
+   171	      }
+   172	    },
+   173	    "/addresses/utxos": {
+   174	      "post": {
+   175	        "tags": [
+   176	          "Kaspa addresses"
+   177	        ],
+   178	        "summary": "Get Utxos For Addresses",
+   179	        "description": "Lists all open utxo for a given kaspa address",
+   180	        "operationId": "get_utxos_for_addresses_addresses_utxos_post",
+   181	        "requestBody": {
+   182	          "content": {
+   183	            "application/json": {
+   184	              "schema": {
+   185	                "$ref": "#/components/schemas/UtxoRequest"
+   186	              }
+   187	            }
+   188	          },
+   189	          "required": true
+   190	        },
+   191	        "responses": {
+   192	          "200": {
+   193	            "description": "Successful Response",
+   194	            "content": {
+   195	              "application/json": {
+   196	                "schema": {
+   197	                  "items": {
+   198	                    "$ref": "#/components/schemas/UtxoResponse"
+   199	                  },
+   200	                  "type": "array",
+   201	                  "title": "Response Get Utxos For Addresses Addresses Utxos Post"
+   202	                }
+   203	              }
+   204	            }
+   205	          },
+   206	          "422": {
+   207	            "description": "Validation Error",
+   208	            "content": {
+   209	              "application/json": {
+   210	                "schema": {
+
+### /addresses full-transactions + full-transactions-page
+  1164	    "/addresses/{kaspaAddress}/full-transactions": {
+  1165	      "get": {
+  1166	        "tags": [
+  1167	          "Kaspa addresses"
+  1168	        ],
+  1169	        "summary": "Get Full Transactions For Address",
+  1170	        "description": "Get all transactions for a given address from database.\nAnd then get their related full transaction data",
+  1171	        "operationId": "get_full_transactions_for_address_addresses__kaspaAddress__full_transactions_get",
+  1172	        "parameters": [
+  1173	          {
+  1174	            "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+  1175	            "required": true,
+  1176	            "schema": {
+  1177	              "type": "string",
+  1178	              "pattern": "^kaspa:[a-z0-9]{61,63}$",
+  1179	              "title": "Kaspaaddress",
+  1180	              "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
+  1181	            },
+  1182	            "name": "kaspaAddress",
+  1183	            "in": "path"
+  1184	          },
+  1185	          {
+  1186	            "description": "The number of records to get",
+  1187	            "required": false,
+  1188	            "schema": {
+  1189	              "type": "integer",
+  1190	              "maximum": 500.0,
+  1191	              "minimum": 1.0,
+  1192	              "title": "Limit",
+  1193	              "description": "The number of records to get",
+  1194	              "default": 50
+  1195	            },
+  1196	            "name": "limit",
+  1197	            "in": "query"
+  1198	          },
+  1199	          {
+  1200	            "description": "The offset from which to get records",
+  1201	            "required": false,
+  1202	            "schema": {
+  1203	              "type": "integer",
+  1204	              "minimum": 0.0,
+  1205	              "title": "Offset",
+  1206	              "description": "The offset from which to get records",
+  1207	              "default": 0
+  1208	            },
+  1209	            "name": "offset",
+  1210	            "in": "query"
+  1211	          },
+  1212	          {
+  1213	            "required": false,
+  1214	            "schema": {
+  1215	              "type": "string",
+  1216	              "title": "Fields",
+  1217	              "default": ""
+  1218	            },
+  1219	            "name": "fields",
+  1220	            "in": "query"
+  1221	          },
+  1222	          {
+  1223	            "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the adress and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1224	            "required": false,
+  1225	            "schema": {
+  1226	              "allOf": [
+  1227	                {
+  1228	                  "$ref": "#/components/schemas/PreviousOutpointLookupMode"
+  1229	                }
+  1230	              ],
+  1231	              "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the adress and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1232	              "default": "no"
+  1233	            },
+  1234	            "name": "resolve_previous_outpoints",
+  1235	            "in": "query"
+  1236	          }
+  1237	        ],
+  1238	        "responses": {
+  1239	          "200": {
+  1240	            "description": "Successful Response",
+  1241	            "content": {
+  1242	              "application/json": {
+  1243	                "schema": {
+  1244	                  "items": {
+  1245	                    "$ref": "#/components/schemas/TxModel"
+  1246	                  },
+  1247	                  "type": "array",
+  1248	                  "title": "Response Get Full Transactions For Address Addresses  Kaspaaddress  Full Transactions Get"
+  1249	                }
+  1250	              }
+  1251	            }
+  1252	          },
+  1253	          "422": {
+  1254	            "description": "Validation Error",
+  1255	            "content": {
+  1256	              "application/json": {
+  1257	                "schema": {
+  1258	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1259	                }
+  1260	              }
+  1261	            }
+  1262	          }
+  1263	        },
+  1264	        "strict_query_params": true
+  1265	      }
+  1266	    },
+  1267	    "/addresses/{kaspaAddress}/full-transactions-page": {
+  1268	      "get": {
+  1269	        "tags": [
+  1270	          "Kaspa addresses"
+  1271	        ],
+  1272	        "summary": "Get Full Transactions For Address Page",
+  1273	        "description": "Get all transactions for a given address from database.\nAnd then get their related full transaction data",
+  1274	        "operationId": "get_full_transactions_for_address_page_addresses__kaspaAddress__full_transactions_page_get",
+  1275	        "parameters": [
+  1276	          {
+  1277	            "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
+  1278	            "required": true,
+  1279	            "schema": {
+  1280	              "type": "string",
+  1281	              "pattern": "^kaspa:[a-z0-9]{61,63}$",
+  1282	              "title": "Kaspaaddress",
+  1283	              "description": "Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
+  1284	            },
+  1285	            "name": "kaspaAddress",
+  1286	            "in": "path"
+  1287	          },
+  1288	          {
+  1289	            "description": "The max number of records to get. For paging combine with using 'before/after' from oldest previous result. Use value of X-Next-Page-Before/-After as long as header is present to continue paging. The actual number of transactions returned for each page can be != limit.",
+  1290	            "required": false,
+  1291	            "schema": {
+  1292	              "type": "integer",
+  1293	              "maximum": 500.0,
+  1294	              "minimum": 1.0,
+  1295	              "title": "Limit",
+  1296	              "description": "The max number of records to get. For paging combine with using 'before/after' from oldest previous result. Use value of X-Next-Page-Before/-After as long as header is present to continue paging. The actual number of transactions returned for each page can be != limit.",
+  1297	              "default": 50
+  1298	            },
+  1299	            "name": "limit",
+  1300	            "in": "query"
+  1301	          },
+  1302	          {
+  1303	            "description": "Only include transactions with block time before this (epoch-millis)",
+  1304	            "required": false,
+  1305	            "schema": {
+  1306	              "type": "integer",
+  1307	              "minimum": 0.0,
+  1308	              "title": "Before",
+  1309	              "description": "Only include transactions with block time before this (epoch-millis)",
+  1310	              "default": 0
+  1311	            },
+  1312	            "name": "before",
+  1313	            "in": "query"
+  1314	          },
+  1315	          {
+  1316	            "description": "Only include transactions with block time after this (epoch-millis)",
+  1317	            "required": false,
+  1318	            "schema": {
+  1319	              "type": "integer",
+  1320	              "minimum": 0.0,
+  1321	              "title": "After",
+  1322	              "description": "Only include transactions with block time after this (epoch-millis)",
+  1323	              "default": 0
+  1324	            },
+  1325	            "name": "after",
+  1326	            "in": "query"
+  1327	          },
+  1328	          {
+  1329	            "required": false,
+  1330	            "schema": {
+  1331	              "type": "string",
+  1332	              "title": "Fields",
+  1333	              "default": ""
+  1334	            },
+  1335	            "name": "fields",
+  1336	            "in": "query"
+  1337	          },
+  1338	          {
+  1339	            "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the adress and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1340	            "required": false,
+  1341	            "schema": {
+  1342	              "allOf": [
+  1343	                {
+  1344	                  "$ref": "#/components/schemas/PreviousOutpointLookupMode"
+  1345	                }
+  1346	              ],
+  1347	              "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the adress and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1348	              "default": "no"
+  1349	            },
+  1350	            "name": "resolve_previous_outpoints",
+  1351	            "in": "query"
+  1352	          },
+  1353	          {
+  1354	            "required": false,
+  1355	            "schema": {
+  1356	              "$ref": "#/components/schemas/AcceptanceMode"
+  1357	            },
+  1358	            "name": "acceptance",
+  1359	            "in": "query"
+  1360	          }
+  1361	        ],
+  1362	        "responses": {
+  1363	          "200": {
+  1364	            "description": "Successful Response",
+  1365	            "content": {
+  1366	              "application/json": {
+  1367	                "schema": {
+  1368	                  "items": {
+  1369	                    "$ref": "#/components/schemas/TxModel"
+  1370	                  },
+  1371	                  "type": "array",
+  1372	                  "title": "Response Get Full Transactions For Address Page Addresses  Kaspaaddress  Full Transactions Page Get"
+  1373	                }
+  1374	              }
+  1375	            }
+  1376	          },
+  1377	          "422": {
+  1378	            "description": "Validation Error",
+  1379	            "content": {
+  1380	              "application/json": {
+  1381	                "schema": {
+  1382	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1383	                }
+  1384	              }
+  1385	            }
+  1386	          }
+  1387	        },
+  1388	        "strict_query_params": true
+  1389	      }
+  1390	    },
+  1391	    "/addresses/{kaspaAddress}/transactions-count": {
+  1392	      "get": {
+  1393	        "tags": [
+  1394	          "Kaspa addresses"
+  1395	        ],
+
+### /addresses/balances and /info/hashrate (legacy duplicate route section)
+  1506	    "/addresses/balances": {
+  1507	      "post": {
+  1508	        "tags": [
+  1509	          "Kaspa addresses"
+  1510	        ],
+  1511	        "summary": "Get Balances From Kaspa Addresses",
+  1512	        "description": "Get balances for multiple kaspa addresses",
+  1513	        "operationId": "get_balances_from_kaspa_addresses_addresses_balances_post",
+  1514	        "requestBody": {
+  1515	          "content": {
+  1516	            "application/json": {
+  1517	              "schema": {
+  1518	                "$ref": "#/components/schemas/BalanceRequest"
+  1519	              }
+  1520	            }
+  1521	          },
+  1522	          "required": true
+  1523	        },
+  1524	        "responses": {
+  1525	          "200": {
+  1526	            "description": "Successful Response",
+  1527	            "content": {
+  1528	              "application/json": {
+  1529	                "schema": {
+  1530	                  "items": {
+  1531	                    "$ref": "#/components/schemas/BalancesByAddressEntry"
+  1532	                  },
+  1533	                  "type": "array",
+  1534	                  "title": "Response Get Balances From Kaspa Addresses Addresses Balances Post"
+  1535	                }
+  1536	              }
+  1537	            }
+  1538	          },
+  1539	          "422": {
+  1540	            "description": "Validation Error",
+  1541	            "content": {
+  1542	              "application/json": {
+  1543	                "schema": {
+  1544	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1545	                }
+  1546	              }
+  1547	            }
+  1548	          }
+  1549	        }
+  1550	      }
+  1551	    },
+  1552	    "/info/blockreward": {
+  1553	      "get": {
+  1554	        "tags": [
+  1555	          "Kaspa network info"
+  1556	        ],
+  1557	        "summary": "Get Blockreward",
+  1558	        "description": "Returns the current blockreward in KAS/block",
+  1559	        "operationId": "get_blockreward_info_blockreward_get",
+  1560	        "parameters": [
+  1561	          {
+  1562	            "required": false,
+  1563	            "schema": {
+  1564	              "type": "boolean",
+  1565	              "title": "Stringonly",
+  1566	              "default": false
+  1567	            },
+  1568	            "name": "stringOnly",
+  1569	            "in": "query"
+  1570	          }
+  1571	        ],
+  1572	        "responses": {
+  1573	          "200": {
+  1574	            "description": "Successful Response",
+  1575	            "content": {
+  1576	              "application/json": {
+  1577	                "schema": {
+  1578	                  "anyOf": [
+  1579	                    {
+  1580	                      "$ref": "#/components/schemas/BlockRewardResponse"
+  1581	                    },
+  1582	                    {
+  1583	                      "type": "string"
+  1584	                    }
+  1585	                  ],
+  1586	                  "title": "Response Get Blockreward Info Blockreward Get"
+  1587	                }
+  1588	              }
+  1589	            }
+  1590	          },
+  1591	          "422": {
+  1592	            "description": "Validation Error",
+  1593	            "content": {
+  1594	              "application/json": {
+  1595	                "schema": {
+  1596	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1597	                }
+  1598	              }
+  1599	            }
+  1600	          }
+  1601	        }
+  1602	      }
+  1603	    },
+  1604	    "/info/halving": {
+  1605	      "get": {
+  1606	        "tags": [
+  1607	          "Kaspa network info"
+  1608	        ],
+  1609	        "summary": "Get Halving",
+  1610	        "description": "Returns information about chromatic halving",
+  1611	        "operationId": "get_halving_info_halving_get",
+  1612	        "parameters": [
+  1613	          {
+  1614	            "required": false,
+  1615	            "schema": {
+  1616	              "type": "string",
+  1617	              "title": "Field"
+  1618	            },
+  1619	            "name": "field",
+  1620	            "in": "query"
+  1621	          }
+  1622	        ],
+  1623	        "responses": {
+  1624	          "200": {
+  1625	            "description": "Successful Response",
+  1626	            "content": {
+  1627	              "application/json": {
+  1628	                "schema": {
+  1629	                  "anyOf": [
+  1630	                    {
+  1631	                      "$ref": "#/components/schemas/HalvingResponse"
+  1632	                    },
+  1633	                    {
+  1634	                      "type": "string"
+  1635	                    }
+  1636	                  ],
+  1637	                  "title": "Response Get Halving Info Halving Get"
+  1638	                }
+  1639	              }
+  1640	            }
+  1641	          },
+  1642	          "422": {
+  1643	            "description": "Validation Error",
+  1644	            "content": {
+  1645	              "application/json": {
+  1646	                "schema": {
+  1647	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1648	                }
+  1649	              }
+  1650	            }
+  1651	          }
+  1652	        }
+  1653	      }
+  1654	    },
+  1655	    "/info/hashrate": {
+  1656	      "get": {
+  1657	        "tags": [
+  1658	          "Kaspa network info"
+  1659	        ],
+  1660	        "summary": "Get Hashrate",
+  1661	        "description": "Returns the current hashrate for Kaspa network in TH/s.",
+  1662	        "operationId": "get_hashrate_info_hashrate_get",
+  1663	        "parameters": [
+  1664	          {
+  1665	            "required": false,
+  1666	            "schema": {
+  1667	              "type": "boolean",
+  1668	              "title": "Stringonly",
+  1669	              "default": false
+  1670	            },
+  1671	            "name": "stringOnly",
+  1672	            "in": "query"
+  1673	          }
+  1674	        ],
+  1675	        "responses": {
+  1676	          "200": {
+  1677	            "description": "Successful Response",
+  1678	            "content": {
+  1679	              "application/json": {
+  1680	                "schema": {
+  1681	                  "anyOf": [
+  1682	                    {
+  1683	                      "$ref": "#/components/schemas/HashrateResponse"
+  1684	                    },
+  1685	                    {
+  1686	                      "type": "string"
+  1687	                    }
+  1688	                  ],
+  1689	                  "title": "Response Get Hashrate Info Hashrate Get"
+  1690	                }
+  1691	              }
+  1692	            }
+  1693	          },
+  1694	          "422": {
+  1695	            "description": "Validation Error",
+  1696	            "content": {
+  1697	              "application/json": {
+  1698	                "schema": {
+  1699	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1700	                }
+  1701	              }
+  1702	            }
+  1703	          }
+  1704	        }
+  1705	      }
+  1706	    },
+  1707	    "/info/hashrate/max": {
+  1708	      "get": {
+  1709	        "tags": [
+  1710	          "Kaspa network info"
+  1711	        ],
+  1712	        "summary": "Get Max Hashrate",
+  1713	        "description": "Returns the current hashrate for Kaspa network in TH/s.",
+  1714	        "operationId": "get_max_hashrate_info_hashrate_max_get",
+  1715	        "responses": {
+  1716	          "200": {
+  1717	            "description": "Successful Response",
+  1718	            "content": {
+  1719	              "application/json": {
+  1720	                "schema": {
+  1721	                  "$ref": "#/components/schemas/MaxHashrateResponse"
+  1722	                }
+  1723	              }
+  1724	            }
+  1725	          }
+
+### /blocks/{blockId} and /blocks
+   242	    "/blocks/{blockId}": {
+   243	      "get": {
+   244	        "tags": [
+   245	          "Kaspa blocks"
+   246	        ],
+   247	        "summary": "Get Block",
+   248	        "description": "Get block information for a given block id",
+   249	        "operationId": "get_block_blocks__blockId__get",
+   250	        "parameters": [
+   251	          {
+   252	            "required": true,
+   253	            "schema": {
+   254	              "type": "string",
+   255	              "pattern": "[a-f0-9]{64}",
+   256	              "title": "Blockid"
+   257	            },
+   258	            "name": "blockId",
+   259	            "in": "path"
+   260	          },
+   261	          {
+   262	            "required": false,
+   263	            "schema": {
+   264	              "type": "boolean",
+   265	              "title": "Includetransactions",
+   266	              "default": true
+   267	            },
+   268	            "name": "includeTransactions",
+   269	            "in": "query"
+   270	          },
+   271	          {
+   272	            "required": false,
+   273	            "schema": {
+   274	              "type": "boolean",
+   275	              "title": "Includecolor",
+   276	              "default": false
+   277	            },
+   278	            "name": "includeColor",
+   279	            "in": "query"
+   280	          }
+   281	        ],
+   282	        "responses": {
+   283	          "200": {
+   284	            "description": "Successful Response",
+   285	            "content": {
+   286	              "application/json": {
+   287	                "schema": {
+   288	                  "$ref": "#/components/schemas/BlockModel"
+   289	                }
+   290	              }
+   291	            }
+   292	          },
+   293	          "422": {
+   294	            "description": "Validation Error",
+   295	            "content": {
+   296	              "application/json": {
+   297	                "schema": {
+   298	                  "$ref": "#/components/schemas/HTTPValidationError"
+   299	                }
+   300	              }
+   301	            }
+   302	          }
+   303	        }
+   304	      }
+   305	    },
+   306	    "/blocks": {
+   307	      "get": {
+   308	        "tags": [
+   309	          "Kaspa blocks"
+   310	        ],
+   311	        "summary": "Get Blocks",
+   312	        "description": "Lists block beginning from a low hash (block id).",
+   313	        "operationId": "get_blocks_blocks_get",
+   314	        "parameters": [
+   315	          {
+   316	            "required": true,
+   317	            "schema": {
+   318	              "type": "string",
+   319	              "pattern": "[a-f0-9]{64}",
+   320	              "title": "Lowhash"
+   321	            },
+   322	            "name": "lowHash",
+   323	            "in": "query"
+   324	          },
+   325	          {
+   326	            "required": false,
+   327	            "schema": {
+   328	              "type": "boolean",
+   329	              "title": "Includeblocks",
+   330	              "default": false
+   331	            },
+   332	            "name": "includeBlocks",
+   333	            "in": "query"
+   334	          },
+   335	          {
+   336	            "required": false,
+   337	            "schema": {
+   338	              "type": "boolean",
+   339	              "title": "Includetransactions",
+   340	              "default": false
+   341	            },
+   342	            "name": "includeTransactions",
+   343	            "in": "query"
+   344	          }
+   345	        ],
+   346	        "responses": {
+   347	          "200": {
+   348	            "description": "Successful Response",
+   349	            "content": {
+   350	              "application/json": {
+   351	                "schema": {
+   352	                  "$ref": "#/components/schemas/BlockResponse"
+   353	                }
+   354	              }
+   355	            }
+   356	          },
+   357	          "422": {
+   358	            "description": "Validation Error",
+   359	            "content": {
+   360	              "application/json": {
+   361	                "schema": {
+   362	                  "$ref": "#/components/schemas/HTTPValidationError"
+   363	                }
+   364	              }
+   365	            }
+
+### /info/network + /info/blockdag + /info/coinsupply routes
+   445	    "/info/network": {
+   446	      "get": {
+   447	        "tags": [
+   448	          "Kaspa network info"
+   449	        ],
+   450	        "summary": "Get Network",
+   451	        "description": "Alias for /info/blockdag",
+   452	        "operationId": "get_network_info_network_get",
+   453	        "responses": {
+   454	          "200": {
+   455	            "description": "Successful Response",
+   456	            "content": {
+   457	              "application/json": {
+   458	                "schema": {
+   459	                  "$ref": "#/components/schemas/BlockdagResponse"
+   460	                }
+   461	              }
+   462	            }
+   463	          }
+   464	        },
+   465	        "deprecated": true
+   466	      }
+   467	    },
+   468	    "/info/blockdag": {
+   469	      "get": {
+   470	        "tags": [
+   471	          "Kaspa network info"
+   472	        ],
+   473	        "summary": "Get Blockdag",
+   474	        "description": "Get Kaspa BlockDAG information",
+   475	        "operationId": "get_blockdag_info_blockdag_get",
+   476	        "responses": {
+   477	          "200": {
+   478	            "description": "Successful Response",
+   479	            "content": {
+   480	              "application/json": {
+   481	                "schema": {
+   482	                  "$ref": "#/components/schemas/BlockdagResponse"
+   483	                }
+   484	              }
+   485	            }
+   486	          }
+   487	        }
+   488	      }
+   489	    },
+   490	    "/info/coinsupply": {
+   491	      "get": {
+   492	        "tags": [
+   493	          "Kaspa network info"
+   494	        ],
+   495	        "summary": "Get Coinsupply",
+   496	        "description": "Get $KAS coin supply information",
+   497	        "operationId": "get_coinsupply_info_coinsupply_get",
+   498	        "responses": {
+   499	          "200": {
+   500	            "description": "Successful Response",
+   501	            "content": {
+   502	              "application/json": {
+   503	                "schema": {
+   504	                  "$ref": "#/components/schemas/CoinSupplyResponse"
+   505	                }
+   506	              }
+   507	            }
+   508	          }
+   509	        }
+   510	      }
+   511	    },
+   512	    "/info/coinsupply/circulating": {
+   513	      "get": {
+   514	        "tags": [
+   515	          "Kaspa network info"
+   516	        ],
+   517	        "summary": "Get Circulating Coins",
+   518	        "description": "Get circulating amount of $KAS token as numerical value",
+   519	        "operationId": "get_circulating_coins_info_coinsupply_circulating_get",
+   520	        "parameters": [
+   521	          {
+   522	            "required": false,
+   523	            "schema": {
+   524	              "type": "boolean",
+   525	              "title": "In Billion",
+   526	              "default": false
+   527	            },
+   528	            "name": "in_billion",
+   529	            "in": "query"
+   530	          }
+   531	        ],
+   532	        "responses": {
+   533	          "200": {
+   534	            "description": "Successful Response",
+   535	            "content": {
+   536	              "text/plain": {
+   537	                "schema": {
+   538	                  "type": "string"
+   539	                }
+   540	              }
+   541	            }
+   542	          },
+   543	          "422": {
+   544	            "description": "Validation Error",
+   545	            "content": {
+   546	              "application/json": {
+   547	                "schema": {
+   548	                  "$ref": "#/components/schemas/HTTPValidationError"
+   549	                }
+   550	              }
+   551	            }
+   552	          }
+   553	        }
+   554	      }
+   555	    },
+   556	    "/info/coinsupply/total": {
+   557	      "get": {
+   558	        "tags": [
+   559	          "Kaspa network info"
+   560	        ],
+   561	        "summary": "Get Total Coins",
+   562	        "description": "Get total amount of $KAS token as numerical value",
+   563	        "operationId": "get_total_coins_info_coinsupply_total_get",
+   564	        "parameters": [
+   565	          {
+   566	            "required": false,
+   567	            "schema": {
+   568	              "type": "boolean",
+   569	              "title": "In Billion",
+   570	              "default": false
+   571	            },
+   572	            "name": "in_billion",
+   573	            "in": "query"
+   574	          }
+   575	        ],
+   576	        "responses": {
+   577	          "200": {
+   578	            "description": "Successful Response",
+   579	            "content": {
+   580	              "text/plain": {
+   581	                "schema": {
+   582	                  "type": "string"
+   583	                }
+   584	              }
+   585	            }
+   586	          },
+   587	          "422": {
+   588	            "description": "Validation Error",
+   589	            "content": {
+   590	              "application/json": {
+   591	                "schema": {
+   592	                  "$ref": "#/components/schemas/HTTPValidationError"
+   593	                }
+   594	              }
+   595	            }
+   596	          }
+   597	        }
+   598	      }
+   599	    },
+   600	    "/info/kaspad": {
+   601	      "get": {
+   602	        "tags": [
+   603	          "Kaspa network info"
+   604	        ],
+   605	        "summary": "Get Kaspad Info",
+   606	        "description": "Get some information for kaspad instance, which is currently connected.",
+   607	        "operationId": "get_kaspad_info_info_kaspad_get",
+   608	        "responses": {
+   609	          "200": {
+   610	            "description": "Successful Response",
+   611	            "content": {
+   612	              "application/json": {
+   613	                "schema": {
+   614	                  "$ref": "#/components/schemas/KaspadInfoResponse"
+   615	                }
+   616	              }
+   617	            }
+   618	          }
+   619	        }
+   620	      }
+   621	    },
+   622	    "/info/fee-estimate": {
+   623	      "get": {
+   624	        "tags": [
+   625	          "Kaspa network info"
+   626	        ],
+   627	        "summary": "Get Fee Estimate",
+   628	        "description": "Get fee estimate from Kaspad.\n\nFor all buckets, feerate values represent fee/mass of a transaction in `sompi/gram` units.<br>\nGiven a feerate value recommendation, calculate the required fee by\ntaking the transaction mass and multiplying it by feerate: `fee = feerate * mass(tx)`",
+   629	        "operationId": "get_fee_estimate_info_fee_estimate_get",
+   630	        "responses": {
+   631	          "200": {
+   632	            "description": "Successful Response",
+   633	            "content": {
+   634	              "application/json": {
+   635	                "schema": {
+   636	                  "$ref": "#/components/schemas/FeeEstimateResponse"
+   637	                }
+   638	              }
+   639	            }
+   640	          }
+   641	        }
+   642	      }
+   643	    },
+   644	    "/info/price": {
+   645	      "get": {
+   646	        "tags": [
+   647	          "Kaspa network info"
+   648	        ],
+   649	        "summary": "Get Price",
+   650	        "description": "Returns the current price for Kaspa in USD.",
+
+### /transactions/{transaction_id}
+   940	    "/transactions/{transaction_id}": {
+   941	      "get": {
+   942	        "tags": [
+   943	          "Kaspa transactions"
+   944	        ],
+   945	        "summary": "Get Transaction",
+   946	        "description": "Get details for a given transaction id",
+   947	        "operationId": "get_transaction_transactions__transaction_id__get",
+   948	        "parameters": [
+   949	          {
+   950	            "required": true,
+   951	            "schema": {
+   952	              "type": "string",
+   953	              "pattern": "[a-f0-9]{64}",
+   954	              "title": "Transaction Id"
+   955	            },
+   956	            "name": "transaction_id",
+   957	            "in": "path"
+   958	          },
+   959	          {
+   960	            "description": "Specify a containing block (if known) for faster lookup",
+   961	            "required": false,
+   962	            "schema": {
+   963	              "type": "string",
+   964	              "title": "Blockhash",
+   965	              "description": "Specify a containing block (if known) for faster lookup"
+   966	            },
+   967	            "name": "blockHash",
+   968	            "in": "query"
+   969	          },
+   970	          {
+   971	            "required": false,
+   972	            "schema": {
+   973	              "type": "boolean",
+   974	              "title": "Inputs",
+   975	              "default": true
+   976	            },
+   977	            "name": "inputs",
+   978	            "in": "query"
+   979	          },
+   980	          {
+   981	            "required": false,
+   982	            "schema": {
+   983	              "type": "boolean",
+   984	              "title": "Outputs",
+   985	              "default": true
+   986	            },
+   987	            "name": "outputs",
+   988	            "in": "query"
+   989	          },
+   990	          {
+   991	            "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the address and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+   992	            "required": false,
+   993	            "schema": {
+   994	              "allOf": [
+   995	                {
+   996	                  "$ref": "#/components/schemas/PreviousOutpointLookupMode"
+   997	                }
+   998	              ],
+   999	              "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the address and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1000	              "default": "no"
+  1001	            },
+  1002	            "name": "resolve_previous_outpoints",
+  1003	            "in": "query"
+  1004	          }
+  1005	        ],
+  1006	        "responses": {
+  1007	          "200": {
+  1008	            "description": "Successful Response",
+  1009	            "content": {
+  1010	              "application/json": {
+  1011	                "schema": {
+  1012	                  "$ref": "#/components/schemas/TxModel"
+  1013	                }
+  1014	              }
+  1015	            }
+  1016	          },
+  1017	          "422": {
+  1018	            "description": "Validation Error",
+  1019	            "content": {
+  1020	              "application/json": {
+  1021	                "schema": {
+  1022	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1023	                }
+  1024	              }
+  1025	            }
+  1026	          }
+  1027	        }
+  1028	      }
+  1029	    },
+  1030	    "/transactions/search": {
+  1031	      "post": {
+  1032	        "tags": [
+  1033	          "Kaspa transactions"
+  1034	        ],
+  1035	        "summary": "Search For Transactions",
+  1036	        "description": "Search for transactions by transaction_ids or blue_score",
+  1037	        "operationId": "search_for_transactions_transactions_search_post",
+  1038	        "parameters": [
+  1039	          {
+  1040	            "required": false,
+  1041	            "schema": {
+  1042	              "type": "string",
+  1043	              "title": "Fields",
+  1044	              "default": ""
+  1045	            },
+  1046	            "name": "fields",
+  1047	            "in": "query"
+  1048	          },
+  1049	          {
+  1050	            "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the address and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1051	            "required": false,
+  1052	            "schema": {
+  1053	              "allOf": [
+  1054	                {
+  1055	                  "$ref": "#/components/schemas/PreviousOutpointLookupMode"
+  1056	                }
+  1057	              ],
+  1058	              "description": "Use this parameter if you want to fetch the TransactionInput previous outpoint details. Light fetches only the address and amount. Full fetches the whole TransactionOutput and adds it into each TxInput.",
+  1059	              "default": "no"
+  1060	            },
+  1061	            "name": "resolve_previous_outpoints",
+  1062	            "in": "query"
+  1063	          },
+  1064	          {
+  1065	            "description": "Only used when searching using transactionIds",
+  1066	            "required": false,
+  1067	            "schema": {
+  1068	              "allOf": [
+  1069	                {
+  1070	                  "$ref": "#/components/schemas/AcceptanceMode"
+  1071	                }
+  1072	              ],
+  1073	              "description": "Only used when searching using transactionIds"
+  1074	            },
+  1075	            "name": "acceptance",
+  1076	            "in": "query"
+  1077	          }
+  1078	        ],
+  1079	        "requestBody": {
+  1080	          "content": {
+  1081	            "application/json": {
+  1082	              "schema": {
+  1083	                "$ref": "#/components/schemas/TxSearch"
+  1084	              }
+  1085	            }
+  1086	          },
+  1087	          "required": true
+  1088	        },
+
+### /transactions POST
+  1918	    "/transactions": {
+  1919	      "post": {
+  1920	        "tags": [
+  1921	          "Kaspa transactions"
+  1922	        ],
+  1923	        "summary": "Submit A New Transaction",
+  1924	        "operationId": "submit_a_new_transaction_transactions_post",
+  1925	        "parameters": [
+  1926	          {
+  1927	            "description": "Replace an existing transaction in the mempool",
+  1928	            "required": false,
+  1929	            "schema": {
+  1930	              "type": "boolean",
+  1931	              "title": "Replacebyfee",
+  1932	              "description": "Replace an existing transaction in the mempool",
+  1933	              "default": false
+  1934	            },
+  1935	            "name": "replaceByFee",
+  1936	            "in": "query"
+  1937	          }
+  1938	        ],
+  1939	        "requestBody": {
+  1940	          "content": {
+  1941	            "application/json": {
+  1942	              "schema": {
+  1943	                "$ref": "#/components/schemas/SubmitTransactionRequest"
+  1944	              }
+  1945	            }
+  1946	          },
+  1947	          "required": true
+  1948	        },
+  1949	        "responses": {
+  1950	          "200": {
+  1951	            "description": "Successful Response",
+  1952	            "content": {
+  1953	              "application/json": {
+  1954	                "schema": {
+  1955	                  "$ref": "#/components/schemas/SubmitTransactionResponse"
+  1956	                }
+  1957	              }
+  1958	            }
+  1959	          },
+  1960	          "400": {
+  1961	            "description": "Bad Request",
+  1962	            "content": {
+  1963	              "application/json": {
+  1964	                "schema": {
+  1965	                  "$ref": "#/components/schemas/SubmitTransactionResponse"
+  1966	                }
+  1967	              }
+  1968	            }
+  1969	          },
+  1970	          "422": {
+  1971	            "description": "Validation Error",
+  1972	            "content": {
+  1973	              "application/json": {
+  1974	                "schema": {
+  1975	                  "$ref": "#/components/schemas/HTTPValidationError"
+  1976	                }
+  1977	              }
+  1978	            }
+  1979	          }
+  1980	        }
+  1981	      }
+  1982	    },
+  1983	    "/transactions/mass": {
+  1984	      "post": {
+  1985	        "tags": [
+  1986	          "Kaspa transactions"
+  1987	        ],
+  1988	        "summary": "Calculate Transaction Mass",
+  1989	        "description": "This function calculates and returns the mass of a transaction, which is essential for determining the minimum fee. The mass calculation takes into account the storage mass as defined in KIP-0009.\n\nNote: Be aware that if the transaction has a very low output amount or a high number of outputs, the mass can become significantly large.",
+  1990	        "operationId": "calculate_transaction_mass_transactions_mass_post",
+  1991	        "requestBody": {
+  1992	          "content": {
+  1993	            "application/json": {
+  1994	              "schema": {
+  1995	                "$ref": "#/components/schemas/SubmitTxModel"
+  1996	              }
+  1997	            }
+  1998	          },
+  1999	          "required": true
+  2000	        },
+  2001	        "responses": {
+  2002	          "200": {
+  2003	            "description": "Successful Response",
+  2004	            "content": {
+  2005	              "application/json": {
+  2006	                "schema": {
+
+### /virtual-chain GET
+  2093	    "/virtual-chain": {
+  2094	      "get": {
+  2095	        "tags": [
+  2096	          "Kaspa virtual chain"
+  2097	        ],
+  2098	        "summary": "EXPERIMENTAL - EXPECT BREAKING CHANGES: Get virtual chain transactions by blue score",
+  2099	        "operationId": "get_virtual_chain_transactions_virtual_chain_get",
+  2100	        "parameters": [
+  2101	          {
+  2102	            "description": "Divisible by limit",
+  2103	            "required": true,
+  2104	            "schema": {
+  2105	              "type": "integer",
+  2106	              "minimum": 0.0,
+  2107	              "title": "Bluescoregte",
+  2108	              "description": "Divisible by limit"
+  2109	            },
+  2110	            "example": 106329050,
+  2111	            "name": "blueScoreGte",
+  2112	            "in": "query"
+  2113	          },
+  2114	          {
+  2115	            "required": false,
+  2116	            "schema": {
+  2117	              "type": "integer",
+  2118	              "enum": [
+  2119	                10,
+  2120	                100
+  2121	              ],
+  2122	              "title": "Limit",
+  2123	              "default": 10
+  2124	            },
+  2125	            "name": "limit",
+  2126	            "in": "query"
+  2127	          },
+  2128	          {
+  2129	            "required": false,
+  2130	            "schema": {
+  2131	              "type": "boolean",
+  2132	              "title": "Resolveinputs",
+  2133	              "default": false
+  2134	            },
+  2135	            "name": "resolveInputs",
+  2136	            "in": "query"
+  2137	          },
+  2138	          {
+  2139	            "required": false,
+  2140	            "schema": {
+  2141	              "type": "boolean",
+  2142	              "title": "Includecoinbase",
+  2143	              "default": true
+  2144	            },
+  2145	            "name": "includeCoinbase",
+  2146	            "in": "query"
+  2147	          }
+  2148	        ],
+  2149	        "responses": {
+  2150	          "200": {
+  2151	            "description": "Successful Response",
+  2152	            "content": {
+  2153	              "application/json": {
+  2154	                "schema": {
+  2155	                  "items": {
+  2156	                    "$ref": "#/components/schemas/VcBlockModel"
+  2157	                  },
+  2158	                  "type": "array",
+  2159	                  "title": "Response Get Virtual Chain Transactions Virtual Chain Get"
+  2160	                }
+  2161	              }
+  2162	            }
+  2163	          },
+  2164	          "422": {
+  2165	            "description": "Validation Error",
+
+### enums + submit schemas
+  3034	      "PreviousOutpointLookupMode": {
+  3035	        "type": "string",
+  3036	        "enum": [
+  3037	          "no",
+  3038	          "light",
+  3039	          "full"
+  3040	        ],
+  3041	        "title": "PreviousOutpointLookupMode",
+  3042	        "description": "An enumeration."
+  3043	      },
+  3044	      "PriceResponse": {
+  3045	        "properties": {
+  3046	          "price": {
+  3047	            "type": "number",
+  3048	            "title": "Price",
+  3049	            "default": 0.025235
+  3050	          }
+  3051	        },
+  3052	        "type": "object",
+  3053	        "title": "PriceResponse"
+  3054	      },
+  3055	      "ScriptPublicKeyModel": {
+  3056	        "properties": {
+  3057	          "scriptPublicKey": {
+  3058	            "type": "string",
+  3059	            "title": "Scriptpublickey",
+  3060	            "default": "20c5629ce85f6618cd3ed1ac1c99dc6d3064ed244013555c51385d9efab0d0072fac"
+  3061	          }
+  3062	        },
+  3063	        "type": "object",
+  3064	        "title": "ScriptPublicKeyModel"
+  3065	      },
+  3066	      "SubmitTransactionRequest": {
+  3067	        "properties": {
+  3068	          "transaction": {
+  3069	            "$ref": "#/components/schemas/SubmitTxModel"
+  3070	          },
+  3071	          "allowOrphan": {
+  3072	            "type": "boolean",
+  3073	            "title": "Alloworphan",
+  3074	            "default": false
+  3075	          }
+  3076	        },
+  3077	        "type": "object",
+  3078	        "required": [
+  3079	          "transaction"
+  3080	        ],
+  3081	        "title": "SubmitTransactionRequest"
+  3082	      },
+  3083	      "SubmitTransactionResponse": {
+  3084	        "properties": {
+  3085	          "transactionId": {
+  3086	            "type": "string",
+  3087	            "title": "Transactionid"
+  3088	          },
+  3089	          "error": {
+  3090	            "type": "string",
+  3091	            "title": "Error"
+  3092	          }
+  3093	        },
+  3094	        "type": "object",
+  3095	        "title": "SubmitTransactionResponse"
+  3096	      },
+  3097	      "SubmitTxInput": {
+  3098	        "properties": {
+  3099	          "previousOutpoint": {
+  3100	            "$ref": "#/components/schemas/SubmitTxOutpoint"
+  3101	          },
+  3102	          "signatureScript": {
+  3103	            "type": "string",
+  3104	            "title": "Signaturescript"
+  3105	          },
+  3106	          "sequence": {
+  3107	            "type": "integer",
+  3108	            "title": "Sequence"
+  3109	          },
+  3110	          "sigOpCount": {
+  3111	            "type": "integer",
+  3112	            "title": "Sigopcount"
+  3113	          }
+  3114	        },
+  3115	        "type": "object",
+  3116	        "required": [
+  3117	          "previousOutpoint",
+  3118	          "signatureScript",
+  3119	          "sequence",
+  3120	          "sigOpCount"

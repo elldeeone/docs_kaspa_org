@@ -13,7 +13,7 @@ The DAA examines a trailing window of recent blocks and computes a new target va
 
 1. **Window selection**: The DAA uses a window duration of **2,641 seconds** (~44 minutes), sampling **661 blocks** at intervals of 4 seconds (40 blocks at 10 BPS). For each block being mined, the algorithm collects the timestamps of sampled blocks within this window.
 
-2. **Timestamp extraction**: The timestamps of blocks in the window are sorted, and outliers are trimmed. The algorithm uses the minimum and maximum timestamps from the trimmed set to determine how much real time elapsed during the window.
+2. **Timestamp extraction**: The implementation identifies window timestamp bounds (minimum and maximum sampled timestamps) and computes average target information from the internal window set used by the DAA calculation.
 
 3. **Target calculation**: The new target is calculated proportionally. If blocks were produced faster than expected (meaning hashrate increased), the target decreases (difficulty increases). If blocks were produced slower than expected, the target increases (difficulty decreases).
 
@@ -31,7 +31,7 @@ Kaspa's per-block adjustment eliminates this problem. Every block carries an upd
 
 Because the DAA window spans a duration of 2,641 seconds (~44 minutes) at 10 BPS, sampling 661 blocks from the selected parent chain, the window provides a substantial history for difficulty estimation. However, the algorithm does not require the full window to rotate before responding. A sudden change in hashrate begins influencing the target immediately, with the effect growing stronger as more blocks at the new hashrate enter the window.
 
-In practice, a large hashrate swing (such as a mining farm coming online or going offline) produces a visible difficulty adjustment within **one to two minutes**.
+In practice, large hashrate swings begin affecting the target quickly, with adjustment strength increasing as more new-condition samples enter the window.
 
 <Callout type="warn">
 During very rapid hashrate oscillations, miners may temporarily see blocks produced faster or slower than 10 BPS. The DAA will correct this within a few minutes, but short-term variance is expected.
@@ -39,10 +39,10 @@ During very rapid hashrate oscillations, miners may temporarily see blocks produ
 
 ## DAA Score as a Logical Clock
 
-Every block in the Kaspa DAG has a **DAA score**, which represents the cumulative difficulty of the selected parent chain up to that block. The DAA score serves as a logical clock for the network:
+Every block in the Kaspa DAG has a **DAA score**, a monotonically increasing consensus-time counter used by several protocol rules. The DAA score serves as a logical clock for the network:
 
 - **Block rewards** are calculated from the DAA score (see [Block Rewards](/docs/mining/block-rewards)).
-- **Coinbase maturity** is measured in blue score, which is closely related to DAA score.
+- **Coinbase maturity** is measured in DAA score.
 - **Finality depth** is defined in terms of blue score.
 
 The DAA score increases monotonically along the selected parent chain and provides a consistent time-like ordering even though the DAG may contain many parallel blocks at any given moment.
@@ -57,13 +57,7 @@ The per-block difficulty adjustment affects solo miners and pool miners differen
 
 ## Hashrate Estimation
 
-The current network hashrate can be estimated from the difficulty:
-
-```
-estimated_hashrate = difficulty / target_block_interval
-```
-
-Since Kaspa targets 10 BPS, the block interval is 0.1 seconds. Mining pools and monitoring tools use this formula to display estimated network hashrate on dashboards. Keep in mind that this is a statistical estimate — actual hashrate can only be inferred indirectly from the rate of block production.
+A quick heuristic is to derive hashrate from displayed difficulty and target interval, but node-side estimators typically use observed work-over-time windows (for example, blue-work delta over measured duration) rather than a single static formula. In all cases, hashrate is an inference from observed block production/work, not a directly measured ground truth.
 
 ## Practical Implications for Mining Profitability
 

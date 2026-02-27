@@ -10,7 +10,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 This page provides a comprehensive reference of all configurable and fixed parameters that define the Kaspa network's behavior. Parameters are listed for mainnet post-Crescendo (10 BPS) unless otherwise noted.
 
 <Callout type="info">
-Values on this page are derived directly from the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) reference implementation. Where a parameter is computed from constants (for example, `finality_depth = BPS * FINALITY_DURATION`), the formula is shown alongside the result.
+Values on this page are derived from current [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) behavior (mainnet/testnet-10) unless explicitly marked as historical context.
 </Callout>
 
 ---
@@ -55,7 +55,7 @@ The GHOSTDAG K parameter is derived from a Poisson analysis: given `x = 2 * D * 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | Maximum block mass | **500,000 grams** | Maximum total transaction mass allowed in a single block |
-| Maximum transaction mass | **100,000 grams** | Maximum mass for a single standard transaction |
+| Maximum transaction mass | **100,000 grams** | Standard mempool policy limit for a single transaction (`MAXIMUM_STANDARD_TRANSACTION_MASS`), not a consensus constant |
 | Mass per transaction byte | **1** | Mass contribution per byte of serialized transaction data (compute mass) |
 | Mass per script public key byte | **10** | Mass contribution per byte of script public key data (compute mass) |
 | Mass per sig op | **1,000** | Mass contribution per signature operation (compute mass) |
@@ -64,7 +64,7 @@ The GHOSTDAG K parameter is derived from a Poisson analysis: given `x = 2 * D * 
 
 ### Mass Types
 
-Kaspa uses a multi-dimensional mass system where the effective mass of a transaction is the maximum across three independently computed mass values:
+Kaspa uses a multi-dimensional mass system with three independently computed mass values:
 
 | Mass Type | Description |
 |-----------|-------------|
@@ -73,7 +73,7 @@ Kaspa uses a multi-dimensional mass system where the effective mass of a transac
 | **Storage mass** | Context-dependent mass based on UTXO creation vs. consumption (KIP-0009). Penalizes UTXO set bloat by charging more for creating small or numerous outputs |
 
 <Callout type="warn">
-The effective mass of a transaction is `max(compute_mass, transient_mass, storage_mass)`. A transaction that is lightweight in compute terms can still have high mass if it fragments UTXOs into many small outputs.
+`max(compute_mass, transient_mass, storage_mass)` is commonly used for mempool and block-template selection. Consensus validation still enforces block limits per mass dimension rather than assigning protocol meaning to this single max value.
 </Callout>
 
 ### Transaction Constraints
@@ -151,13 +151,13 @@ Pruning allows nodes to discard old block body data while retaining headers. Thi
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Maximum sompi | **29 billion KAS** (2,900,000,000,000,000,000 sompi) | Hard cap encoded as `MAX_SOMPI` in the protocol |
+| `MAX_SOMPI` | **2,900,000,000,000,000,000 sompi** | Numeric upper bound used in transaction-amount validation; not the same thing as total emitted supply |
+| Current consensus emission total (approx.) | **~28.38 billion KAS** | Aggregate subsidy implied by the current chromatic subsidy table |
 | Base unit | **sompi** | 1 KAS = 100,000,000 sompi (10^8) |
 | Pre-deflationary base subsidy | **50 KAS** per block at 10 BPS | `50,000,000,000 / BPS` sompi per block |
 | Emission schedule | **Chromatic** | Named after the 12 semitones in a musical chromatic scale |
 | Halving interval | **~1 year** (by chromatic phases) | Reward halves approximately once per year |
 | Monthly reduction factor | **(1/2)^(1/12)** ~= 0.9439 | Reward reduces by this factor each month |
-| Pre-mine | **None** | No tokens were pre-mined or allocated before launch |
 | Deflationary phase DAA score | **15,519,600** | DAA score at which mainnet switched from fixed to deflationary subsidy (at original 1 BPS) |
 
 ### Chromatic Emission Schedule
@@ -191,8 +191,8 @@ The chromatic schedule means miners never experience a sudden 50% revenue drop. 
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Minimum relay transaction fee | **1,000 sompi** per gram of mass | Minimum fee rate for a transaction to be relayed by nodes |
-| Minimum fee calculation | `(mass * 1000) / 1000` | Fee is computed per-gram, with a floor of the base relay fee |
+| Minimum relay transaction fee | **1,000 sompi per 1,000 grams (1 kg) of mass** | Default relay fee rate used by mempool policy |
+| Minimum fee calculation | `max(1000, floor((mass * minRelayTxFee) / 1000))` | With default `minRelayTxFee=1000`, this simplifies to a floor of `mass` sompi with a 1000-sompi minimum |
 | Lock time threshold | **500,000,000,000** | Values below this threshold are interpreted as DAA scores; values at or above are interpreted as Unix timestamps (milliseconds) |
 
 <Callout type="info">
@@ -223,13 +223,13 @@ The fee market in Kaspa is mass-based rather than byte-based. This means fees ac
 
 ## Network Ports and Configuration
 
-| Parameter | Mainnet | Testnet-10 | Testnet-11 | Simnet | Devnet |
-|-----------|---------|------------|------------|--------|--------|
-| Default P2P port | **16111** | 16211 | 16311 | 16511 | 16611 |
-| Default gRPC port | **16110** | 16210 | 16210 | 16510 | 16610 |
-| Default wRPC (Borsh) port | **17110** | 17210 | 17210 | 17510 | 17610 |
-| Default wRPC (JSON) port | **18110** | 18210 | 18210 | 18510 | 18610 |
-| Address prefix | `kaspa:` | `kaspatest:` | `kaspatest:` | `kaspasim:` | `kaspadev:` |
+| Parameter | Mainnet | Testnet-10 | Simnet | Devnet |
+|-----------|---------|------------|--------|--------|
+| Default P2P port | **16111** | 16211 | 16511 | 16611 |
+| Default gRPC port | **16110** | 16210 | 16510 | 16610 |
+| Default wRPC (Borsh) port | **17110** | 17210 | 17510 | 17610 |
+| Default wRPC (JSON) port | **18110** | 18210 | 18510 | 18610 |
+| Address prefix | `kaspa:` | `kaspatest:` | `kaspasim:` | `kaspadev:` |
 
 ### Network Types
 
@@ -237,13 +237,14 @@ The fee market in Kaspa is mass-based rather than byte-based. This means fees ac
 |---------|-----|---------|-------------|
 | **Mainnet** | 10 | Production | The live Kaspa network with real value |
 | **Testnet-10** | 10 | Testing | Public test network mirroring mainnet BPS for realistic testing |
-| **Testnet-11** | 10 | Testing | Secondary public test network for parallel testing |
 | **Simnet** | 10 | Development | Simulated network for local development with instant mining (PoW skipped by default) |
 | **Devnet** | 10 | Development | Developer network for testing protocol changes |
 
 <Callout type="info">
-For development purposes, **simnet** is recommended as it allows instant block generation and does not require connecting to external peers. Use testnet-10 or testnet-11 when you need a realistic multi-node environment.
+For development purposes, **simnet** is recommended as it allows instant block generation and does not require connecting to external peers. Use testnet-10 when you need a realistic multi-node environment.
 </Callout>
+
+Historical testnet suffixes (for example `testnet-11`) may still appear in older announcements or tooling docs but are not part of the currently supported consensus parameter mapping in `rusty-kaspa`.
 
 ---
 
@@ -261,8 +262,8 @@ For development purposes, **simnet** is recommended as it allows instant block g
 The kHeavyHash proof-of-work algorithm consists of:
 
 1. **Pre-hash**: Compute a domain-separated cSHAKE256 hash of the block header (domain: "ProofOfWorkHash").
-2. **Matrix multiplication**: Multiply the pre-hash result by a 64x64 matrix (derived from the DAG state) in GF(2^4).
-3. **XOR**: XOR the matrix multiplication result with the original pre-hash.
+2. **Matrix heavy-mixing step**: Apply the matrix-generated heavy step derived from the header pre-PoW hash.
+3. **XOR**: XOR the mixed output with the original pre-hash.
 4. **Post-hash**: Compute a domain-separated cSHAKE256 hash of the combined result (domain: "HeavyHash").
 
 This construction was originally designed with optical computing hardware in mind. In practice, Kaspa is now predominantly mined with ASICs (e.g., Bitmain KS series).
@@ -273,8 +274,10 @@ This construction was originally designed with optical computing hardware in min
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Maximum message size | **10 MB** | Maximum size of a single P2P message |
-| Handshake timeout | **30 seconds** | Time allowed to complete the P2P handshake |
+| Maximum message size | **1 GB** | Maximum decoded size of a single P2P gRPC message |
+| Global protocol timeout | **120 seconds** | Default timeout used by protocol message flows |
+| Handshake version/verack wait | **4 seconds** | Per-phase timeout while exchanging version/verack during handshake |
+| Handshake ready wait | **8 seconds** | Timeout while waiting for `Ready` during handshake finalization |
 | Maximum outbound connections | **8** | Default maximum outbound peer connections |
 | Maximum inbound connections | **128** | Default maximum inbound peer connections |
 | IBD batch size | **99** | Number of blocks requested per batch during Initial Block Download |

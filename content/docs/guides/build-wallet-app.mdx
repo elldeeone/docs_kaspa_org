@@ -133,7 +133,7 @@ If `createTransactions` returns more than one transaction, the earlier ones are 
 
 ## Step 5 -- Fee Estimation
 
-Call `createTransactions` with your intended outputs to get the `summary.fees` value (in sompi) before committing. Kaspa fees are based on **transaction mass** (byte size, input/output count, and signature operations), not on network congestion. Fees are extremely low -- typically fractions of a cent. See [Estimate Fees](/docs/cookbook/transactions/estimate-fees) for details.
+Call `createTransactions` with your intended outputs to get the `summary.fees` value (in sompi) before committing. Kaspa fees are based on **transaction mass** (byte size, input/output count, and signature operations), not on network congestion. Fees are typically low in sompi terms, while fiat cost varies with market price. See [Estimate Fees](/docs/cookbook/transactions/estimate-fees) for details.
 
 ## UTXO Management Tips
 

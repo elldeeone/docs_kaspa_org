@@ -8,7 +8,7 @@ description: "Estimate the current network hash rate based on recent block diffi
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `windowSize` | u32 | Yes | Number of recent blocks to use for the estimation. A larger window gives a smoother estimate. |
-| `startHash` | string | No | Hash of the block to start the window from. If omitted, uses the current sink. |
+| `startHash` | string | No | Hash of the block to start the window from. If omitted, the estimate is computed from the current virtual state. |
 
 ## Response
 
@@ -38,6 +38,6 @@ description: "Estimate the current network hash rate based on recent block diffi
 
 - The estimate is derived from the difficulty of blocks in the specified window and the time elapsed.
 - A larger `windowSize` produces a more stable estimate but is less responsive to sudden hash rate changes.
-- Typical window sizes range from 100 to 2000 blocks.
+- `windowSize` must be at least `1000`.
 - At 10 BPS, 1000 blocks covers approximately 100 seconds of network activity.
 - This method is useful for mining dashboards and network health monitoring.

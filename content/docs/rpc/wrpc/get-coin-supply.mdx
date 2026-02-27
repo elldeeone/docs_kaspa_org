@@ -25,7 +25,7 @@ No parameters required.
 
 // Response
 {
-  "maxSompi": 2880000000000000000,
+  "maxSompi": 2900000000000000000,
   "circulatingSompi": 2150000000000000000
 }
 ```
@@ -33,6 +33,7 @@ No parameters required.
 ## Notes
 
 - Values are in **sompi** (1 KAS = 100,000,000 sompi).
-- The maximum supply of Kaspa is 28.7 billion KAS.
+- `maxSompi` is the node's hardcoded cap (`2_900_000_000_000_000_000` sompi, i.e. 29.0B KAS).
+- The effective emitted supply is expected to be lower than this hard cap (commonly cited as approximately 28.7B KAS).
 - Circulating supply increases with each block's coinbase reward and follows Kaspa's emission schedule with chromatic phase-based halvings.
 - To convert to KAS, divide by 100,000,000.

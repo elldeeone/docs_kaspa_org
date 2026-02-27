@@ -214,14 +214,12 @@ rpc.addEventListener("block-added", (event) => {
 
 ### Virtual Chain Changes
 
-Track changes to the selected parent chain (the "heaviest" path through the DAG). This is important for understanding which blocks and transactions are confirmed:
+Track virtual-chain changes (the selected ordering path through the DAG). This is important for understanding which blocks and transactions are currently accepted:
 
 ```typescript
-await rpc.subscribeVirtualSelectedParentChainChanged({
-  includeAcceptedTransactionIds: true,
-});
+await rpc.subscribeVirtualChainChanged(true);
 
-rpc.addEventListener("virtual-selected-parent-chain-changed", (event) => {
+rpc.addEventListener("virtual-chain-changed", (event) => {
   const { addedChainBlockHashes, removedChainBlockHashes, acceptedTransactionIds } = event.data;
 
   console.log("Blocks added to chain:", addedChainBlockHashes);
@@ -360,8 +358,8 @@ This is a simplified example. A production payment processor must also handle ed
 
 In Kaspa's blockDAG, "confirmations" are measured differently than in a traditional blockchain. Instead of counting blocks on top of a transaction's block, confirmation depth is measured using the **blue score** or **DAA score** difference.
 
-- **10+ blue score confirmations** — Recommended for most payments. With Kaspa's 10 BPS (blocks per second), this takes roughly 1 second.
-- **100+ confirmations** — Recommended for high-value transactions.
+- **10+ confirmations** — Common default policy for routine payments.
+- **100+ confirmations** — Common stricter policy for higher-value transfers.
 - **Coinbase maturity** — Coinbase (mining reward) transactions require a maturity period before they can be spent. This is enforced at the protocol level.
 
 ```typescript
@@ -377,21 +375,19 @@ if (confirmations >= 10n) {
 
 ### Handling Reorgs in a DAG
 
-Kaspa's DAG structure means that blocks are rarely fully orphaned (unlike in a linear blockchain). However, the **virtual selected parent chain** can change, which affects which transactions are considered accepted.
+Kaspa's DAG structure means that blocks are rarely fully orphaned (unlike in a linear blockchain). However, the **virtual chain** can change, which affects which transactions are considered accepted.
 
 Key principles:
 
-1. **Use `subscribeVirtualSelectedParentChainChanged`** to detect chain reorganizations. The event provides both `addedChainBlockHashes` and `removedChainBlockHashes`.
+1. **Use `subscribeVirtualChainChanged`** to detect chain reorganizations. The event provides both `addedChainBlockHashes` and `removedChainBlockHashes`.
 2. **A block removed from the selected chain is not necessarily invalid** — it may still be a valid blue block in the DAG, and its transactions may be accepted by a different chain block.
 3. **Wait for sufficient confirmation depth** before considering a transaction final. The deeper a transaction is (in terms of blue score), the less likely the chain will reorganize past it.
 4. **Monitor `acceptedTransactionIds`** in chain change events to know exactly which transactions are currently accepted.
 
 ```typescript
-await rpc.subscribeVirtualSelectedParentChainChanged({
-  includeAcceptedTransactionIds: true,
-});
+await rpc.subscribeVirtualChainChanged(true);
 
-rpc.addEventListener("virtual-selected-parent-chain-changed", (event) => {
+rpc.addEventListener("virtual-chain-changed", (event) => {
   const { removedChainBlockHashes, acceptedTransactionIds } = event.data;
 
   if (removedChainBlockHashes.length > 0) {

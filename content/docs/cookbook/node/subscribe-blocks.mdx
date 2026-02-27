@@ -35,7 +35,8 @@ async function subscribeToBlocks() {
   // 3. Handle incoming block notifications
   rpc.addEventListener("block-added", (event) => {
     const block = event.data.block;
-    console.log(`Block: ${block.verboseData.hash}`);
+    const blockHash = block.header.hash ?? block.verboseData?.hash ?? "<hash unavailable>";
+    console.log(`Block: ${blockHash}`);
     console.log(`  DAA Score: ${block.header.daaScore}`);
     console.log(`  Blue Score: ${block.header.blueScore}`);
     console.log(`  Transactions: ${block.transactions.length}`);
@@ -55,7 +56,7 @@ DAG. Each notification includes the full block data:
 
 | Field | Description |
 |---|---|
-| `block.verboseData.hash` | Unique block hash identifier |
+| `block.header.hash` | Canonical block hash identifier (`verboseData.hash` may be absent) |
 | `block.header.daaScore` | Difficulty Adjustment Algorithm score at this block |
 | `block.header.blueScore` | Number of blue blocks in the selected chain up to this block |
 | `block.header.timestamp` | Block creation time (milliseconds since Unix epoch) |
