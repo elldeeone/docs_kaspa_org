@@ -13,32 +13,38 @@ The canonical source for all KIP documents is the [KIPs repository on GitHub](ht
 
 ## Active KIPs
 
-These KIPs have been implemented and activated on the Kaspa mainnet.
+These KIPs have been implemented and are active on the Kaspa network.
 
-| KIP | Title | Category | Summary |
+| KIP | Title | Status | Summary |
 |---|---|---|---|
-| KIP-1 | KIP Process | Process | Defines the formal process for submitting, reviewing, and activating Kaspa Improvement Proposals. Establishes the template, lifecycle stages, and roles involved in governance. |
-| KIP-9 | Storage Mass | Protocol | Introduces a storage mass component to the transaction mass calculation. Accounts for the long-term cost of growing the UTXO set by charging mass proportional to the number of outputs created minus inputs consumed. This prevents UTXO bloat attacks that could degrade node performance. |
-| KIP-13 | Crescendo | Protocol | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
-
-## KIPs in Review
-
-These KIPs are under active discussion and review by the community.
-
-| KIP | Title | Category | Summary |
-|---|---|---|---|
-| KIP-10 | Transaction Introspection Opcodes | Protocol | Proposes new opcodes for transaction introspection, enabling scripts to inspect their own transaction context. This opens the door to advanced smart contract functionality such as covenants and conditional spending logic on Kaspa. |
+| KIP-1 | Rewriting the Kaspa Full-Node in the Rust Programming Language | Implemented | Defines the rationale and plan for rewriting the Kaspa full-node implementation from Go to Rust, improving performance, memory safety, and maintainability. |
+| KIP-4 | Sparse Difficulty Windows | Active | Introduces sparse sampling of the difficulty adjustment window to improve efficiency of the DAA at higher block rates. |
+| KIP-5 | Message Signing | Active | Defines a standard for cryptographic message signing using Kaspa keys, enabling proof of ownership and off-chain authentication. |
+| KIP-9 | Extended Mass Formula for Mitigating State Bloat | Active | Introduces a storage mass component to the transaction mass calculation. Accounts for the long-term cost of growing the UTXO set by charging mass proportional to the number of outputs created minus inputs consumed. This prevents UTXO bloat attacks that could degrade node performance. |
+| KIP-10 | New Transaction Opcodes for Enhanced Script Functionality | Active | Proposes new opcodes for transaction introspection, enabling scripts to inspect their own transaction context. This opens the door to advanced smart contract functionality such as covenants and conditional spending logic on Kaspa. |
+| KIP-13 | Transient Storage Handling | Active | Refines the mass model to introduce transient mass, more accurately pricing the bandwidth dimension of transaction cost as a prerequisite for efficient smart contract execution. |
+| KIP-14 | The Crescendo Hardfork | Active | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
+| KIP-15 | Canonical Transaction Ordering and SelectedParent Accepted Transactions Commitment | Active | Defines a canonical ordering for transactions within blocks and commits to the set of accepted transactions from the selected parent, improving verification efficiency and enabling light client support. |
 
 ## Proposed / Draft KIPs
 
-These KIPs are in early stages of development or discussion.
+These KIPs are in early stages of development or under community discussion.
 
-| KIP | Title | Category | Summary |
+| KIP | Title | Status | Summary |
 |---|---|---|---|
-| — | DAGKnight Activation | Protocol | Anticipated proposal to replace GHOSTDAG with the DAGKnight consensus protocol, which achieves optimal Byzantine fault tolerance without requiring a predetermined `k` parameter. Currently in research and specification phase. |
+| KIP-2 | Upgrade Consensus to Follow the DAGKNIGHT Protocol | Proposed | Proposes replacing GHOSTDAG with the DAGKnight consensus protocol, which achieves optimal Byzantine fault tolerance without requiring a predetermined `k` parameter. |
+| KIP-6 | Proof of Chain Membership (PoChM) | Draft | Defines a mechanism for proving that a block or transaction is a member of the selected chain, enabling efficient verification by light clients and external systems. |
+
+## Rejected KIPs
+
+These KIPs were reviewed and rejected by community consensus.
+
+| KIP | Title | Status | Summary |
+|---|---|---|---|
+| KIP-3 | Block Sampling for Efficient DAA with High BPS | Rejected | Proposed a block sampling approach for the difficulty adjustment algorithm at high block rates. Rejected in favor of the approach taken by KIP-4 (Sparse Difficulty Windows). |
 
 <Callout>
-The KIP numbering may not be strictly sequential. Some numbers may be reserved, skipped, or assigned to proposals that were later withdrawn. The numbers listed here reflect the official assignments in the KIPs repository.
+The KIP numbering is not strictly sequential. Some numbers may be reserved, skipped, or assigned to proposals that were later withdrawn. The numbers listed here reflect the official assignments in the [KIPs repository](https://github.com/kaspanet/kips).
 </Callout>
 
 ## KIP Categories
@@ -47,7 +53,7 @@ The KIP numbering may not be strictly sequential. Some numbers may be reserved, 
 
 **Informational** — Design documents, best practices, guidelines, or analysis that do not propose protocol changes. These serve as reference material for the ecosystem.
 
-**Process** — Changes to the governance, workflow, or organizational processes of the Kaspa project. KIP-1 is the foundational process KIP.
+**Process** — Changes to the governance, workflow, or organizational processes of the Kaspa project.
 
 ## KIP Status Definitions
 
@@ -66,7 +72,7 @@ The KIP numbering may not be strictly sequential. Some numbers may be reserved, 
 
 Anyone can propose a KIP. The process is fully open and permissionless:
 
-1. Review the KIP-1 process document for formatting and submission requirements.
+1. Review existing KIPs for formatting and submission conventions.
 2. Draft your proposal using the standard template.
 3. Submit a pull request to the [kaspanet/kips](https://github.com/kaspanet/kips) repository on GitHub.
 
@@ -77,6 +83,6 @@ Before submitting a new KIP, search the existing proposals and community discuss
 ## Further Reading
 
 - [KIPs Overview](/docs/protocol-evolution/kips-overview) — Detailed explanation of the KIP process and lifecycle.
-- [Crescendo](/docs/protocol-evolution/crescendo) — Full details on KIP-13, the Crescendo hardfork.
+- [Crescendo](/docs/protocol-evolution/crescendo) — Full details on KIP-14, the Crescendo hardfork.
 - [Roadmap](/docs/protocol-evolution/roadmap) — How pending KIPs fit into Kaspa's development trajectory.
 - [KIPs GitHub Repository](https://github.com/kaspanet/kips) — The canonical source for all KIP documents.

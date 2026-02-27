@@ -22,7 +22,7 @@ Before you begin, ensure you have the following:
 - **Hardware**: A GPU with sufficient hashrate (see the [Hardware](/docs/mining/hardware) page for recommendations) or an ASIC miner.
 - **Full node**: A running and fully synced instance of `kaspad` (the Kaspa full node daemon).
 - **Mining software**: A compatible miner such as `kaspa-miner`, BzMiner, lolMiner, or another kHeavyHash-compatible GPU/ASIC miner.
-- **Kaspa wallet address**: A Kaspa address to receive block rewards. You can generate one using the Kaspa CLI wallet (`kaspa-cli`), the Kaspa desktop wallet, or the KDX application.
+- **Kaspa wallet address**: A Kaspa address to receive block rewards. You can generate one using the Kaspa CLI wallet (`kaspa-wallet`), the Kaspa desktop wallet, or the KDX application.
 - **Stable internet connection**: Low latency is important at 10 BPS to ensure your blocks propagate quickly.
 - **Sufficient disk space**: The Kaspa UTXO set and DAG headers require storage. Plan for at least 50 GB of free disk space, with room to grow.
 
@@ -30,18 +30,19 @@ Before you begin, ensure you have the following:
 
 Download and build or install `kaspad` from the official Kaspa repository. Then start the node with the required flags for mining.
 
-### Running kaspad with Mining Enabled
+Solo mining is a two-step process: first you run a `kaspad` full node, then you run a separate miner application that connects to the node and specifies your mining address. The mining address is configured on the **miner**, not on the node.
+
+### Running kaspad
 
 ```bash
-kaspad --utxoindex --mining-address=kaspa:qr...your_address_here
+kaspad --utxoindex
 ```
 
 **Key flags:**
 
 | Flag | Purpose |
 |---|---|
-| `--utxoindex` | Enables the UTXO index, which is required for mining and wallet operations. Without this flag, the node cannot construct block templates. |
-| `--mining-address` | Specifies the Kaspa address that will receive block rewards. |
+| `--utxoindex` | Enables the UTXO index, which is required for mining and wallet operations. Without this flag, the node cannot serve block templates to miners. |
 
 <Callout type="info">
 The `--utxoindex` flag causes `kaspad` to maintain an additional index over the UTXO set. This increases disk usage and initial sync time but is mandatory for mining. If you previously ran `kaspad` without this flag, you may need to re-sync from scratch or use `--reset-db` to rebuild the database with the index.
@@ -51,7 +52,6 @@ The `--utxoindex` flag causes `kaspad` to maintain an additional index over the 
 
 ```bash
 kaspad --utxoindex \
-  --mining-address=kaspa:qr...your_address_here \
   --rpclisten=0.0.0.0:16110 \
   --listen=0.0.0.0:16111
 ```
@@ -60,6 +60,11 @@ kaspad --utxoindex \
 |---|---|
 | `--rpclisten` | Sets the gRPC listen address. Default is `localhost:16110`. Set to `0.0.0.0:16110` if your miner runs on a different machine. |
 | `--listen` | Sets the P2P listen address. Default is `0.0.0.0:16111`. |
+| `--enable-unsynced-mining` | Allows the node to accept blocks from RPC while not fully synced. Only use this for testing purposes. |
+
+<Callout type="warn">
+The `kaspad` node does **not** have a `--mining-address` flag. The mining address is specified when launching your miner software (see Step 2). Do not pass a mining address to `kaspad`.
+</Callout>
 
 ### Wait for Sync
 
@@ -128,13 +133,11 @@ For solo mining, "shares" or "blocks" found represents actual blocks submitted t
 
 ### Checking Block Rewards
 
-You can verify that blocks you mined are being accepted by querying your node or checking your wallet balance:
+You can verify that blocks you mined are being accepted by checking your wallet balance or querying the node:
 
-```bash
-kaspa-cli --rpcserver=127.0.0.1:16110 getbalancebyaddress kaspa:qr...your_address_here
-```
-
-You can also use a Kaspa block explorer to search your mining address and confirm that mined blocks appear with your address as the coinbase recipient.
+- **Using the CLI wallet**: Open `kaspa-wallet`, connect to your node, and run the `list` command to see your account balances.
+- **Using the wRPC API**: Query the `getBalanceByAddress` method via the wRPC interface (see the [wRPC API](/docs/developer-guide) documentation).
+- **Using a block explorer**: Search your mining address on a Kaspa block explorer to confirm that mined blocks appear with your address as the coinbase recipient.
 
 ### Expected Block Frequency
 

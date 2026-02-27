@@ -1,11 +1,11 @@
 ---
 title: CLI Wallet
-description: Install and use the Kaspa CLI wallet (kaspa-cli-wallet) to manage keys, check balances, and send KAS from the command line.
+description: Install and use the Kaspa CLI wallet (kaspa-wallet) to manage keys, check balances, and send KAS from the command line.
 ---
 
 ## Overview
 
-The Kaspa CLI wallet (`kaspa-cli-wallet`) is a command-line wallet included in the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) project. It connects to a Kaspa node via the wRPC interface to query the network state and broadcast transactions. All key management and signing happens locally on your machine.
+The Kaspa CLI wallet (`kaspa-wallet`) is a command-line wallet included in the [rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) project. It connects to a Kaspa node via the wRPC interface to query the network state and broadcast transactions. All key management and signing happens locally on your machine.
 
 The CLI wallet is well suited for:
 
@@ -18,18 +18,18 @@ The CLI wallet is well suited for:
 
 ### Building with the Kaspa Node
 
-If you are already building `rusty-kaspa` from source, the CLI wallet is included as part of the workspace. After building the full project, the `kaspa-cli-wallet` binary is available in the `target/release` directory:
+If you are already building `rusty-kaspa` from source, the CLI wallet is included as part of the workspace. After building the full project, the `kaspa-wallet` binary is available in the `target/release` directory:
 
 ```bash
 git clone https://github.com/kaspanet/rusty-kaspa.git
 cd rusty-kaspa
-cargo build --release --bin kaspa-cli-wallet
+cargo build --release --bin kaspa-wallet
 ```
 
 The compiled binary will be located at:
 
 ```
-target/release/kaspa-cli-wallet
+target/release/kaspa-wallet
 ```
 
 ### Standalone Build
@@ -39,12 +39,12 @@ You can also build just the CLI wallet without compiling the full node:
 ```bash
 git clone https://github.com/kaspanet/rusty-kaspa.git
 cd rusty-kaspa
-cargo build --release -p kaspa-cli-wallet
+cargo build --release -p kaspa-wallet
 ```
 
 ### Pre-built Binaries
 
-Pre-built binaries are available on the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases). Download the archive for your platform, extract it, and place the `kaspa-cli-wallet` binary in your PATH.
+Pre-built binaries are available on the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases). Download the archive for your platform, extract it, and place the `kaspa-wallet` binary in your PATH.
 
 <Callout type="info">
 The CLI wallet requires a running Kaspa node to connect to. By default it connects to `wrpc://127.0.0.1:17110` (mainnet wRPC). You can specify a different endpoint with the `--server` flag or connect to a public node.
@@ -55,13 +55,13 @@ The CLI wallet requires a running Kaspa node to connect to. By default it connec
 Launch the interactive wallet shell:
 
 ```bash
-kaspa-cli-wallet
+kaspa-wallet
 ```
 
 You will enter an interactive prompt where you can issue wallet commands. To connect to a specific node:
 
 ```bash
-kaspa-cli-wallet --server wrpc://your-node-ip:17110
+kaspa-wallet --server wrpc://your-node-ip:17110
 ```
 
 Once inside the interactive shell, you can type `help` to see all available commands:
@@ -128,13 +128,13 @@ wallet> disconnect
 
 ## Listing Addresses
 
-Generate and list your receive addresses:
+Show your current receive address:
 
 ```
-wallet> address show
+wallet> address
 ```
 
-To create a new receive address:
+To generate a new receive address:
 
 ```
 wallet> address new
@@ -144,13 +144,13 @@ The wallet uses BIP-32 HD key derivation, so all addresses are derived determini
 
 ## Checking Balance
 
-View your wallet's current balance:
+View your wallet accounts and their balances:
 
 ```
-wallet> balance
+wallet> list
 ```
 
-This displays the total confirmed balance across all addresses in the wallet. The balance is queried from the connected node in real time.
+This displays all accounts in the wallet along with their confirmed balances. The balances are queried from the connected node in real time.
 
 ## Sending KAS
 
@@ -178,35 +178,33 @@ You will be asked to confirm the transaction details before it is broadcast.
 
 ### Sending with a Priority Fee
 
-You can specify a priority fee (in sompi) to incentivize faster inclusion:
+You can specify a priority fee as a third positional argument to incentivize faster inclusion. The priority fee is specified in KAS (not sompi):
 
 ```
-wallet> send <address> <amount> --priority-fee <fee_in_sompi>
+wallet> send <address> <amount> <priority_fee>
+```
+
+For example, to send 100 KAS with a 0.001 KAS priority fee:
+
+```
+wallet> send kaspa:qr0emu7s4yrkunhp2p4vodqem59nnfmryzrsmjy7mvsrgf22ygqqxf7z8g5wv 100 0.001
 ```
 
 <Callout type="info">
-One KAS equals 100,000,000 sompi (10^8). Sompi is the smallest unit of KAS, analogous to satoshi in Bitcoin.
+One KAS equals 100,000,000 sompi (10^8). Sompi is the smallest unit of KAS, analogous to satoshi in Bitcoin. The priority fee in the `send` command is specified in KAS, not sompi.
 </Callout>
 
 ## Advanced Features
 
 ### UTXO Sweep
 
-The sweep command consolidates all UTXOs in the wallet into a single output. This is useful if your wallet has accumulated many small UTXOs (e.g., from mining payouts) and you want to consolidate them:
+The `sweep` command consolidates all UTXOs in the wallet into a single output. This is useful if your wallet has accumulated many small UTXOs (e.g., from mining payouts) and you want to consolidate them:
 
 ```
 wallet> sweep
 ```
 
-The sweep operation may execute multiple transactions internally if the number of UTXOs exceeds what a single transaction can consume.
-
-### Compound
-
-Similar to sweep, the compound command consolidates UTXOs but keeps them within the same wallet. This is useful as a preparatory step before a large send:
-
-```
-wallet> compound
-```
+The sweep operation may execute multiple transactions internally if the number of UTXOs exceeds what a single transaction can consume. This is also useful as a preparatory step before a large send.
 
 ### Transfer Between Accounts
 
@@ -218,40 +216,57 @@ wallet> transfer <account_name> <amount>
 
 ### Multi-Sig
 
-The CLI wallet supports creating multi-signature addresses. A multi-sig address requires M of N signatures to authorize a transaction, providing enhanced security for shared funds or organizational wallets.
+The CLI wallet supports creating multi-signature accounts. A multi-sig account requires M of N signatures to authorize a transaction, providing enhanced security for shared funds or organizational wallets.
 
-To create a multi-sig account:
-
-```
-wallet> wallet create-multisig --name <name> --n-of-m <n> <m>
-```
-
-For example, to create a 2-of-3 multi-sig:
+To create a multi-sig account, use the interactive wizard:
 
 ```
-wallet> wallet create-multisig --name treasury --n-of-m 2 3
+wallet> account create multisig
 ```
 
-You will need to provide the public keys of all participating parties. Multi-sig transactions require the specified threshold of co-signers to sign before they can be broadcast.
+The wizard will prompt you for the required number of signatures (M), the total number of keys (N), and the extended public keys of all participating parties.
 
-### Export and Import Transactions
-
-For multi-sig workflows or air-gapped signing, you can export unsigned transactions to a file and import signed transactions:
+Multi-sig transactions use the PSKB (Partially Signed Kaspa Block) workflow. To create, sign, and broadcast multi-sig transactions:
 
 ```
-wallet> export <filename>
-wallet> import <filename>
+wallet> pskb create
+wallet> pskb sign
+wallet> pskb send
 ```
 
-### Monitoring Mode
+Each co-signer signs the PSKB in turn until the required threshold of signatures is reached, at which point the transaction can be broadcast.
 
-The wallet supports a monitoring mode where it watches for incoming transactions without the ability to spend:
+### Export and Import
+
+The `export` command exports your wallet's mnemonic seed phrase (for backup purposes):
 
 ```
-wallet> wallet create --watch-only
+wallet> export mnemonic
 ```
 
-This is useful for tracking balances on a public-facing server without exposing private keys.
+To import a wallet from a mnemonic seed phrase:
+
+```
+wallet> wallet import
+```
+
+For multi-sig transaction workflows or air-gapped signing, use the `pskb` commands described in the Multi-Sig section above.
+
+### Watch-Only Mode
+
+The wallet supports watch-only accounts that can monitor balances and incoming transactions without the ability to spend. To create a watch-only account from a BIP-32 extended public key:
+
+```
+wallet> account watch bip32
+```
+
+Or for a multi-sig watch-only account:
+
+```
+wallet> account watch multisig
+```
+
+These are interactive commands that will prompt you for the required public key information. Watch-only mode is useful for tracking balances on a public-facing server without exposing private keys.
 
 ## Configuration
 
@@ -259,16 +274,16 @@ The CLI wallet stores its data (encrypted wallet files, configuration) in a plat
 
 | Platform | Path |
 |---|---|
-| Linux | `~/.kaspa-cli-wallet/` |
-| macOS | `~/Library/Application Support/kaspa-cli-wallet/` |
-| Windows | `%APPDATA%\kaspa-cli-wallet\` |
+| Linux | `~/.kaspa-wallet/` |
+| macOS | `~/Library/Application Support/kaspa-wallet/` |
+| Windows | `%APPDATA%\kaspa-wallet\` |
 
 ## Scripting and Automation
 
 While the CLI wallet is primarily interactive, you can pipe commands for basic automation:
 
 ```bash
-echo "wallet open\nbalance\nwallet close" | kaspa-cli-wallet
+echo "wallet open\nlist\nwallet close" | kaspa-wallet
 ```
 
 For more robust programmatic interaction with the Kaspa network, consider using the [Kaspa WASM SDK](/docs/developer-guide) or the [wRPC API](/docs/developer-guide) directly.

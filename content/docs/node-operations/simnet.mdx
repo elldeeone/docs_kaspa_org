@@ -50,12 +50,18 @@ Wallet software connected to a simnet node will automatically generate addresses
 
 Simnet uses a minimal mining difficulty, allowing blocks to be mined nearly instantly with CPU mining. To mine blocks on simnet:
 
-1. Start kaspad with `--simnet`, `--utxoindex`, and a `--mining-address` flag pointing to your simnet address.
-2. Connect a miner to the node's gRPC endpoint, or use the built-in mining capabilities.
+1. Start kaspad with `--simnet` and `--utxoindex`.
+2. Connect a miner to the node's gRPC endpoint, providing your simnet mining address to the **miner** (not to kaspad).
 
 ```bash
-kaspad --simnet --utxoindex --mining-address=kaspasim:qr...your_address
+# Start the simnet node
+kaspad --simnet --utxoindex --rpclisten=0.0.0.0:16510
+
+# In a separate terminal, connect a miner with your simnet address
+kaspa-miner --mining-address kaspasim:qr...your_address --kaspad-address 127.0.0.1:16510
 ```
+
+Note that `kaspad` does **not** have a `--mining-address` flag. The mining address is always specified on the miner, not the node.
 
 <Callout>
 On simnet, blocks are mined almost instantly because the difficulty target is set extremely low. This allows you to generate blocks as fast as your CPU can produce them, which is ideal for testing transaction confirmation flows and DAG behavior.
