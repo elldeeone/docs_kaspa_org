@@ -7,7 +7,7 @@ description: "Manually add a peer address to the node's connection list."
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `address` | string | Yes | The IP address and port of the peer to add (e.g., `192.168.1.100:16111`). |
+| `peerAddress` | string | Yes | The IP address and port of the peer to add (e.g., `192.168.1.100:16111`). |
 | `isPermanent` | boolean | Yes | If `true`, the node will persistently try to connect to this peer and reconnect if disconnected. |
 
 ## Response
@@ -21,7 +21,7 @@ Empty response on success.
 {
   "method": "addPeer",
   "params": {
-    "address": "192.168.1.100:16111",
+    "peerAddress": "192.168.1.100:16111",
     "isPermanent": true
   }
 }

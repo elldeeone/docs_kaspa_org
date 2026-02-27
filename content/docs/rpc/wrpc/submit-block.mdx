@@ -14,7 +14,9 @@ description: "Submit a solved block to the network for validation and inclusion 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `report` | string | The result of block submission: `success`, `duplicate`, or `reject`. |
+| `report` | object | The result of block submission as a tagged object. |
+| `report.type` | string | Either `"success"` or `"reject"`. |
+| `report.reason` | string | Only present when `type` is `"reject"`. The rejection reason (e.g., `"blockInvalid"`). |
 
 ## Example
 
@@ -40,16 +42,25 @@ description: "Submit a solved block to the network for validation and inclusion 
   }
 }
 
-// Response
+// Response (success)
 {
-  "report": "success"
+  "report": {
+    "type": "success"
+  }
+}
+
+// Response (rejected)
+{
+  "report": {
+    "type": "reject",
+    "reason": "blockInvalid"
+  }
 }
 ```
 
 ## Notes
 
-- A `success` report means the block was accepted and will be propagated to peers.
-- A `duplicate` report means the block was already known to the node.
-- A `reject` report means the block failed validation (invalid PoW, bad timestamps, etc.).
+- A `"success"` report type means the block was accepted and will be propagated to peers.
+- A `"reject"` report type means the block failed validation (invalid PoW, bad timestamps, etc.) and includes a `reason` field.
 - The block object should be the template from `GetBlockTemplate` with the nonce field updated to the solved value.
 - Mining software typically calls `GetBlockTemplate`, solves the nonce, and calls `SubmitBlock` in a tight loop.

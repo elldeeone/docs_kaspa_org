@@ -32,7 +32,7 @@ async function collectMetrics(): Promise<string> {
   };
   g("kaspa_synced", "Node synced (1/0)", info.isSynced ? 1 : 0);
   g("kaspa_daa_score", "Virtual DAA score", dag.virtualDaaScore);
-  g("kaspa_peer_count", "Connected peers", peers.infos?.length ?? 0);
+  g("kaspa_peer_count", "Connected peers", peers.peerInfo?.length ?? 0);
   g("kaspa_mempool_size", "Mempool txs", info.mempoolSize ?? 0);
   g("kaspa_block_count", "Total blocks", dag.blockCount);
   g("kaspa_difficulty", "Mining difficulty", dag.difficulty);

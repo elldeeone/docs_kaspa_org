@@ -87,10 +87,10 @@ Kaspa supports the following SigHash types, which control what parts of the tran
 Instead of a simple byte-size limit, Kaspa uses a concept called **transaction mass** to measure the resource cost of a transaction. Mass accounts for multiple dimensions of resource consumption:
 
 - **Compute mass**: The computational cost of verifying the transaction's scripts and signatures.
-- **Bandwidth mass**: The serialized size of the transaction in bytes, reflecting network propagation costs.
-- **UTXO mass**: The impact on the UTXO set. Transactions that create many new UTXOs without consolidating existing ones incur higher UTXO mass.
+- **Transient mass** (KIP-13): The serialized size of the transaction in bytes, reflecting network propagation and mempool costs.
+- **Storage mass** (KIP-9): The impact on the UTXO set. Transactions that create many new UTXOs without consolidating existing ones incur higher storage mass.
 
-The total mass of a transaction is the sum of these components. Each block has a maximum mass capacity, and transactions are selected by miners based on their fee-to-mass ratio.
+The total mass of a transaction is the **maximum** of these three components (not the sum). Each block has a maximum mass capacity, and transactions are selected by miners based on their fee-to-mass ratio.
 
 <Callout>
 Transaction mass is designed to align economic incentives with resource consumption. A transaction that is expensive for the network to process (in terms of compute, bandwidth, or state growth) must pay a proportionally higher fee.

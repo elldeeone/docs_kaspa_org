@@ -7,7 +7,7 @@ description: "Retrieve a specific transaction entry from the node's mempool by t
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `txId` | string | Yes | The transaction ID to look up in the mempool. |
+| `transactionId` | string | Yes | The transaction ID to look up in the mempool. |
 | `includeOrphanPool` | boolean | No | Whether to also search the orphan pool. Defaults to `false`. |
 | `filterTransactionPool` | boolean | No | If `true`, excludes the main transaction pool and searches only the orphan pool. Defaults to `false`. |
 
@@ -15,11 +15,10 @@ description: "Retrieve a specific transaction entry from the node's mempool by t
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `entry` | object | The mempool entry object. |
-| `entry.fee` | u64 | Transaction fee in sompi. |
-| `entry.mass` | u64 | Transaction mass. |
-| `entry.transaction` | object | The full transaction object. |
-| `entry.isOrphan` | boolean | Whether the transaction is in the orphan pool. |
+| `mempoolEntry` | object | The mempool entry object. |
+| `mempoolEntry.fee` | u64 | Transaction fee in sompi. |
+| `mempoolEntry.transaction` | object | The full transaction object. |
+| `mempoolEntry.isOrphan` | boolean | Whether the transaction is in the orphan pool. |
 
 ## Example
 
@@ -28,7 +27,7 @@ description: "Retrieve a specific transaction entry from the node's mempool by t
 {
   "method": "getMempoolEntry",
   "params": {
-    "txId": "aabb1122ccdd3344...",
+    "transactionId": "aabb1122ccdd3344...",
     "includeOrphanPool": false,
     "filterTransactionPool": false
   }
@@ -36,9 +35,8 @@ description: "Retrieve a specific transaction entry from the node's mempool by t
 
 // Response
 {
-  "entry": {
+  "mempoolEntry": {
     "fee": 5000,
-    "mass": 2345,
     "transaction": {
       "version": 0,
       "inputs": [{ "previousOutpoint": { "transactionId": "...", "index": 0 } }],
@@ -53,5 +51,5 @@ description: "Retrieve a specific transaction entry from the node's mempool by t
 ## Notes
 
 - Returns an error if the transaction is not found in the mempool (or orphan pool, if searched).
-- The `fee` and `mass` fields are useful for determining the transaction's priority relative to other mempool entries.
+- The `fee` fields are useful for determining the transaction's priority relative to other mempool entries.
 - Orphan transactions are those whose parent transactions are not yet known to the node.

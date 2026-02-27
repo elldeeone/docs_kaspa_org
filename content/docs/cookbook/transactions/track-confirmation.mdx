@@ -33,16 +33,11 @@ async function trackConfirmation(targetTxId: string, requiredConfirmations: numb
   });
   await rpc.connect();
 
-  // 2. Look up the transaction to find which block accepted it
-  //    and its DAA score at inclusion time
+  // 2. Track the transaction's inclusion via DAA score changes
+  //    Note: There is no RPC method to look up transactions by address directly.
+  //    Use subscribeUtxosChanged to detect when the transaction is accepted,
+  //    or use the REST API (GET /transactions/address/{address}) if available.
   let inclusionDaaScore: bigint | null = null;
-
-  // Subscribe to UTXO changes to detect when the transaction is accepted
-  // Alternatively, poll for the transaction in the block
-  const txInfo = await rpc.getTransactionsByAddresses({
-    startingBlockHash: "",
-    addresses: ["kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0"],
-  });
 
   // 3. Subscribe to virtual DAA score changes
   await rpc.subscribeVirtualDaaScoreChanged();

@@ -51,17 +51,17 @@ Depending on your operating system, you may need additional system libraries:
 
 ```bash
 # Ubuntu / Debian
-sudo apt-get install -y build-essential libssl-dev pkg-config protobuf-compiler libprotobuf-dev
+sudo apt-get install -y build-essential libssl-dev pkg-config protobuf-compiler libprotobuf-dev clang llvm
 
 # Fedora
-sudo dnf install -y gcc openssl-devel pkgconfig protobuf-compiler protobuf-devel
+sudo dnf install -y gcc openssl-devel pkgconfig protobuf-compiler protobuf-devel clang llvm
 
 # macOS (via Homebrew)
-brew install protobuf
+brew install protobuf llvm
 ```
 
 <Callout type="warn">
-The `protobuf-compiler` (protoc) package is required for building the gRPC components used by the Kaspa RPC layer. The build will fail without it.
+The `protobuf-compiler` (protoc) package is required for building the gRPC components used by the Kaspa RPC layer. The `clang` / `llvm` packages are required for compiling RocksDB (the database engine used by rusty-kaspa). The build will fail without them.
 </Callout>
 
 ## Building from Source
@@ -108,9 +108,9 @@ The `--utxoindex` flag enables the UTXO index, which is required for wallet func
 
 By default, rusty-kaspa stores blockchain data and configuration in:
 
-- **Linux:** `~/.kaspad/kaspa-mainnet/`
-- **macOS:** `~/Library/Application Support/kaspad/kaspa-mainnet/`
-- **Windows:** `%APPDATA%\kaspad\kaspa-mainnet\`
+- **Linux:** `~/.rusty-kaspa/kaspa-mainnet/`
+- **macOS:** `~/.rusty-kaspa/kaspa-mainnet/`
+- **Windows:** `%LOCALAPPDATA%\rusty-kaspa\kaspa-mainnet\`
 
 You can override this with the `--appdir` flag:
 

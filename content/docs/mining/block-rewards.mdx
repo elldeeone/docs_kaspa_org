@@ -50,9 +50,9 @@ If your blocks are frequently marked red, you are losing rewards. Common causes 
 
 ## Coinbase Maturity
 
-Coinbase outputs (newly minted KAS from block rewards) cannot be spent immediately. They require a maturity period of **100 blue score** before they become spendable. This prevents miners from spending rewards from blocks that might later be reorged out of the selected parent chain.
+Coinbase outputs (newly minted KAS from block rewards) cannot be spent immediately. They require a maturity period of **1,000 DAA score** before they become spendable (at 10 BPS). This prevents miners from spending rewards from blocks that might later be reorged out of the selected parent chain.
 
-At 10 BPS, 100 blue score corresponds to roughly **10 seconds** of network time, making coinbase maturity very short compared to Bitcoin's 100-block (~16.7 hour) maturity period.
+At 10 BPS, 1,000 DAA score corresponds to roughly **100 seconds** of network time, making coinbase maturity very short compared to Bitcoin's 100-block (~16.7 hour) maturity period.
 
 ## Reward Per Second
 

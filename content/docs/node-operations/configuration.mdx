@@ -5,7 +5,7 @@ description: Complete reference for kaspad CLI flags, data directory structure, 
 
 ## CLI Flags Reference
 
-kaspad is configured entirely through command-line flags. There is no configuration file; all options are passed as arguments when starting the node.
+kaspad is configured primarily through command-line flags. It also supports an optional configuration file (typically `kaspad.conf` in the data directory) where flags can be specified one per line. Command-line flags override any values set in the configuration file.
 
 ### Core Flags
 
@@ -21,8 +21,8 @@ kaspad is configured entirely through command-line flags. There is no configurat
 | Flag | Description |
 |---|---|
 | `--rpclisten` | Sets the gRPC listen address. Default: `127.0.0.1:16110`. Set to `0.0.0.0:16110` to accept remote connections. |
-| `--rpclisten-borsh` | Sets the wRPC Borsh listen address. Default: `0.0.0.0:17110` (mainnet), `0.0.0.0:17210` (testnet). |
-| `--rpclisten-json` | Sets the wRPC JSON listen address. Default: `0.0.0.0:18110` (mainnet), `0.0.0.0:18210` (testnet). |
+| `--rpclisten-borsh` | Enables and sets the wRPC Borsh listen address. wRPC Borsh is **disabled by default**; you must pass this flag to enable it. Example: `--rpclisten-borsh=0.0.0.0:17110`. |
+| `--rpclisten-json` | Enables and sets the wRPC JSON listen address. wRPC JSON is **disabled by default**; you must pass this flag to enable it. Example: `--rpclisten-json=0.0.0.0:18110`. |
 | `--rpcmaxclients` | Maximum number of simultaneous RPC client connections. Default: `128`. Increase for high-traffic nodes serving many wallets or applications. |
 | `--listen` | Sets the P2P listen address for incoming peer connections. Default: `0.0.0.0:16111`. |
 | `--connect` | Connect only to the specified peer(s). Disables automatic peer discovery. Useful for private network topologies. |
@@ -55,7 +55,7 @@ Only one network flag can be specified at a time. If no network flag is provided
 |---|---|
 | `--ram-scale` | Scales the amount of RAM used by internal caches and data structures. Default is `1.0`. Values greater than 1.0 allocate more RAM for faster sync and processing; values less than 1.0 reduce memory usage at the cost of performance. |
 | `--perf-metrics` | Enables periodic logging of performance metrics (CPU, memory, bandwidth). |
-| `--perf-metrics-interval-sec` | Sets the interval in seconds between performance metric log entries. Default: `60`. |
+| `--perf-metrics-interval-sec` | Sets the interval in seconds between performance metric log entries. Default: `1`. |
 
 <Callout>
 On machines with ample RAM (32 GB+), setting `--ram-scale=2.0` or higher can significantly speed up the initial sync. On memory-constrained systems, use `--ram-scale=0.5` to avoid out-of-memory conditions, accepting slower sync performance.
@@ -65,7 +65,7 @@ On machines with ample RAM (32 GB+), setting `--ram-scale=2.0` or higher can sig
 
 | Flag | Description |
 |---|---|
-| `--loglevel` | Sets the log verbosity level. Options include `trace`, `debug`, `info`, `warn`, `error`. Default: `info`. |
+| `--loglevel` | Sets the log verbosity level. Options include `off`, `trace`, `debug`, `info`, `warn`, `error`. Default: `info`. |
 | `--nologfiles` | Disables writing log output to files. Logs are only printed to stdout/stderr. Useful for containerized deployments where log aggregation is handled externally. |
 
 ### Data Directory
@@ -96,15 +96,15 @@ If you change networks (e.g., from mainnet to testnet), kaspad automatically use
 
 ## RPC Configuration
 
-kaspad exposes three RPC interfaces:
+kaspad exposes up to three RPC interfaces:
 
-| Interface | Default Port (Mainnet) | Default Port (Testnet) | Flag |
-|---|---|---|---|
-| gRPC | 16110 | 16210 | `--rpclisten` |
-| wRPC Borsh | 17110 | 17210 | `--rpclisten-borsh` |
-| wRPC JSON | 18110 | 18210 | `--rpclisten-json` |
+| Interface | Default Port (Mainnet) | Default Port (Testnet) | Flag | Enabled by Default |
+|---|---|---|---|---|
+| gRPC | 16110 | 16210 | `--rpclisten` | Yes (localhost only) |
+| wRPC Borsh | 17110 | 17210 | `--rpclisten-borsh` | No |
+| wRPC JSON | 18110 | 18210 | `--rpclisten-json` | No |
 
-By default, the gRPC interface listens on `127.0.0.1` (localhost only). To allow remote connections, bind to `0.0.0.0` and ensure appropriate firewall rules are in place.
+By default, only the gRPC interface is enabled, listening on `127.0.0.1` (localhost only). The wRPC interfaces (Borsh and JSON) are **disabled by default** and must be explicitly enabled by passing the `--rpclisten-borsh` or `--rpclisten-json` flags. To allow remote connections on any interface, bind to `0.0.0.0` and ensure appropriate firewall rules are in place.
 
 ## Example Configurations
 
@@ -112,11 +112,11 @@ By default, the gRPC interface listens on `127.0.0.1` (localhost only). To allow
 # Minimal relay node
 kaspad
 
-# Mining node with remote RPC
-kaspad --utxoindex --rpclisten=0.0.0.0:16110
+# Mining node with remote RPC and wRPC enabled
+kaspad --utxoindex --rpclisten=0.0.0.0:16110 --rpclisten-borsh=0.0.0.0:17110
 
 # Development node with verbose logging
-kaspad --utxoindex --loglevel=debug --perf-metrics --perf-metrics-interval-sec=10
+kaspad --utxoindex --rpclisten-borsh=0.0.0.0:17110 --loglevel=debug --perf-metrics --perf-metrics-interval-sec=10
 
 # Memory-constrained node
 kaspad --ram-scale=0.3 --nologfiles

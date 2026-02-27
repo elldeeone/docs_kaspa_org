@@ -138,24 +138,6 @@ Content-Type: application/json
 Transactions must be fully signed before submission. The REST API does not perform signing. Use the WASM SDK, Rust crates, or another signing library to construct and sign transactions before submitting them via this endpoint.
 </Callout>
 
-## GET /transactions/search
-
-Searches for transactions matching given criteria. This endpoint allows filtering by block hash or other parameters.
-
-**Request:**
-
-```
-GET https://api.kaspa.org/transactions/search?blueScoreGte=48234500&blueScoreLt=48234600
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `blueScoreGte` | integer | Minimum accepting block blue score (inclusive) |
-| `blueScoreLt` | integer | Maximum accepting block blue score (exclusive) |
-| `transactionIds` | string | Comma-separated list of transaction IDs to look up |
-
 ## Understanding Mass and Fees
 
 Every transaction response includes a `mass` field. Transaction mass is a multi-dimensional measure of the transaction's resource cost:

@@ -28,13 +28,13 @@ With 10 blocks per second and a maximum block mass of 500,000, the network has a
 
 ## How Mass Is Calculated
 
-Transaction mass is computed as the **maximum** of two independent mass components:
+Transaction mass is computed as the **maximum** of three independent mass components:
 
 ```
-transaction_mass = max(compute_mass, storage_mass)
+transaction_mass = max(compute_mass, transient_mass, storage_mass)
 ```
 
-Each component measures a different dimension of cost. A transaction is limited by whichever dimension is most expensive. This approach follows the KIP-0009 standard.
+Each component measures a different dimension of cost. A transaction is limited by whichever dimension is most expensive. Compute mass and transient mass are non-contextual (can be computed from the transaction alone), while storage mass is contextual (requires knowledge of the input UTXOs). This approach follows KIP-9 (storage mass) and KIP-13 (transient mass).
 
 ## Compute Mass
 

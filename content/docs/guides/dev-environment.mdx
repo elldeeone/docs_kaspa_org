@@ -57,14 +57,14 @@ The key binaries:
 Simnet is a private, single-node network ideal for development. No external peers, instant mining, and full control.
 
 ```bash
-kaspad --simnet --utxoindex --rpclisten=0.0.0.0:16510
+kaspad --simnet --utxoindex --rpclisten=0.0.0.0:16510 --rpclisten-borsh=0.0.0.0:17510
 ```
 
 In a second terminal, connect the wallet:
 
 ```bash
 kaspa-wallet
-wallet> connect 127.0.0.1:16510
+wallet> connect 127.0.0.1:17510
 wallet> create
 wallet> address
 ```
@@ -73,7 +73,7 @@ wallet> address
 Simnet resets every time you clear its data directory. This is useful for clean-state testing but means you must re-fund wallets after a restart.
 </Callout>
 
-Simnet uses port **16510** for wRPC. See [Simnet](/docs/node-operations/simnet) for full details.
+Simnet uses port **16510** for gRPC and port **17510** for wRPC (Borsh). The WASM SDK connects via wRPC, so use port 17510. See [Simnet](/docs/node-operations/simnet) for full details.
 
 ## Step 4 -- Install the WASM SDK
 
@@ -92,7 +92,7 @@ import { RpcClient, Encoding } from "kaspa-wasm";
 
 async function main() {
   const rpc = new RpcClient({
-    url: "ws://127.0.0.1:16510",
+    url: "ws://127.0.0.1:17510",
     encoding: Encoding.Borsh,
   });
   await rpc.connect();
@@ -123,7 +123,7 @@ For **VS Code**, install **rust-analyzer** (Rust language server), **CodeLLDB** 
 2. **Fund a wallet** -- Use the CLI wallet to mine or transfer simnet KAS.
 3. **Write SDK code** -- Build your application logic against the local node.
 4. **Test on testnet** -- Once stable, point your app at testnet-10 or testnet-11 (see [Testnet Development](/docs/guides/testnet-development)).
-5. **Deploy to mainnet** -- Switch `networkId` to `"mainnet"` and connect via port 16110.
+5. **Deploy to mainnet** -- Switch `networkId` to `"mainnet"` and connect via wRPC Borsh port 17110 (or use the Resolver).
 
 ## Next Steps
 

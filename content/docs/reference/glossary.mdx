@@ -47,7 +47,7 @@ The **sink** is the selected parent of the virtual block — the tip of the virt
 
 ### Merge Set (Blues and Reds)
 
-When a new block is added to the DAG, its **merge set** consists of all blocks in the anticone of its selected parent that are reachable from the new block's other parents. The merge set is partitioned into **mergeset blues** (blocks that satisfy the k-cluster constraint) and **mergeset reds** (blocks that violate it). The merging process establishes ordering for blocks that were previously in parallel branches. The merge set size is bounded by the protocol (e.g., 180 blocks on mainnet).
+When a new block is added to the DAG, its **merge set** consists of all blocks in the anticone of its selected parent that are reachable from the new block's other parents. The merge set is partitioned into **mergeset blues** (blocks that satisfy the k-cluster constraint) and **mergeset reds** (blocks that violate it). The merging process establishes ordering for blocks that were previously in parallel branches. The merge set size is bounded by the protocol (248 blocks on mainnet at 10 BPS).
 
 ### Chain Block
 
@@ -91,7 +91,7 @@ The parameter `k` is central to GHOSTDAG's security and performance. It represen
 
 ### Finality
 
-A block achieves **finality** when its blue score depth exceeds the finality threshold (86,400 blue score, approximately 2.4 hours at 10 BPS). Once finalized, a block cannot be removed from the selected chain by any reorganization, regardless of an attacker's hash power. Finality provides a hard security guarantee: transactions in finalized blocks are irreversible. In practice, transactions are considered safe much sooner, but the finality depth provides the mathematically proven bound.
+A block achieves **finality** when its blue score depth exceeds the finality threshold (432,000 blue score, approximately 12 hours at 10 BPS). Once finalized, a block cannot be removed from the selected chain by any reorganization, regardless of an attacker's hash power. Finality provides a hard security guarantee: transactions in finalized blocks are irreversible. In practice, transactions are considered safe much sooner, but the finality depth provides the mathematically proven bound.
 
 ### Accepted Transaction
 
@@ -131,7 +131,7 @@ A special transaction included in each block that mints new KAS as a block rewar
 
 ### Coinbase Maturity
 
-Coinbase outputs cannot be spent immediately. They require a maturity period of **100 blue score** before they become spendable. At 10 BPS, this corresponds to approximately 10 seconds of wall-clock time. The maturity requirement protects against spending rewards from blocks that might later be reorganized out of the blue set.
+Coinbase outputs cannot be spent immediately. They require a maturity period of **1,000 DAA score** before they become spendable (at 10 BPS). This corresponds to approximately 100 seconds of wall-clock time. The maturity requirement protects against spending rewards from blocks that might later be reorganized out of the blue set.
 
 ### Script Public Key
 
@@ -155,7 +155,7 @@ Kaspa uses **Schnorr signatures** over the secp256k1 elliptic curve for transact
 
 ### kHeavyHash
 
-The proof-of-work mining algorithm used by Kaspa. kHeavyHash involves a matrix multiplication step sandwiched between two standard hash operations (Blake3). The algorithm multiplies the pre-hashed block header by a 64x64 matrix over GF(2^4), then XORs the result with the original hash before a final hashing step. This construction is designed to be amenable to optical computing implementations while maintaining resistance to traditional ASIC optimization advantages.
+The proof-of-work mining algorithm used by Kaspa. kHeavyHash involves a matrix multiplication step sandwiched between two cSHAKE256 hash operations. The algorithm multiplies the pre-hashed block header by a 64x64 matrix over GF(2^4), then XORs the result with the original hash before a final hashing step. This construction is designed to be amenable to optical computing implementations while maintaining resistance to traditional ASIC optimization advantages.
 
 ### BPS (Blocks Per Second)
 
@@ -163,7 +163,7 @@ The target rate at which blocks are produced across the network. Kaspa currently
 
 ### DAA (Difficulty Adjustment Algorithm)
 
-Kaspa's difficulty adjustment mechanism that maintains a consistent target block rate despite fluctuations in total network hash power. Unlike Bitcoin, which adjusts every 2,016 blocks, Kaspa adjusts difficulty **every single block** using a sampling window of **2,641 blocks** (~4.4 minutes at 10 BPS). The DAA computes new difficulty based on the ratio of expected time to actual time within the window, using median timestamps from the selected parent chain for manipulation resistance.
+Kaspa's difficulty adjustment mechanism that maintains a consistent target block rate despite fluctuations in total network hash power. Unlike Bitcoin, which adjusts every 2,016 blocks, Kaspa adjusts difficulty **every single block** using a sampling window of **661 blocks** spanning a duration of 2,641 seconds (~44 minutes). The DAA computes new difficulty based on the ratio of expected time to actual time within the window, using median timestamps from the selected parent chain for manipulation resistance.
 
 ### DAA Score
 
@@ -224,7 +224,7 @@ A local, self-contained **simulation network** designed for development and test
 
 ### Pruning
 
-The process of discarding historical block body data (transaction details, signature scripts) beyond the pruning depth while retaining all block headers, the current UTXO set, and UTXO commitments. Pruning is essential to Kaspa's scalability at 10 BPS, keeping storage requirements bounded. Pruned nodes can still fully validate new blocks and transactions. The pruning depth on mainnet is **185,798 blue score**.
+The process of discarding historical block body data (transaction details, signature scripts) beyond the pruning depth while retaining all block headers, the current UTXO set, and UTXO commitments. Pruning is essential to Kaspa's scalability at 10 BPS, keeping storage requirements bounded. Pruned nodes can still fully validate new blocks and transactions. The pruning depth on mainnet is **1,080,000 blue score** (30 hours at 10 BPS).
 
 ### Pruning Point
 

@@ -26,7 +26,7 @@ import {
   Encoding,
   UtxoProcessor,
   UtxoContext,
-  sompiToKas,
+  sompiToKaspaString,
 } from "kaspa-wasm";
 
 async function restoreWallet(
@@ -102,8 +102,8 @@ async function restoreWallet(
   const pendingBalance = balance?.pending ?? 0n;
 
   console.log("\nWallet restored successfully.");
-  console.log("  Mature balance:", sompiToKas(matureBalance), "KAS");
-  console.log("  Pending balance:", sompiToKas(pendingBalance), "KAS");
+  console.log("  Mature balance:", sompiToKaspaString(matureBalance), "KAS");
+  console.log("  Pending balance:", sompiToKaspaString(pendingBalance), "KAS");
 
   // 7. Check which addresses have UTXOs
   const utxoResponse = await rpc.getUtxosByAddresses(allAddresses);

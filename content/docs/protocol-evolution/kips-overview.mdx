@@ -45,7 +45,7 @@ Not all KIPs reach the Active stage. Proposals may be **Withdrawn** by the autho
 
 KIPs fall into three categories:
 
-**Protocol KIPs** propose changes to the consensus rules, network protocol, transaction format, or other aspects that affect the operation of Kaspa nodes. These are the most consequential type and always require a hardfork or softfork for activation. Examples include KIP-9 (storage mass), KIP-10 (opcode reactivation), and KIP-14 (Crescendo).
+**Protocol KIPs** propose changes to the consensus rules, network protocol, transaction format, or other aspects that affect the operation of Kaspa nodes. These are the most consequential type and always require a hardfork or softfork for activation. Examples include KIP-9 (storage mass), KIP-10 (transaction introspection opcodes), and KIP-13 (Crescendo).
 
 **Informational KIPs** describe design issues, best practices, or general guidelines for the Kaspa ecosystem. They do not propose protocol changes and do not require a fork. They serve as reference documents for developers and users.
 
@@ -76,9 +76,8 @@ Softforks (backward-compatible rule tightenings) are also possible but less comm
 |---|---|---|---|
 | KIP-1 | KIP Process | Active | Defines the governance process for all subsequent KIPs |
 | KIP-9 | Storage Mass | Active | Introduces a mass component that accounts for long-term UTXO storage costs, preventing UTXO bloat attacks |
-| KIP-10 | Opcode Reactivation | In Review | Proposes re-enabling disabled opcodes to support more expressive scripting capabilities |
-| KIP-13 | Transient Mass | In Review | Refines the transaction mass model to distinguish transient costs from persistent storage costs |
-| KIP-14 | Crescendo | Active | The hardfork that increased block rate from 1 BPS to 10 BPS with all associated parameter changes |
+| KIP-10 | Transaction Introspection Opcodes | In Review | Proposes new opcodes for transaction introspection, enabling scripts to inspect their own transaction context for advanced smart contract functionality |
+| KIP-13 | Crescendo | Active | The hardfork that increased block rate from 1 BPS to 10 BPS with all associated parameter changes |
 
 ## Where KIPs Are Discussed
 
@@ -89,5 +88,5 @@ Softforks (backward-compatible rule tightenings) are also possible but less comm
 ## Further Reading
 
 - [KIP Index](/docs/protocol-evolution/kip-index) — Complete listing of all KIPs with their current status.
-- [Crescendo](/docs/protocol-evolution/crescendo) — Detailed look at KIP-14, the most impactful KIP to date.
+- [Crescendo](/docs/protocol-evolution/crescendo) — Detailed look at KIP-13, the most impactful KIP to date.
 - [Roadmap](/docs/protocol-evolution/roadmap) — How upcoming KIPs fit into Kaspa's technical roadmap.

@@ -47,7 +47,7 @@ cargo build --release -p kaspa-cli-wallet
 Pre-built binaries are available on the [rusty-kaspa releases page](https://github.com/kaspanet/rusty-kaspa/releases). Download the archive for your platform, extract it, and place the `kaspa-cli-wallet` binary in your PATH.
 
 <Callout type="info">
-The CLI wallet requires a running Kaspa node to connect to. By default it connects to `ws://127.0.0.1:17110` (mainnet wRPC). You can specify a different endpoint with the `--server` flag or connect to a public node.
+The CLI wallet requires a running Kaspa node to connect to. By default it connects to `wrpc://127.0.0.1:17110` (mainnet wRPC). You can specify a different endpoint with the `--server` flag or connect to a public node.
 </Callout>
 
 ## Starting the Wallet
@@ -61,7 +61,7 @@ kaspa-cli-wallet
 You will enter an interactive prompt where you can issue wallet commands. To connect to a specific node:
 
 ```bash
-kaspa-cli-wallet --server ws://your-node-ip:17110
+kaspa-cli-wallet --server wrpc://your-node-ip:17110
 ```
 
 Once inside the interactive shell, you can type `help` to see all available commands:
@@ -114,10 +114,10 @@ To connect the wallet to a Kaspa node for balance queries and transaction broadc
 wallet> connect
 ```
 
-By default this connects to `ws://127.0.0.1:17110`. You can specify a custom endpoint:
+By default this connects to `wrpc://127.0.0.1:17110`. You can specify a custom endpoint:
 
 ```
-wallet> connect ws://your-node-ip:17110
+wallet> connect wrpc://your-node-ip:17110
 ```
 
 To disconnect:
@@ -131,7 +131,7 @@ wallet> disconnect
 Generate and list your receive addresses:
 
 ```
-wallet> address list
+wallet> address show
 ```
 
 To create a new receive address:

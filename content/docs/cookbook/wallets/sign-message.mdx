@@ -22,35 +22,9 @@ import {
   PublicKey,
   Mnemonic,
   XPrv,
+  signMessage,
+  verifyMessage,
 } from "kaspa-wasm";
-
-// Sign a message with a private key
-function signMessage(privateKey: PrivateKey, message: string): string {
-  // Convert the message to bytes
-  const messageBytes = new TextEncoder().encode(message);
-
-  // Sign the message using Schnorr signature
-  const signature = privateKey.signMessage(messageBytes);
-
-  return signature;
-}
-
-// Verify a message signature with a public key
-function verifyMessage(
-  publicKey: PublicKey,
-  message: string,
-  signature: string
-): boolean {
-  const messageBytes = new TextEncoder().encode(message);
-
-  try {
-    const isValid = publicKey.verifyMessage(messageBytes, signature);
-    return isValid;
-  } catch (err) {
-    console.error("Verification failed:", err.message);
-    return false;
-  }
-}
 
 // Complete example: sign and verify
 function signAndVerifyExample() {
@@ -70,27 +44,29 @@ function signAndVerifyExample() {
 
   // 2. Sign a message
   const message = "I own this Kaspa address. Timestamp: 2025-01-15T12:00:00Z";
-  const signature = signMessage(privateKey, message);
+  const messageBytes = new TextEncoder().encode(message);
+  const signature = signMessage({ privateKey, data: messageBytes });
   console.log("\nMessage:", message);
   console.log("Signature:", signature);
 
   // 3. Verify the signature
-  const isValid = verifyMessage(publicKey, message, signature);
+  const isValid = verifyMessage({ publicKey, data: messageBytes, signature });
   console.log("Signature valid:", isValid); // true
 
   // 4. Verify with wrong message fails
-  const isValidWrong = verifyMessage(publicKey, "tampered message", signature);
+  const tamperedBytes = new TextEncoder().encode("tampered message");
+  const isValidWrong = verifyMessage({ publicKey, data: tamperedBytes, signature });
   console.log("Tampered message valid:", isValidWrong); // false
 
   // 5. Verify with wrong key fails
   const wrongKey = new PrivateKey(
     "0000000000000000000000000000000000000000000000000000000000000001"
   );
-  const isValidWrongKey = verifyMessage(
-    wrongKey.toPublicKey(),
-    message,
-    signature
-  );
+  const isValidWrongKey = verifyMessage({
+    publicKey: wrongKey.toPublicKey(),
+    data: messageBytes,
+    signature,
+  });
   console.log("Wrong key valid:", isValidWrongKey); // false
 }
 
@@ -105,8 +81,9 @@ function signWithStandaloneKey() {
   console.log("Address:", address);
 
   const message = "Proof of ownership for account registration";
-  const signature = signMessage(privateKey, message);
-  const isValid = verifyMessage(publicKey, message, signature);
+  const messageBytes = new TextEncoder().encode(message);
+  const signature = signMessage({ privateKey, data: messageBytes });
+  const isValid = verifyMessage({ publicKey, data: messageBytes, signature });
 
   console.log("Message:", message);
   console.log("Signature:", signature);
@@ -129,7 +106,8 @@ function authenticationExample() {
   const publicKey = privateKey.toPublicKey();
   const address = publicKey.toAddress("mainnet").toString();
 
-  const signature = signMessage(privateKey, challenge);
+  const challengeBytes = new TextEncoder().encode(challenge);
+  const signature = signMessage({ privateKey, data: challengeBytes });
 
   // Client sends back: { address, publicKey, signature }
   const response = {
@@ -149,7 +127,11 @@ function authenticationExample() {
 
   // 2. The signature is valid for the challenge
   const serverPubKey = PublicKey.fromString(response.publicKey);
-  const signatureValid = verifyMessage(serverPubKey, challenge, signature);
+  const signatureValid = verifyMessage({
+    publicKey: serverPubKey,
+    data: challengeBytes,
+    signature,
+  });
   console.log("Signature valid:", signatureValid);
 
   // 3. The challenge is recent (not replayed)
@@ -179,16 +161,18 @@ Kaspa uses **Schnorr signatures** over the secp256k1 elliptic curve. Schnorr sig
 ### Signing process
 
 1. The message is converted to bytes using UTF-8 encoding
-2. The bytes are hashed internally using a domain-separated hash function
-3. The private key signs the hash using the Schnorr algorithm
-4. The resulting signature is a hex-encoded string
+2. The bytes are passed to the standalone `signMessage()` function along with the private key
+3. Internally, the message is hashed using a domain-separated hash function
+4. The private key signs the hash using the Schnorr algorithm
+5. The resulting signature is a hex-encoded string
 
 ### Verification process
 
 1. The verifier receives the message, signature, and the signer's public key
-2. The same hash is computed from the message bytes
-3. The Schnorr verification algorithm checks that the signature is valid for the hash and public key
-4. Returns `true` if valid, `false` otherwise
+2. These are passed to the standalone `verifyMessage()` function
+3. The same hash is computed from the message bytes
+4. The Schnorr verification algorithm checks that the signature is valid for the hash and public key
+5. Returns `true` if valid, `false` otherwise
 
 ### Use cases for message signing
 

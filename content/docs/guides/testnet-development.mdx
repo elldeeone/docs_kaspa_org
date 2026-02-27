@@ -10,7 +10,8 @@ Kaspa operates two public testnets for development and testing. They mirror main
 | Property | Testnet-10 | Testnet-11 |
 |---|---|---|
 | Network ID | `testnet-10` | `testnet-11` |
-| wRPC port | 16210 | 16310 |
+| gRPC port | 16210 | 16210 |
+| wRPC Borsh port | 17210 | 17210 |
 | P2P port | 16211 | 16311 |
 | Block rate | 10 BPS | 10 BPS |
 | Address prefix | `kaspatest:` | `kaspatest:` |
@@ -42,20 +43,20 @@ This requires no infrastructure on your part and is suitable for development and
 For heavier workloads or when you need `--utxoindex`:
 
 ```bash
-kaspad --testnet --utxoindex --rpclisten=0.0.0.0:16210
+kaspad --testnet --utxoindex --rpclisten=0.0.0.0:16210 --rpclisten-borsh=0.0.0.0:17210
 ```
 
 The `--testnet` flag defaults to testnet-10. To use testnet-11:
 
 ```bash
-kaspad --testnet --netsuffix=11 --utxoindex --rpclisten=0.0.0.0:16310
+kaspad --testnet --netsuffix=11 --utxoindex --rpclisten=0.0.0.0:16210 --rpclisten-borsh=0.0.0.0:17210
 ```
 
 Then connect your SDK directly:
 
 ```typescript
 const rpc = new RpcClient({
-  url: "ws://127.0.0.1:16210",
+  url: "ws://127.0.0.1:17210",
   encoding: Encoding.Borsh,
 });
 await rpc.connect();
@@ -121,7 +122,7 @@ See [Send KAS](/docs/cookbook/transactions/send-kas) for the full code pattern.
 |---|---|---|
 | Address prefix | `kaspatest:` | `kaspa:` |
 | KAS value | Worthless | Real value |
-| wRPC port | 16210 / 16310 | 16110 |
+| wRPC Borsh port | 17210 | 17110 |
 | Network ID | `testnet-10` / `testnet-11` | `mainnet` |
 | Resets | May be reset periodically | Never reset |
 | Mining difficulty | Lower | Production difficulty |

@@ -5,15 +5,18 @@ description: "Get detailed experimental fee rate estimates with additional verbo
 
 ## Request
 
-No parameters required.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verbose` | boolean | No | Whether to include verbose fee estimation data. |
 
 ## Response
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `priorityBucket` | object | Fee rate for high-priority inclusion (same as `GetFeeEstimate`). |
-| `normalBuckets` | object[] | Normal-priority fee rate buckets. |
-| `lowBuckets` | object[] | Low-priority fee rate buckets. |
+| `estimate` | object | The fee estimate object containing priority buckets. |
+| `estimate.priorityBucket` | object | Fee rate for high-priority inclusion (same as `GetFeeEstimate`). |
+| `estimate.normalBuckets` | object[] | Normal-priority fee rate buckets. |
+| `estimate.lowBuckets` | object[] | Low-priority fee rate buckets. |
 | `verbose` | object | Additional experimental data about fee estimation internals. |
 
 ## Example
@@ -22,21 +25,25 @@ No parameters required.
 // Request
 {
   "method": "getFeeEstimateExperimental",
-  "params": {}
+  "params": {
+    "verbose": true
+  }
 }
 
 // Response
 {
-  "priorityBucket": {
-    "feerate": 10.0,
-    "estimatedSeconds": 1.0
+  "estimate": {
+    "priorityBucket": {
+      "feerate": 10.0,
+      "estimatedSeconds": 1.0
+    },
+    "normalBuckets": [
+      { "feerate": 5.0, "estimatedSeconds": 5.0 }
+    ],
+    "lowBuckets": [
+      { "feerate": 1.0, "estimatedSeconds": 60.0 }
+    ]
   },
-  "normalBuckets": [
-    { "feerate": 5.0, "estimatedSeconds": 5.0 }
-  ],
-  "lowBuckets": [
-    { "feerate": 1.0, "estimatedSeconds": 60.0 }
-  ],
   "verbose": {
     "mempoolReadyTransactionsCount": 150,
     "mempoolReadyTransactionsTotalMass": 3500000,

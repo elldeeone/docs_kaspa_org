@@ -7,7 +7,7 @@ description: "Retrieve a batch of blocks starting from a given hash, useful for 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `lowHash` | string | Yes | The hash to start from (exclusive). Use the genesis hash or a known block hash. |
+| `lowHash` | string | No | The hash to start from (exclusive). Use the genesis hash or a known block hash. If omitted, starts from the genesis block. |
 | `includeBlocks` | boolean | No | Whether to include full block data. Defaults to `false`. |
 | `includeTransactions` | boolean | No | Whether to include transactions within blocks. Only relevant if `includeBlocks` is `true`. |
 

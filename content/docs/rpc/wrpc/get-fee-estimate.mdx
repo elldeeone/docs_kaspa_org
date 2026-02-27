@@ -11,11 +11,12 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `priorityBucket` | object | Fee rate for high-priority (next block) inclusion. |
-| `priorityBucket.feerate` | number | Recommended fee rate in sompi per gram of mass. |
-| `priorityBucket.estimatedSeconds` | number | Estimated time to confirmation at this fee rate. |
-| `normalBuckets` | object[] | Fee rate buckets for normal-priority transactions. |
-| `lowBuckets` | object[] | Fee rate buckets for low-priority (economy) transactions. |
+| `estimate` | object | The fee estimate object containing priority buckets. |
+| `estimate.priorityBucket` | object | Fee rate for high-priority (next block) inclusion. |
+| `estimate.priorityBucket.feerate` | number | Recommended fee rate in sompi per gram of mass. |
+| `estimate.priorityBucket.estimatedSeconds` | number | Estimated time to confirmation at this fee rate. |
+| `estimate.normalBuckets` | object[] | Fee rate buckets for normal-priority transactions. |
+| `estimate.lowBuckets` | object[] | Fee rate buckets for low-priority (economy) transactions. |
 
 Each bucket contains `feerate` (number) and `estimatedSeconds` (number).
 
@@ -30,17 +31,19 @@ Each bucket contains `feerate` (number) and `estimatedSeconds` (number).
 
 // Response
 {
-  "priorityBucket": {
-    "feerate": 10.0,
-    "estimatedSeconds": 1.0
-  },
-  "normalBuckets": [
-    { "feerate": 5.0, "estimatedSeconds": 5.0 },
-    { "feerate": 2.0, "estimatedSeconds": 15.0 }
-  ],
-  "lowBuckets": [
-    { "feerate": 1.0, "estimatedSeconds": 60.0 }
-  ]
+  "estimate": {
+    "priorityBucket": {
+      "feerate": 10.0,
+      "estimatedSeconds": 1.0
+    },
+    "normalBuckets": [
+      { "feerate": 5.0, "estimatedSeconds": 5.0 },
+      { "feerate": 2.0, "estimatedSeconds": 15.0 }
+    ],
+    "lowBuckets": [
+      { "feerate": 1.0, "estimatedSeconds": 60.0 }
+    ]
+  }
 }
 ```
 

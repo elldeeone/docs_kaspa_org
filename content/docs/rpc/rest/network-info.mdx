@@ -68,16 +68,25 @@ GET https://api.kaspa.org/info/network
 
 ```json
 {
-  "p2pId": "a1b2c3d4e5f6...",
-  "mempoolSize": "42",
-  "serverVersion": "0.15.3",
-  "isUtxoIndexed": true,
-  "isSynced": true
+  "networkName": "kaspa-mainnet",
+  "blockCount": "58234192",
+  "headerCount": "58234192",
+  "tipHashes": [
+    "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+  ],
+  "difficulty": 1.234567890123e+15,
+  "pastMedianTime": "1700000000000",
+  "virtualParentHashes": [
+    "8d3f2e1a9b7c4d5e6f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+  ],
+  "pruningPointHash": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+  "virtualDaaScore": "52345678",
+  "sink": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
 }
 ```
 
 <Callout type="info">
-The `isUtxoIndexed` field indicates whether the node maintains a full UTXO index. Address-related queries (balance, UTXOs) require the UTXO index to be enabled. Nodes started without `--utxoindex` will return `false` and cannot serve address queries.
+This endpoint returns the same data as the wRPC `getBlockDagInfo` method. It provides a snapshot of the DAG state including tip hashes, difficulty, virtual DAA score, and the sink (the current selected tip of the virtual chain).
 </Callout>
 
 ## GET /info/coinsupply
@@ -94,9 +103,8 @@ GET https://api.kaspa.org/info/coinsupply
 
 ```json
 {
-  "circulatingSupply": "2460000000000000000",
-  "totalSupply": "2460000000000000000",
-  "maxSupply": "2870000000000000000"
+  "circulatingSupply": "2723867870846334647",
+  "maxSupply": "2870403560500000000"
 }
 ```
 
@@ -134,24 +142,8 @@ GET https://api.kaspa.org/info/coinsupply/total
 24600000000.00000000
 ```
 
-## GET /info/coinsupply/max
-
-Returns the maximum possible supply of KAS.
-
-**Request:**
-
-```
-GET https://api.kaspa.org/info/coinsupply/max
-```
-
-**Response:**
-
-```
-28700000000.00000000
-```
-
 <Callout>
-Kaspa has a fixed maximum supply of approximately 28.7 billion KAS. The emission schedule follows a chromatic (musical half-note) curve, with the block reward halving approximately once per year.
+Kaspa has a fixed maximum supply of approximately 28.7 billion KAS. The `maxSupply` field in the `/info/coinsupply` response shows this value. The emission schedule follows a chromatic (musical half-note) curve, with the block reward halving approximately once per year.
 </Callout>
 
 ## GET /info/hashrate
@@ -231,12 +223,19 @@ GET https://api.kaspa.org/info/health
 
 ```json
 {
-  "isSynced": true,
-  "isUtxoIndexed": true
+  "kaspadServers": [
+    {
+      "kaspadHost": "wrpc",
+      "serverVersion": "1.1.0",
+      "isUtxoIndexed": true,
+      "isSynced": true,
+      "p2pId": "a1b2c3d4e5f6..."
+    }
+  ]
 }
 ```
 
-Use this endpoint for health checks and monitoring. A node that is not synced may return stale data.
+Use this endpoint for health checks and monitoring. The response includes information about each connected kaspad server, including its sync status, version, and whether the UTXO index is enabled. A node that is not synced may return stale data.
 
 ## GET /info/virtual-chain-blue-score
 

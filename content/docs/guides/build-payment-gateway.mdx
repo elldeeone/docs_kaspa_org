@@ -69,18 +69,18 @@ await context.trackAddresses(getActiveInvoiceAddresses()); // from your DB
 Kaspa does not use a simple block-height confirmation count. Instead, confirmation depth is measured by the difference in **DAA score** (Difficulty Adjustment Algorithm score) between the transaction's accepting block and the current virtual DAA score.
 
 ```typescript
-processor.addEventListener("utxo-change", async (event: any) => {
-  for (const added of event.added) {
-    const address = added.address.toString();
-    const amountSompi = added.amount; // bigint, in sompi
-    const daaScore = added.blockDaaScore;
+processor.addEventListener("balance", async (event: any) => {
+  const balance = event.data;
+  // balance contains: mature, pending, outgoing, matureUtxoCount, pendingUtxoCount, stasisUtxoCount
+  console.log(`Balance update: ${balance.mature} sompi mature, ${balance.pending} sompi pending`);
 
-    // Look up the invoice for this address
-    const invoice = await db.findInvoiceByAddress(address);
+  // Check each tracked invoice address for sufficient balance
+  for (const addr of getActiveInvoiceAddresses()) {
+    const addrBalance = await rpc.getBalanceByAddress({ address: addr });
+    const invoice = await db.findInvoiceByAddress(addr);
     if (!invoice) continue;
 
-    // Record the deposit
-    await db.recordDeposit(invoice.id, amountSompi, daaScore);
+    await db.updateInvoiceBalance(invoice.id, BigInt(addrBalance.balance));
   }
 });
 ```
@@ -137,7 +137,7 @@ async function consolidate(invoiceKeys: any[], hotWalletAddress: string) {
 | Database | Use an ACID-compliant database with write-ahead logging for payment records |
 | Idempotency | Deduplicate deposits by UTXO outpoint (transaction ID + output index) |
 | Expiry | Expire unpaid invoices after a timeout and stop tracking those addresses |
-| Reorgs | Monitor for UTXO removals in the `utxo-change` event, which indicate reorgs |
+| Reorgs | Listen for `"reorg"` events from the UtxoProcessor and re-check balances when they occur |
 
 ## Next Steps
 

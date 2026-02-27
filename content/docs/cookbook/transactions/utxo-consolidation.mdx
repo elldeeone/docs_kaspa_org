@@ -26,7 +26,7 @@ import {
   UtxoProcessor,
   UtxoContext,
   createTransactions,
-  sompiToKas,
+  sompiToKaspaString,
 } from "kaspa-wasm";
 
 async function consolidateUtxos() {
@@ -55,8 +55,8 @@ async function consolidateUtxos() {
 
   // 4. Check current UTXO state
   const balance = context.balance;
-  console.log("Current balance:", sompiToKas(balance?.mature ?? 0n), "KAS");
-  console.log("Pending balance:", sompiToKas(balance?.pending ?? 0n), "KAS");
+  console.log("Current balance:", sompiToKaspaString(balance?.mature ?? 0n), "KAS");
+  console.log("Pending balance:", sompiToKaspaString(balance?.pending ?? 0n), "KAS");
 
   // Query raw UTXOs for analysis
   const utxoResponse = await rpc.getUtxosByAddresses([address]);
@@ -77,11 +77,11 @@ async function consolidateUtxos() {
   amounts.sort((a, b) => Number(a - b));
 
   console.log("\nUTXO distribution:");
-  console.log("  Smallest:", sompiToKas(amounts[0]), "KAS");
-  console.log("  Largest:", sompiToKas(amounts[amounts.length - 1]), "KAS");
+  console.log("  Smallest:", sompiToKaspaString(amounts[0]), "KAS");
+  console.log("  Largest:", sompiToKaspaString(amounts[amounts.length - 1]), "KAS");
   console.log(
     "  Median:",
-    sompiToKas(amounts[Math.floor(amounts.length / 2)]),
+    sompiToKaspaString(amounts[Math.floor(amounts.length / 2)]),
     "KAS"
   );
 
@@ -172,7 +172,7 @@ async function consolidateHdWallet(
 
   const balance = context.balance;
   console.log("Total balance across", addressCount, "addresses:");
-  console.log("  Mature:", sompiToKas(balance?.mature ?? 0n), "KAS");
+  console.log("  Mature:", sompiToKaspaString(balance?.mature ?? 0n), "KAS");
 
   // Consolidate everything to the first address
   const targetAddress = addresses[0];

@@ -9,7 +9,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 kHeavyHash is Kaspa's proof-of-work (PoW) consensus algorithm, purpose-built to secure a high-throughput blockDAG running at 10 blocks per second (BPS). It was designed with a forward-looking goal: to be efficiently implementable on photonic (optical) hardware, potentially enabling dramatic improvements in mining energy efficiency in the future.
 
-The algorithm combines a heavy matrix multiplication step with the SHA-3 (Keccak-256) hash function, creating a compute profile that is distinct from the pure hash-chaining approaches used by SHA-256d (Bitcoin) or Ethash (former Ethereum PoW).
+The algorithm combines a heavy matrix multiplication step with the cSHAKE256 hash function, creating a compute profile that is distinct from the pure hash-chaining approaches used by SHA-256d (Bitcoin) or Ethash (former Ethereum PoW).
 
 ## How kHeavyHash Works
 
@@ -17,10 +17,10 @@ The kHeavyHash function operates in three stages:
 
 ### Step 1: Initial Hash
 
-The block header is first hashed using **SHA-3 (Keccak-256)**, producing a 256-bit digest. This serves as the input vector for the next stage.
+The block header is first hashed using **cSHAKE256**, producing a 256-bit digest. This serves as the input vector for the next stage.
 
 ```
-hash_0 = Keccak256(block_header || nonce)
+hash_0 = cSHAKE256("ProofOfWorkHash", pre_pow_hash || timestamp || padding || nonce)
 ```
 
 ### Step 2: Matrix Multiplication
@@ -35,10 +35,10 @@ This matrix multiplication is the "heavy" part of kHeavyHash. It introduces a la
 
 ### Step 3: Final Hash
 
-The output of the matrix multiplication is XORed with the original hash, and the result is hashed again with Keccak-256 to produce the final PoW hash:
+The output of the matrix multiplication is XORed with the original hash, and the result is hashed again with cSHAKE256 to produce the final PoW hash:
 
 ```
-result = Keccak256(hash_0 XOR vector_out)
+result = cSHAKE256("HeavyHash", hash_0 XOR vector_out)
 ```
 
 The final result is compared against the block's target difficulty. If `result < target`, the block is valid.
@@ -112,7 +112,7 @@ The combination of per-block difficulty adjustment and DAG-based parallel block 
 
 kHeavyHash is a carefully engineered proof-of-work function that balances several goals:
 
-- **Security**: The combination of Keccak-256 hashing and matrix multiplication makes the algorithm resistant to algebraic shortcuts.
+- **Security**: The combination of cSHAKE256 hashing and matrix multiplication makes the algorithm resistant to algebraic shortcuts.
 - **Future-proofing**: The matrix multiplication core is designed to be efficiently implementable on optical hardware.
 - **DAG compatibility**: Fine-grained, per-block difficulty adjustment keeps the 10 BPS target stable under varying hashrate conditions.
 - **Simplicity**: The algorithm avoids memory-hardness, keeping implementation straightforward across diverse hardware platforms.

@@ -11,7 +11,8 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `rpcApiVersion` | u32[] | The RPC API version as an array (e.g., `[0, 15, 0]`). |
+| `rpcApiVersion` | u16 | The RPC API version number. |
+| `rpcApiRevision` | u16 | The RPC API revision number. |
 | `serverVersion` | string | The node software version string. |
 | `networkId` | string | The full network identifier (e.g., `kaspa-mainnet`). |
 | `hasUtxoIndex` | boolean | Whether the UTXO index is enabled. |
@@ -29,7 +30,8 @@ No parameters required.
 
 // Response
 {
-  "rpcApiVersion": [0, 15, 0],
+  "rpcApiVersion": 1,
+  "rpcApiRevision": 0,
   "serverVersion": "0.15.0",
   "networkId": "kaspa-mainnet",
   "hasUtxoIndex": true,
@@ -40,6 +42,6 @@ No parameters required.
 
 ## Notes
 
-- Use `rpcApiVersion` to check compatibility between your client and the node. Breaking changes increment the major version.
+- Use `rpcApiVersion` and `rpcApiRevision` to check compatibility between your client and the node. Breaking changes increment the version number.
 - The `networkId` combines the network name and suffix into a single string.
 - `virtualDaaScore` provides the same value as `GetBlockDagInfo` but with a simpler call.

@@ -67,7 +67,7 @@ Key additions in KIP-10:
 | Category | Opcodes | Description |
 |---|---|---|
 | Transaction introspection | `OP_TXINPUTCOUNT`, `OP_TXOUTPUTCOUNT`, `OP_TXINPUTINDEX`, `OP_TXINPUTAMOUNT`, `OP_TXINPUTSPK`, `OP_TXOUTPUTAMOUNT`, `OP_TXOUTPUTSPK` | Allow scripts to read input/output counts, amounts, and script public keys of the current transaction |
-| Extended arithmetic | `OP_ADD`, `OP_SUB`, `OP_MUL` (and others) | Extended to support 8-byte (i64) integers instead of the previous 4-byte limit |
+| Extended arithmetic | `OP_ADD`, `OP_SUB` | Extended to support 8-byte (i64) integers instead of the previous 4-byte limit (`OP_MUL`, `OP_DIV`, `OP_MOD` remain disabled) |
 
 Transaction introspection enables scripts to enforce constraints on how funds are spent -- for example, requiring that a specific output amount or destination exists in the transaction. This opens the door to covenants, vaults, and other advanced spending conditions.
 

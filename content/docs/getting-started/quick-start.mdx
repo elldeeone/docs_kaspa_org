@@ -13,10 +13,10 @@ Launch `kaspad` with the UTXO index enabled:
 ./target/release/kaspad --utxoindex
 ```
 
-The node will begin connecting to peers on the Kaspa mainnet (default port `16111`) and start synchronizing the BlockDAG. The RPC server listens on `127.0.0.1:16110` by default.
+The node will begin connecting to peers on the Kaspa mainnet (default port `16111`) and start synchronizing the BlockDAG. The wRPC server listens on `127.0.0.1:17110` by default (gRPC is on port `16110`).
 
 <Callout type="info">
-If you want the RPC server to be accessible from other machines on your network, start with `--rpclisten 0.0.0.0:16110`. Be cautious exposing RPC to untrusted networks.
+If you want the wRPC server to be accessible from other machines on your network, start with `--rpclisten 0.0.0.0:17110`. Be cautious exposing RPC to untrusted networks.
 </Callout>
 
 ## Check Node Status with the Wallet CLI
@@ -44,7 +44,7 @@ For quick checks, you can use tools like `websocat` to issue RPC calls:
 cargo install websocat
 
 # Query the node info
-echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:16110
+echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:17110
 ```
 
 This returns a JSON response with node information including the current network, number of connected peers, and whether the node is synced.
@@ -56,7 +56,7 @@ Here are the most frequently used RPC methods for checking node status:
 #### Get Node Info
 
 ```bash
-echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:16110
+echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:17110
 ```
 
 Example response:
@@ -83,7 +83,7 @@ The `isSynced` field tells you whether your node has fully caught up with the ne
 #### Get Block DAG Info
 
 ```bash
-echo '{"id":1,"method":"getBlockDagInfoRequest","params":{}}' | websocat ws://127.0.0.1:16110
+echo '{"id":1,"method":"getBlockDagInfoRequest","params":{}}' | websocat ws://127.0.0.1:17110
 ```
 
 This returns the current state of the BlockDAG including:
@@ -96,7 +96,7 @@ This returns the current state of the BlockDAG including:
 #### Get Connected Peer Info
 
 ```bash
-echo '{"id":1,"method":"getConnectedPeerInfoRequest","params":{}}' | websocat ws://127.0.0.1:16110
+echo '{"id":1,"method":"getConnectedPeerInfoRequest","params":{}}' | websocat ws://127.0.0.1:17110
 ```
 
 This lists all currently connected peers along with their addresses, protocol versions, and sync status.
@@ -110,7 +110,7 @@ A rough indication of sync progress:
 ```bash
 # Run this in a loop to watch sync progress
 while true; do
-  echo '{"id":1,"method":"getBlockDagInfoRequest","params":{}}' | websocat ws://127.0.0.1:16110 2>/dev/null | python3 -c "
+  echo '{"id":1,"method":"getBlockDagInfoRequest","params":{}}' | websocat ws://127.0.0.1:17110 2>/dev/null | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 score = data['params']['virtualDaaScore']
@@ -132,10 +132,10 @@ To experiment without using real KAS, you can connect to the Kaspa testnet:
 ./target/release/kaspad --utxoindex --testnet
 ```
 
-The testnet RPC server runs on port `16210` by default. All RPC queries work the same way -- just adjust the port:
+The testnet wRPC server runs on port `17210` by default. All RPC queries work the same way -- just adjust the port:
 
 ```bash
-echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:16210
+echo '{"id":1,"method":"getInfoRequest","params":{}}' | websocat ws://127.0.0.1:17210
 ```
 
 ## Next Steps

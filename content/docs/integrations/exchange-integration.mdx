@@ -56,9 +56,9 @@ Kaspa's DAG structure provides fast confirmations, but exchanges should wait for
 | Small (< 1,000 KAS) | 100 | ~10 seconds |
 | Medium (1,000–100,000 KAS) | 1,000 | ~100 seconds |
 | Large (> 100,000 KAS) | 10,000 | ~17 minutes |
-| Very large / critical | 86,400 | ~2.4 hours (finality) |
+| Very large / critical | 432,000 | ~12 hours (finality) |
 
-The confirmation depth is measured in **blue score** — the number of blue blocks added to the selected parent chain since the transaction was included. A depth of 86,400 represents Kaspa's finality threshold, after which reorgs are computationally infeasible.
+The confirmation depth is measured in **blue score** — the number of blue blocks added to the selected parent chain since the transaction was included. A depth of 432,000 represents Kaspa's finality threshold, after which reorgs are rejected by the protocol.
 
 ## Withdrawal Processing
 
@@ -72,11 +72,11 @@ To process a withdrawal:
 
 ## UTXO Consolidation
 
-Exchange hot wallets accumulate many UTXOs from user deposits. Because each Kaspa transaction is limited to **84 inputs**, a wallet with thousands of small UTXOs may need multiple transactions to send a large amount.
+Exchange hot wallets accumulate many UTXOs from user deposits. While there is no hard protocol limit on the number of inputs, the per-transaction mass limit means that in practice a standard transaction can include roughly **84 inputs** (with typical P2PK script sizes). A wallet with thousands of small UTXOs may need multiple transactions to send a large amount.
 
 Regularly consolidate UTXOs during low-activity periods:
 
-1. Select a batch of small UTXOs (up to 84 per transaction).
+1. Select a batch of small UTXOs (roughly 84 per transaction, depending on script sizes).
 2. Send them to a single address controlled by the hot wallet.
 3. Repeat until the UTXO set is manageable.
 

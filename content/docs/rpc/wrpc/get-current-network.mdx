@@ -11,8 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `networkName` | string | The base network name (e.g., `kaspa`). |
-| `suffix` | string or null | The network suffix (e.g., `testnet-10`, `testnet-11`, `simnet`). `null` for mainnet. |
+| `network` | string | The network name (e.g., `mainnet`, `testnet-10`, `testnet-11`). |
 
 ## Example
 
@@ -25,19 +24,16 @@ No parameters required.
 
 // Response (mainnet)
 {
-  "networkName": "kaspa",
-  "suffix": null
+  "network": "mainnet"
 }
 
 // Response (testnet)
 {
-  "networkName": "kaspa",
-  "suffix": "testnet-10"
+  "network": "testnet-10"
 }
 ```
 
 ## Notes
 
-- The full network identifier is formed by combining the name and suffix: `kaspa-mainnet`, `kaspa-testnet-10`, etc.
+- The `network` field returns the network identifier (e.g., `mainnet`, `testnet-10`).
 - Use this to verify your application is connected to the expected network before performing operations.
-- Mainnet has a `null` suffix; all test networks have a non-null suffix.

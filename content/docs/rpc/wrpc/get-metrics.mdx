@@ -5,7 +5,14 @@ description: "Get comprehensive performance and resource metrics from the node."
 
 ## Request
 
-No parameters required.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `processMetrics` | boolean | No | Whether to include process metrics (CPU, memory, etc.). |
+| `connectionMetrics` | boolean | No | Whether to include connection metrics. |
+| `bandwidthMetrics` | boolean | No | Whether to include bandwidth metrics. |
+| `consensusMetrics` | boolean | No | Whether to include consensus metrics. |
+| `storageMetrics` | boolean | No | Whether to include storage metrics. |
+| `customMetrics` | boolean | No | Whether to include custom metrics. |
 
 ## Response
 
@@ -16,6 +23,7 @@ No parameters required.
 | `bandwidthMetrics` | object | Network bandwidth usage (bytes sent/received). |
 | `consensusMetrics` | object | Consensus-related metrics: blocks processed, headers processed, DAG stats. |
 | `storageMetrics` | object | Database size and storage usage statistics. |
+| `serverTime` | u64 | The current server time in milliseconds since epoch. |
 
 ## Example
 
@@ -23,7 +31,14 @@ No parameters required.
 // Request
 {
   "method": "getMetrics",
-  "params": {}
+  "params": {
+    "processMetrics": true,
+    "connectionMetrics": true,
+    "bandwidthMetrics": true,
+    "consensusMetrics": true,
+    "storageMetrics": true,
+    "customMetrics": false
+  }
 }
 
 // Response
@@ -48,7 +63,8 @@ No parameters required.
   },
   "storageMetrics": {
     "dbSize": 53687091200
-  }
+  },
+  "serverTime": 1700000000000
 }
 ```
 

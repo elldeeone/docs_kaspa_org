@@ -5,15 +5,17 @@ description: "Get the number of active peer and client connections to the node."
 
 ## Request
 
-No parameters required.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `includeProfileData` | boolean | No | Whether to include connection profile data in the response. |
 
 ## Response
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `clients` | u32 | Number of RPC clients currently connected. |
-| `peers` | u32 | Number of P2P peers currently connected. |
-| `profileName` | string | The active connection profile name. |
+| `peers` | u16 | Number of P2P peers currently connected. |
+| `profileData` | object \| null | Connection profile data (only present if `includeProfileData` was `true`). |
 
 ## Example
 
@@ -21,14 +23,16 @@ No parameters required.
 // Request
 {
   "method": "getConnections",
-  "params": {}
+  "params": {
+    "includeProfileData": true
+  }
 }
 
 // Response
 {
   "clients": 3,
   "peers": 48,
-  "profileName": "default"
+  "profileData": null
 }
 ```
 

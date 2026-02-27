@@ -12,11 +12,12 @@ No parameters required.
 | Field | Type | Description |
 |-------|------|-------------|
 | `version` | string | The node software version. |
-| `systemId` | string | A unique identifier for the system/node instance. |
-| `gitHash` | string | The git commit hash of the node build. |
-| `coreNum` | u32 | Number of CPU cores available to the node. |
+| `systemId` | string \| null | A unique identifier for the system/node instance. Can be `null`. |
+| `gitHash` | string \| null | The git commit hash of the node build. Can be `null`. |
+| `cpuPhysicalCores` | u16 | Number of physical CPU cores available to the node. |
 | `totalMemory` | u64 | Total system memory in bytes. |
 | `fdLimit` | u32 | The file descriptor limit for the process. |
+| `proxySocketLimitPerCpuCore` | u32 \| null | The proxy socket limit per CPU core. Can be `null` if not applicable. |
 
 ## Example
 
@@ -32,9 +33,10 @@ No parameters required.
   "version": "0.15.0",
   "systemId": "node-abc123",
   "gitHash": "a1b2c3d4e5f6",
-  "coreNum": 8,
+  "cpuPhysicalCores": 8,
   "totalMemory": 17179869184,
-  "fdLimit": 65536
+  "fdLimit": 65536,
+  "proxySocketLimitPerCpuCore": null
 }
 ```
 

@@ -78,7 +78,7 @@ In Kaspa's BlockDAG, block rewards follow special rules:
 
 - **Blue blocks**: The miner of a blue block receives the full block subsidy plus all transaction fees from that block.
 - **Red blocks**: The subsidy and fees from red blocks are **not** paid to the red block's miner. Instead, they are collected by the miner of the block that merges the red block into the DAG.
-- **Coinbase maturity**: Coinbase outputs cannot be spent until they reach a maturity depth of **100 blue score**.
+- **Coinbase maturity**: Coinbase outputs cannot be spent until they reach a maturity depth of **1,000 DAA score** (at 10 BPS), corresponding to approximately 100 seconds.
 
 This incentive structure encourages miners to follow the GHOSTDAG protocol honestly, as blocks that deviate from the protocol are more likely to be classified as red and lose their rewards.
 

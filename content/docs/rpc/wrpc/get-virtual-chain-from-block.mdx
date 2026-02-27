@@ -9,6 +9,7 @@ description: "Get the virtual selected parent chain starting from a given block,
 |-----------|------|----------|-------------|
 | `startHash` | string | Yes | The hash of the block to start the chain traversal from. |
 | `includeAcceptedTransactionIds` | boolean | No | Whether to include the IDs of accepted transactions for each chain block. |
+| `minConfirmationCount` | u64 | No | Minimum number of confirmations required. Only chain blocks with at least this many confirmations are included. |
 
 ## Response
 

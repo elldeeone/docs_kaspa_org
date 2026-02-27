@@ -57,10 +57,10 @@ The DAA uses timestamps from the selected parent chain (determined by GHOSTDAG),
 Every block in Kaspa has a **DAA score** — a monotonically increasing counter on the selected parent chain. The DAA score serves as a logical clock for the network:
 
 ```
-block.daa_score = selected_parent.daa_score + mergeset_size
+block.daa_score = selected_parent.daa_score + (mergeset_size - mergeset_non_daa_count)
 ```
 
-Where `mergeset_size` is the number of blocks in the new block's mergeset (the blocks being merged into the ordering by this block).
+Where `mergeset_size` is the number of blocks in the new block's mergeset and `mergeset_non_daa_count` is the number of blocks whose blue score falls below the DAA window's lowest accepted blue score (these are excluded from the DAA score increment).
 
 The DAA score is used throughout the protocol for:
 
@@ -99,7 +99,7 @@ There is a **minimum difficulty** (equivalently, a maximum target value) that pr
 |---|---|---|
 | Adjustment frequency | Every block | Every 2,016 blocks (~2 weeks) |
 | Target block time | 100ms (10 BPS) | 10 minutes |
-| Window size | 2,641 blocks (~4.4 min) | 2,016 blocks (~2 weeks) |
+| Window size | 661 sampled blocks spanning 2,641 seconds (~44 min) | 2,016 blocks (~2 weeks) |
 | Response to 2x hashrate | Minutes | ~2 weeks |
 | Timestamp source | Selected parent chain | Linear chain |
 | Timestamp protection | Median-based, bounded | Median-based, bounded |

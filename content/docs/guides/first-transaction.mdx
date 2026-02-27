@@ -42,7 +42,7 @@ async function main() {
   console.log("Connected. Synced:", (await rpc.getInfo()).isSynced);
 ```
 
-The `Resolver` automatically discovers a public testnet node. For mainnet you would pass `networkId: "mainnet"` (wRPC port 16110). Testnet-10 uses port 16210 and testnet-11 uses port 16310.
+The `Resolver` automatically discovers a public node and handles wRPC connection details for you -- no port configuration needed. If connecting manually without a Resolver, the default wRPC Borsh ports are **17110** (mainnet) and **17210** (testnet). Note that ports 16110 and 16210 are gRPC ports, not wRPC.
 
 ## Step 3 -- Generate a Wallet
 

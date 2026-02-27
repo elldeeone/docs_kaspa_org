@@ -11,13 +11,12 @@ The Protocol Buffer definitions for Kaspa's gRPC interface are maintained in the
 rusty-kaspa/
 └── rpc/
     └── grpc/
-        └── proto/
-            ├── kaspadrpc.proto    # gRPC service definition
-            ├── messages.proto     # RPC request/response messages
-            └── p2p.proto          # Peer-to-peer protocol messages
+        └── core/
+            └── proto/
+                └── messages.proto    # gRPC service definition and all RPC request/response messages
 ```
 
-The primary file for RPC client development is `messages.proto`, which defines all request and response message types. The `kaspadrpc.proto` file defines the gRPC service with the full set of available RPC methods.
+The primary file for RPC client development is `rpc/grpc/core/proto/messages.proto`, which defines both the gRPC service and all request and response message types.
 
 <Callout type="info">
 Always use the `.proto` files from the same version of rusty-kaspa as the node you are connecting to. Breaking changes to message formats, while rare, are possible between major releases.
@@ -25,15 +24,15 @@ Always use the `.proto` files from the same version of rusty-kaspa as the node y
 
 ## Service Definition
 
-The gRPC service is defined in `kaspadrpc.proto` and exposes a bidirectional streaming RPC:
+The gRPC service is defined in `messages.proto` and exposes a bidirectional streaming RPC:
 
 ```protobuf
 service RPC {
-  rpc MessageStream (stream KaspadMessage) returns (stream KaspadMessage);
+  rpc MessageStream (stream KaspadRequest) returns (stream KaspadResponse);
 }
 ```
 
-All communication flows through this single bidirectional stream. Clients send request messages and receive response messages (and notification messages for active subscriptions) over the same stream. Each message is wrapped in a `KaspadMessage` envelope that uses a `oneof` field to identify the specific request or response type.
+All communication flows through this single bidirectional stream. Clients send `KaspadRequest` messages and receive `KaspadResponse` messages (including notification messages for active subscriptions) over the same stream. Each message uses a `oneof` field to identify the specific request or response type.
 
 ## Key Message Types
 
@@ -176,8 +175,7 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 # Generate Go code from proto files
 protoc --go_out=. --go-grpc_out=. \
   -I ./proto \
-  ./proto/messages.proto \
-  ./proto/kaspadrpc.proto
+  ./proto/messages.proto
 ```
 
 ### Python
@@ -191,11 +189,10 @@ python -m grpc_tools.protoc \
   -I ./proto \
   --python_out=./generated \
   --grpc_python_out=./generated \
-  ./proto/messages.proto \
-  ./proto/kaspadrpc.proto
+  ./proto/messages.proto
 ```
 
-This produces `messages_pb2.py`, `messages_pb2_grpc.py`, `kaspadrpc_pb2.py`, and `kaspadrpc_pb2_grpc.py` in the `./generated` directory.
+This produces `messages_pb2.py` and `messages_pb2_grpc.py` in the `./generated` directory.
 
 ### TypeScript / Node.js
 
@@ -209,8 +206,7 @@ protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_out=./generated \
   --ts_proto_opt=outputServices=grpc-js \
   -I ./proto \
-  ./proto/messages.proto \
-  ./proto/kaspadrpc.proto
+  ./proto/messages.proto
 ```
 
 <Callout>

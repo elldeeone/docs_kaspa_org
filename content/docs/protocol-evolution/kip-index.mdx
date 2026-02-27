@@ -19,7 +19,7 @@ These KIPs have been implemented and activated on the Kaspa mainnet.
 |---|---|---|---|
 | KIP-1 | KIP Process | Process | Defines the formal process for submitting, reviewing, and activating Kaspa Improvement Proposals. Establishes the template, lifecycle stages, and roles involved in governance. |
 | KIP-9 | Storage Mass | Protocol | Introduces a storage mass component to the transaction mass calculation. Accounts for the long-term cost of growing the UTXO set by charging mass proportional to the number of outputs created minus inputs consumed. This prevents UTXO bloat attacks that could degrade node performance. |
-| KIP-14 | Crescendo | Protocol | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
+| KIP-13 | Crescendo | Protocol | The hardfork that transitioned Kaspa from 1 BPS to 10 BPS. Changed GHOSTDAG K from 18 to 124, adjusted DAA window size, finality depth, pruning depth, coinbase maturity, timestamp deviation tolerance, max block parents, and mass limits. Activated on mainnet in May 2025. |
 
 ## KIPs in Review
 
@@ -27,8 +27,7 @@ These KIPs are under active discussion and review by the community.
 
 | KIP | Title | Category | Summary |
 |---|---|---|---|
-| KIP-10 | Opcode Reactivation | Protocol | Proposes re-enabling a set of opcodes that were disabled in the original Kaspa launch for safety reasons. Reactivating these opcodes would enable more expressive scripting capabilities including conditional logic, arithmetic operations, and hash-locked contracts, opening the door to on-chain programmability. |
-| KIP-13 | Transient Mass | Protocol | Refines Kaspa's transaction mass model by distinguishing between transient costs (bandwidth, computation during validation) and persistent costs (UTXO storage). This allows more accurate pricing of transaction resources and could increase effective throughput for transactions that consume UTXOs without creating new ones. |
+| KIP-10 | Transaction Introspection Opcodes | Protocol | Proposes new opcodes for transaction introspection, enabling scripts to inspect their own transaction context. This opens the door to advanced smart contract functionality such as covenants and conditional spending logic on Kaspa. |
 
 ## Proposed / Draft KIPs
 
@@ -78,6 +77,6 @@ Before submitting a new KIP, search the existing proposals and community discuss
 ## Further Reading
 
 - [KIPs Overview](/docs/protocol-evolution/kips-overview) — Detailed explanation of the KIP process and lifecycle.
-- [Crescendo](/docs/protocol-evolution/crescendo) — Full details on KIP-14, the Crescendo hardfork.
+- [Crescendo](/docs/protocol-evolution/crescendo) — Full details on KIP-13, the Crescendo hardfork.
 - [Roadmap](/docs/protocol-evolution/roadmap) — How pending KIPs fit into Kaspa's development trajectory.
 - [KIPs GitHub Repository](https://github.com/kaspanet/kips) — The canonical source for all KIP documents.

@@ -82,15 +82,15 @@ The SDK supports the following environments:
 
 ## Browser Integration
 
-Loading the Kaspa WASM SDK in a web browser requires importing the JavaScript ES6 module and awaiting the WASM bootstrap initialization. Both the JavaScript glue code (`kaspa-wasm.js`) and the WebAssembly binary (`kaspa-wasm_bg.wasm`) must be served together.
+Loading the Kaspa WASM SDK in a web browser requires importing the JavaScript ES6 module and awaiting the WASM bootstrap initialization. Both the JavaScript glue code (`kaspa.js`) and the WebAssembly binary (`kaspa_bg.wasm`) must be served together.
 
 ```html
 <html>
     <head>
         <script type="module">
-            import * as kaspa from './kaspa/kaspa-wasm.js';
+            import * as kaspa from './kaspa/kaspa.js';
             (async () => {
-                await kaspa.default('./kaspa/kaspa-wasm_bg.wasm');
+                await kaspa.default('./kaspa/kaspa_bg.wasm');
                 console.log(kaspa.version());
                 // SDK is now ready to use
             })();
@@ -275,7 +275,7 @@ When loading WASM or scripts via `<script>` tags from any external source, use t
 
 ```html
 <script
-  src="https://example.com/kaspa-wasm.js"
+  src="https://example.com/kaspa.js"
   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
   crossorigin="anonymous">
 </script>

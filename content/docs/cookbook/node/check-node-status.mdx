@@ -33,7 +33,7 @@ async function checkNodeStatus() {
   const peerInfo = await rpc.getConnectedPeerInfo();
 
   console.log("=== Node Status ===");
-  console.log(`Network: ${dagInfo.networkName}`);
+  console.log(`Network: ${dagInfo.network}`);
   console.log(`Synced: ${syncStatus.isSynced}`);
   console.log(`DAA Score: ${dagInfo.virtualDaaScore}`);
   console.log(`Peers: ${peerInfo.infos.length}`);

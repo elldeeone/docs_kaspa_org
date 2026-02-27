@@ -11,7 +11,7 @@ Kaspa's Difficulty Adjustment Algorithm (DAA) is responsible for keeping the blo
 
 The DAA examines a trailing window of recent blocks and computes a new target value based on the observed timestamps and the expected time span for that window. The algorithm works as follows:
 
-1. **Window selection**: The DAA looks back over a window of **2641 blocks** (the `DifficultyAdjustmentWindowSize` parameter). For each block being mined, the algorithm collects the timestamps of blocks within this window.
+1. **Window selection**: The DAA uses a window duration of **2,641 seconds** (~44 minutes), sampling **661 blocks** at intervals of 4 seconds (40 blocks at 10 BPS). For each block being mined, the algorithm collects the timestamps of sampled blocks within this window.
 
 2. **Timestamp extraction**: The timestamps of blocks in the window are sorted, and outliers are trimmed. The algorithm uses the minimum and maximum timestamps from the trimmed set to determine how much real time elapsed during the window.
 
@@ -29,7 +29,7 @@ Kaspa's per-block adjustment eliminates this problem. Every block carries an upd
 
 ## Response Time to Hashrate Changes
 
-Because the DAA window spans 2641 blocks at 10 BPS, the full window covers approximately **4.4 minutes** of block production. However, the algorithm does not require the full window to rotate before responding. A sudden change in hashrate begins influencing the target immediately, with the effect growing stronger as more blocks at the new hashrate enter the window.
+Because the DAA window spans a duration of 2,641 seconds (~44 minutes) at 10 BPS, sampling 661 blocks from the selected parent chain, the window provides a substantial history for difficulty estimation. However, the algorithm does not require the full window to rotate before responding. A sudden change in hashrate begins influencing the target immediately, with the effect growing stronger as more blocks at the new hashrate enter the window.
 
 In practice, a large hashrate swing (such as a mining farm coming online or going offline) produces a visible difficulty adjustment within **one to two minutes**.
 

@@ -37,7 +37,7 @@ The **k parameter** is central to GHOSTDAG security. It defines the maximum numb
 - **Network propagation delay (D)**: Assumed to be 5 seconds maximum.
 - **Probability bound**: The chance that an honest block has more than k parallel blocks is kept negligibly small.
 
-With these parameters, k is set to **18** on mainnet. This means GHOSTDAG expects at most 18 honest blocks to be created during one propagation delay period (10 BPS * 5 seconds / ~2.78 = 18). Any block with more than k blocks in its anticone (blocks neither in its past nor future) is classified as red.
+With these parameters, k is set to **124** on mainnet (post-Crescendo at 10 BPS). This means GHOSTDAG expects at most 124 honest blocks to be created during one propagation delay period. The value is derived from the Poisson distribution with `x = 2Dλ = 2 × 5 × 10 = 100`, yielding K=124 at a 1% tolerance. Any block with more than k blocks in its anticone (blocks neither in its past nor future) is classified as red.
 
 ## Network Delay Assumptions
 
@@ -73,7 +73,7 @@ At Kaspa's 10 BPS rate, even conservative confirmation depths are reached in sec
 
 ## Finality Depth
 
-Kaspa defines a **finality depth** of **86,400 blue score** (approximately 2.4 hours at 10 BPS). After this depth:
+Kaspa defines a **finality depth** of **432,000 blue score** (approximately 12 hours at 10 BPS). After this depth:
 
 - The pruning mechanism removes old block data below the finality point.
 - Transactions below the finality depth are considered irreversible by all nodes.
@@ -82,7 +82,7 @@ Kaspa defines a **finality depth** of **86,400 blue score** (approximately 2.4 h
 This provides a hard finality guarantee that does not exist in Bitcoin (where, in theory, arbitrarily deep reorgs are possible if an attacker has sufficient hashrate).
 
 <Callout>
-The finality depth of 86,400 blue score provides a strong guarantee: once a transaction is buried this deep, it cannot be reversed even by an attacker with majority hashrate. This is a stronger guarantee than Bitcoin's probabilistic finality.
+The finality depth of 432,000 blue score provides a strong guarantee: once a transaction is buried this deep, it cannot be reversed even by an attacker with majority hashrate. This is a stronger guarantee than Bitcoin's probabilistic finality.
 </Callout>
 
 ## GHOSTDAG Security Analysis
@@ -102,7 +102,7 @@ The DAG structure allows high throughput (10 BPS) without sacrificing security, 
 | Honest block inclusion | All honest blocks included | Only one block per height survives |
 | Orphan rate | Near zero (blocks are merged) | Increases with block rate |
 | Confirmation time | Seconds | Minutes to hours |
-| Finality | Hard finality at 86,400 blue score | Probabilistic only |
+| Finality | Hard finality at 432,000 blue score | Probabilistic only |
 | Attack threshold | >50% hashrate (enhanced by DAG) | >50% hashrate |
 | Throughput | 10 BPS without security loss | ~1 block/600 seconds |
 
@@ -113,7 +113,7 @@ For different transaction values, consider these confirmation depth guidelines:
 - **Casual transactions** (small amounts): 10-100 blue score (1-10 seconds). Sufficient for everyday purchases.
 - **Significant transactions** (moderate amounts): 1,000 blue score (~100 seconds). Appropriate for most commercial transactions.
 - **Large transactions** (high-value transfers): 10,000+ blue score (~17 minutes). Provides very strong assurance.
-- **Critical or irreversible decisions**: Wait for finality depth (86,400 blue score, ~2.4 hours). Recommended for exchange deposits of very large amounts.
+- **Critical or irreversible decisions**: Wait for finality depth (432,000 blue score, ~12 hours). Recommended for exchange deposits of very large amounts.
 
 ## Further Reading
 

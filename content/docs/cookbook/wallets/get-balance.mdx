@@ -23,7 +23,7 @@ import {
   Encoding,
   UtxoProcessor,
   UtxoContext,
-  sompiToKas,
+  sompiToKaspaString,
 } from "kaspa-wasm";
 
 // Approach 1: Direct RPC query (simple, one-time check)
@@ -40,7 +40,7 @@ async function getBalanceSimple(address: string) {
   const balanceSompi = result.balance;
 
   console.log("Address:", address);
-  console.log("Balance:", sompiToKas(balanceSompi), "KAS");
+  console.log("Balance:", sompiToKaspaString(balanceSompi), "KAS");
   console.log("Balance:", balanceSompi.toString(), "sompi");
 
   await rpc.disconnect();
@@ -72,14 +72,14 @@ async function getBalanceDetailed(address: string) {
 
     totalBalance += amount;
     console.log(
-      `  ${sompiToKas(amount)} KAS`,
+      `  ${sompiToKaspaString(amount)} KAS`,
       isCoinbase ? "(coinbase)" : "",
       `| DAA score: ${blockDaaScore}`
     );
   }
 
   console.log("---");
-  console.log("Total:", sompiToKas(totalBalance), "KAS");
+  console.log("Total:", sompiToKaspaString(totalBalance), "KAS");
 
   await rpc.disconnect();
   return { total: totalBalance, utxoCount: entries.length };
@@ -103,9 +103,9 @@ async function trackBalanceRealTime(addresses: string[]) {
   processor.addEventListener("balance", () => {
     const balance = context.balance;
     console.log("\nBalance updated:");
-    console.log("  Mature:", sompiToKas(balance?.mature ?? 0n), "KAS");
-    console.log("  Pending:", sompiToKas(balance?.pending ?? 0n), "KAS");
-    console.log("  Outgoing:", sompiToKas(balance?.outgoing ?? 0n), "KAS");
+    console.log("  Mature:", sompiToKaspaString(balance?.mature ?? 0n), "KAS");
+    console.log("  Pending:", sompiToKaspaString(balance?.pending ?? 0n), "KAS");
+    console.log("  Outgoing:", sompiToKaspaString(balance?.outgoing ?? 0n), "KAS");
   });
 
   console.log("Tracking balance for", addresses.length, "addresses...");
@@ -131,11 +131,11 @@ async function getBalanceMultipleAddresses(addresses: string[]) {
     const balance = entry.balance;
     grandTotal += balance;
     if (balance > 0n) {
-      console.log(`${entry.address}: ${sompiToKas(balance)} KAS`);
+      console.log(`${entry.address}: ${sompiToKaspaString(balance)} KAS`);
     }
   }
 
-  console.log("\nTotal across all addresses:", sompiToKas(grandTotal), "KAS");
+  console.log("\nTotal across all addresses:", sompiToKaspaString(grandTotal), "KAS");
 
   await rpc.disconnect();
   return grandTotal;
@@ -181,7 +181,7 @@ The UTXO index must be enabled on the node you connect to (`--utxoindex` flag). 
 
 ### Converting sompi to KAS
 
-All balances are returned in sompi (1 KAS = 100,000,000 sompi). Use `sompiToKas()` for display and `kaspaToSompi()` when constructing transactions. The SDK uses `BigInt` for all amounts to avoid floating-point precision issues.
+All balances are returned in sompi (1 KAS = 100,000,000 sompi). Use `sompiToKaspaString()` for display and `kaspaToSompi()` when constructing transactions. The SDK uses `BigInt` for all amounts to avoid floating-point precision issues.
 
 ## Further Reading
 

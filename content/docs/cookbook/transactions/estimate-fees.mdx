@@ -38,10 +38,11 @@ async function estimateFees() {
 
   // 2. Retrieve fee estimates from the node
   const feeEstimate = await rpc.getFeeEstimate();
+  const estimate = feeEstimate.estimate;
   console.log("Fee estimate buckets:");
-  console.log("  Priority:", feeEstimate.priorityBucket);
-  console.log("  Normal:", feeEstimate.normalBuckets);
-  console.log("  Low:", feeEstimate.lowBuckets);
+  console.log("  Priority:", estimate.priorityBucket);
+  console.log("  Normal:", estimate.normalBuckets);
+  console.log("  Low:", estimate.lowBuckets);
 
   // 3. For more detailed estimates with bucket breakdowns
   const detailedEstimate = await rpc.getFeeEstimateExperimental({
@@ -73,7 +74,7 @@ async function estimateFees() {
   });
 
   // 5. Read the mass and compute fees at each priority level
-  const priorityFeeRate = feeEstimate.priorityBucket.feerate;
+  const priorityFeeRate = estimate.priorityBucket.feerate;
 
   console.log("\nTransaction details:");
   console.log("  Number of transactions:", transactions.length);
@@ -114,7 +115,7 @@ estimateFees().catch(console.error);
 
 ### Fee estimate buckets
 
-The `getFeeEstimate` RPC method returns fee rate recommendations organized into three priority tiers:
+The `getFeeEstimate` RPC method returns a response with a top-level `estimate` field containing fee rate recommendations organized into priority tiers:
 
 | Bucket | Meaning |
 |---|---|

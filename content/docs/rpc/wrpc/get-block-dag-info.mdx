@@ -11,7 +11,7 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `networkName` | string | The name of the network (e.g., `kaspa-mainnet`). |
+| `network` | string | The name of the network (e.g., `kaspa-mainnet`). |
 | `blockCount` | u64 | Total number of blocks in the DAG. |
 | `headerCount` | u64 | Total number of headers known to the node. |
 | `tipHashes` | string[] | Hashes of the current DAG tips (blocks with no children yet). |
@@ -20,6 +20,7 @@ No parameters required.
 | `virtualParentHashes` | string[] | Parent hashes of the virtual block. |
 | `pruningPointHash` | string | Hash of the current pruning point block. |
 | `virtualDaaScore` | u64 | The DAA score of the virtual block. |
+| `sink` | string | Hash of the current sink block (the virtual's selected parent). |
 
 ## Example
 
@@ -32,7 +33,7 @@ No parameters required.
 
 // Response
 {
-  "networkName": "kaspa-mainnet",
+  "network": "kaspa-mainnet",
   "blockCount": 52340000,
   "headerCount": 52340000,
   "tipHashes": [
@@ -43,7 +44,8 @@ No parameters required.
   "pastMedianTime": 1700000000000,
   "virtualParentHashes": ["aabb1122..."],
   "pruningPointHash": "eeff5566...",
-  "virtualDaaScore": 50000000
+  "virtualDaaScore": 50000000,
+  "sink": "ff001122..."
 }
 ```
 

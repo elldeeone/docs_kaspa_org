@@ -44,7 +44,7 @@ async function connectViaResolver() {
 
   // Verify the connection
   const info = await rpc.getBlockDagInfo();
-  console.log("Network:", info.networkName);
+  console.log("Network:", info.network);
   console.log("DAA score:", info.virtualDaaScore);
   console.log("Block count:", info.blockCount);
 
@@ -144,7 +144,7 @@ async function connectionLifecycle() {
 
   const dagInfo = await rpc.getBlockDagInfo();
   console.log("\nDAG info:");
-  console.log("  Network:", dagInfo.networkName);
+  console.log("  Network:", dagInfo.network);
   console.log("  Block count:", dagInfo.blockCount);
   console.log("  Header count:", dagInfo.headerCount);
   console.log("  DAA score:", dagInfo.virtualDaaScore);

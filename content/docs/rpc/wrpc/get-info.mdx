@@ -16,6 +16,8 @@ No parameters required.
 | `serverVersion` | string | The node software version string. |
 | `isUtxoIndexed` | boolean | Whether the UTXO index is enabled on this node. |
 | `isSynced` | boolean | Whether the node is fully synced with the network. |
+| `hasNotifyCommand` | boolean | Whether the node supports the notify command for subscriptions. |
+| `hasMessageId` | boolean | Whether the node supports message IDs for request/response correlation. |
 
 ## Example
 
@@ -32,7 +34,9 @@ No parameters required.
   "mempoolSize": 42,
   "serverVersion": "0.15.0",
   "isUtxoIndexed": true,
-  "isSynced": true
+  "isSynced": true,
+  "hasNotifyCommand": true,
+  "hasMessageId": true
 }
 ```
 

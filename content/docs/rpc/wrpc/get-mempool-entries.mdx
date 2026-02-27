@@ -14,7 +14,7 @@ description: "Retrieve all transaction entries currently in the node's mempool."
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `entries` | object[] | Array of mempool entry objects, each containing `fee`, `mass`, `transaction`, and `isOrphan`. |
+| `mempoolEntries` | object[] | Array of mempool entry objects, each containing `fee`, `transaction`, and `isOrphan`. |
 
 ## Example
 
@@ -30,10 +30,9 @@ description: "Retrieve all transaction entries currently in the node's mempool."
 
 // Response
 {
-  "entries": [
+  "mempoolEntries": [
     {
       "fee": 5000,
-      "mass": 2345,
       "transaction": {
         "version": 0,
         "inputs": [{ "previousOutpoint": { "transactionId": "...", "index": 0 } }],
