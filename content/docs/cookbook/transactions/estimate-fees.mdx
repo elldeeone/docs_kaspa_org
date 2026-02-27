@@ -65,7 +65,7 @@ async function estimateFees() {
     outputs: [
       {
         address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d",
-        amount: kaspaToSompi(5.0),
+        amount: kaspaToSompi("5.0"),
       },
     ],
     changeAddress: senderAddress,
@@ -93,11 +93,11 @@ async function estimateFees() {
       outputs: [
         {
           address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d",
-          amount: kaspaToSompi(5.0),
+          amount: kaspaToSompi("5.0"),
         },
       ],
       changeAddress: senderAddress,
-      priorityFee: kaspaToSompi(0.0001), // Small priority fee boost
+      priorityFee: kaspaToSompi("0.0001"), // Small priority fee boost
     });
 
   console.log("Priority transaction summary:", prioritySummary);

@@ -395,12 +395,12 @@ const privateKey = new PrivateKey("your-hex-key");
 const sender = privateKey.toPublicKey().toAddress("mainnet").toString();
 const { transactions } = await createTransactions({
   entries: context,
-  outputs: [{ address: "kaspa:recipient", amount: kaspaToSompi(1.5) }],
+  outputs: [{ address: "kaspa:recipient", amount: kaspaToSompi("1.5") }],
   changeAddress: sender,
   priorityFee: 0n,
 });
 for (const tx of transactions) {
-  tx.sign([privateKey]);
+  await tx.sign([privateKey]);
   console.log("Submitted:", await tx.submit(rpc));
 }
 ```

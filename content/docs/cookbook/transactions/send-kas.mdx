@@ -67,7 +67,7 @@ async function sendKas() {
 
   // 4. Build the transaction
   const recipientAddress = "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0";
-  const amountInSompi = kaspaToSompi(1.5); // Send 1.5 KAS
+  const amountInSompi = kaspaToSompi("1.5"); // Send 1.5 KAS
 
   const { transactions, summary } = await createTransactions({
     entries: context,

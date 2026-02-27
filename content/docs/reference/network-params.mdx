@@ -260,12 +260,12 @@ For development purposes, **simnet** is recommended as it allows instant block g
 
 The kHeavyHash proof-of-work algorithm consists of:
 
-1. **Pre-hash**: Compute a standard hash of the block header (Blake3).
+1. **Pre-hash**: Compute a domain-separated cSHAKE256 hash of the block header (domain: "ProofOfWorkHash").
 2. **Matrix multiplication**: Multiply the pre-hash result by a 64x64 matrix (derived from the DAG state) in GF(2^4).
 3. **XOR**: XOR the matrix multiplication result with the original pre-hash.
-4. **Post-hash**: Compute a final hash (Blake3) of the combined result.
+4. **Post-hash**: Compute a domain-separated cSHAKE256 hash of the combined result (domain: "HeavyHash").
 
-This construction is designed to be efficient for optical computing hardware while maintaining ASIC resistance for traditional silicon implementations.
+This construction was originally designed with optical computing hardware in mind. In practice, Kaspa is now predominantly mined with ASICs (e.g., Bitmain KS series).
 
 ---
 

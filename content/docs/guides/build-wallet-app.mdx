@@ -110,7 +110,7 @@ import { createTransactions, kaspaToSompi } from "kaspa-wasm";
 const changeAddress = deriveChangeKey(0, 0).toPublicKey().toAddress("mainnet").toString();
 const { transactions, summary } = await createTransactions({
   entries: context,
-  outputs: [{ address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi(5) }],
+  outputs: [{ address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi("5") }],
   changeAddress,
   priorityFee: 0n,
 });

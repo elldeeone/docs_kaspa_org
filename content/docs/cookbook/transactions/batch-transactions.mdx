@@ -153,9 +153,9 @@ async function sequentialSend(payments: Payment[]) {
 
 // Example usage
 const payments: Payment[] = [
-  { address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi(1.0) },
-  { address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d", amount: kaspaToSompi(2.5) },
-  { address: "kaspa:qp9v6090sr2jt4kf3j8r4y63luhfmev555ghq4gl4v", amount: kaspaToSompi(0.75) },
+  { address: "kaspa:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0", amount: kaspaToSompi("1.0") },
+  { address: "kaspa:qzk3uh2twist37c03lttcxldrj2muple9taq065u0d", amount: kaspaToSompi("2.5") },
+  { address: "kaspa:qp9v6090sr2jt4kf3j8r4y63luhfmev555ghq4gl4v", amount: kaspaToSompi("0.75") },
 ];
 
 batchSend(payments).catch(console.error);

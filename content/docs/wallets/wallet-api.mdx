@@ -47,37 +47,49 @@ Use the **Wallet SDK** when you need fine-grained control over UTXO handling and
 A new wallet is created with a BIP-39 mnemonic and an encryption secret. The wallet file is stored using the platform-appropriate backend.
 
 ```javascript
-import { Wallet, RpcClient } from "kaspa-wasm";
+import { Wallet } from "kaspa-wasm";
 
-const rpc = new RpcClient("ws://127.0.0.1:17110");
-await rpc.connect();
+// The Wallet manages its own RPC connection internally
+const wallet = new Wallet({
+  networkId: "mainnet",
+  resolver: new Resolver(),  // Or use url: "ws://127.0.0.1:17110"
+});
 
-const wallet = new Wallet(rpc);
-
-// Create a new wallet with a generated mnemonic
-await wallet.walletCreate("my_wallet", "wallet-encryption-password");
+// Create a new wallet with an encryption secret
+await wallet.walletCreate({
+  walletSecret: "wallet-encryption-password",
+  filename: "my_wallet",
+});
 ```
 
 ```rust
 use kaspa_wallet_core::prelude::*;
 
-// Create a wallet instance connected to an RPC client
-let wallet = Wallet::new(rpc_client);
+// Create a wallet instance
+let wallet = Wallet::try_new(rpc_client, /* store */ None, /* network_id */ None)?;
 
 // Create a new wallet file
-wallet.wallet_create("my_wallet", "wallet-encryption-password").await?;
+wallet.wallet_create(WalletCreateRequest {
+    wallet_secret: Secret::from("wallet-encryption-password"),
+    filename: Some("my_wallet".to_string()),
+    ..Default::default()
+}).await?;
 ```
 
 ### Opening and Closing a Wallet
 
 ```javascript
 // Open an existing wallet
-await wallet.walletOpen("my_wallet", "wallet-encryption-password");
+await wallet.walletOpen({
+  walletSecret: "wallet-encryption-password",
+  filename: "my_wallet",
+  accountDescriptors: true,
+});
 
 // Perform operations...
 
 // Close the wallet (flushes state, clears sensitive data from memory)
-await wallet.walletClose();
+await wallet.walletClose({});
 ```
 
 ### Connecting to the Network
@@ -108,15 +120,17 @@ The Wallet API supports multiple account types within a single wallet file. Each
 
 ```javascript
 // Create a new BIP-32 account (the most common type)
-await wallet.accountCreate({
+await wallet.accountsCreate({
+  walletSecret: "wallet-encryption-password",
   accountName: "savings",
-  accountType: "bip32",
+  accountCreateType: "bip32",
 });
 
 // Create a multisig account
-await wallet.accountCreate({
+await wallet.accountsCreate({
+  walletSecret: "wallet-encryption-password",
   accountName: "treasury",
-  accountType: "multisig",
+  accountCreateType: "multisig",
   minimumSignatures: 2,
   publicKeys: [pubKey1, pubKey2, pubKey3],
 });
@@ -125,14 +139,13 @@ await wallet.accountCreate({
 ### Account Operations
 
 ```javascript
-// List all accounts in the wallet
-const accounts = await wallet.accountList();
+// Enumerate all accounts in the wallet
+const accounts = await wallet.accountsEnumerate({});
 
-// Get balance for the active account
-const balance = await wallet.accountGetBalance();
-
-// Generate a new receive address for the active account
-const address = await wallet.accountCreateAddress();
+// Generate a new receive address for an account
+const address = await wallet.accountsCreateNewAddress({
+  accountId: accounts[0].accountId,
+});
 ```
 
 ## Transaction Operations
@@ -143,9 +156,11 @@ The Wallet API handles UTXO selection, transaction construction, signing, and br
 
 ```javascript
 // Send KAS to an address
-const txId = await wallet.transactionSend({
+const result = await wallet.accountsSend({
+  accountId: accounts[0].accountId,
+  walletSecret: "wallet-encryption-password",
   destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
-  amount: 1_000_000_00n, // Amount in sompi (1 KAS = 100,000,000 sompi)
+  amount: 100_000_000n, // Amount in sompi (1 KAS = 100,000,000 sompi)
   priorityFee: 0n,
 });
 ```
@@ -155,9 +170,10 @@ const txId = await wallet.transactionSend({
 Before sending, you can estimate the transaction fee:
 
 ```javascript
-const estimate = await wallet.transactionEstimate({
+const estimate = await wallet.accountsEstimate({
+  accountId: accounts[0].accountId,
   destination: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
-  amount: 1_000_000_00n,
+  amount: 100_000_000n,
 });
 
 console.log("Estimated fee:", estimate.fees);
@@ -194,20 +210,25 @@ wallet.addEventListener("balance", (event) => {
   console.log("Balance updated:", event.data);
 });
 
-wallet.addEventListener("utxo-change", (event) => {
-  console.log("UTXO set changed:", event.data);
+wallet.addEventListener("discovery", (event) => {
+  console.log("UTXO discovery:", event.data);
 });
 
-wallet.addEventListener("transaction", (event) => {
-  console.log("Transaction detected:", event.data);
+wallet.addEventListener("maturity", (event) => {
+  console.log("Transaction matured:", event.data);
+});
+
+wallet.addEventListener("pending", (event) => {
+  console.log("Transaction pending:", event.data);
 });
 ```
 
 Key events include:
 
 - **balance** -- Fired when the account balance changes (incoming or outgoing transaction confirmed).
-- **utxo-change** -- Fired when UTXOs are added or removed from the tracked set.
-- **transaction** -- Fired for each transaction affecting the wallet, including incoming, outgoing, and inter-account transfers.
+- **discovery** -- Fired when new UTXOs are discovered during address scanning.
+- **pending** -- Fired when a transaction enters the pending state.
+- **maturity** -- Fired when a pending transaction reaches maturity (sufficient confirmations).
 - **connect/disconnect** -- Fired when the connection to the Kaspa node is established or lost.
 
 ## Direct Node RPC
@@ -238,7 +259,10 @@ When using direct RPC, the order of operations matters:
 ```javascript
 import { RpcClient } from "kaspa-wasm";
 
-const rpc = new RpcClient("ws://127.0.0.1:17110");
+const rpc = new RpcClient({
+  url: "ws://127.0.0.1:17110",
+  networkId: "mainnet",
+});
 await rpc.connect();
 
 // Step 1: Subscribe FIRST to avoid missing notifications
@@ -265,20 +289,28 @@ In Rust, the Wallet API is accessed through the `WalletApi` trait. Method argume
 ```rust
 use kaspa_wallet_core::prelude::*;
 
-let wallet = Wallet::new(rpc_client);
+let wallet = Wallet::try_new(rpc_client, None, None)?;
 
 // Open wallet
-wallet.wallet_open("my_wallet", "password").await?;
+wallet.wallet_open(WalletOpenRequest {
+    wallet_secret: Secret::from("password"),
+    filename: Some("my_wallet".to_string()),
+    account_descriptors: true,
+    ..Default::default()
+}).await?;
 
 // Create a new account
-wallet.account_create(AccountCreateArgs {
-    account_name: "default".to_string(),
-    account_type: AccountType::Bip32,
+wallet.accounts_create(AccountsCreateRequest {
+    wallet_secret: Secret::from("password"),
+    account_create_type: AccountCreateType::Bip32,
+    account_name: Some("default".to_string()),
     ..Default::default()
 }).await?;
 
 // Send a transaction
-wallet.transaction_send(TransactionSendArgs {
+wallet.accounts_send(AccountsSendRequest {
+    account_id: account_id,
+    wallet_secret: Secret::from("password"),
     destination: address,
     amount: 100_000_000, // 1 KAS
     priority_fee: 0,
@@ -286,7 +318,7 @@ wallet.transaction_send(TransactionSendArgs {
 }).await?;
 
 // Close wallet
-wallet.wallet_close().await?;
+wallet.wallet_close(WalletCloseRequest {}).await?;
 ```
 
 ## Further Reading

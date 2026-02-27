@@ -114,7 +114,7 @@ const { transactions, summary } = await createTransactions({
   outputs: [
     {
       address: "kaspa:recipient-address",
-      amount: kaspaToSompi(10), // 10 KAS
+      amount: kaspaToSompi("10"), // 10 KAS
     },
   ],
   changeAddress: "kaspa:your-change-address",
@@ -424,7 +424,7 @@ const { transactions, summary } = await createTransactions({
   entries: utxoContext,
   outputs: [{ address: recipient, amount }],
   changeAddress: myAddress,
-  priorityFee: kaspaToSompi(0.001), // Optional priority fee
+  priorityFee: kaspaToSompi("0.001"), // Optional priority fee
 });
 
 console.log("Total fees:", summary.fees, "sompi");

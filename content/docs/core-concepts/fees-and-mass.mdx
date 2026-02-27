@@ -64,7 +64,7 @@ The compute mass implementation can be found in the [`kaspa_consensus_core::mass
 
 ### Signed vs. Unsigned Transactions
 
-Signatures contribute to compute mass through the serialized transaction size. Both ECDSA and Schnorr signatures are 64 bytes. When calculating mass for **unsigned** transactions, mass calculation functions pad the result by 64 bytes per input to account for the signature that will be added later.
+Signatures contribute to compute mass through the serialized transaction size. The raw Schnorr signature is 64 bytes, but the signature script includes 2 additional bytes of overhead (an OP_DATA opcode and a sighash type byte), totaling **66 bytes** per signature. When calculating mass for **unsigned** transactions, mass calculation functions pad the result by 66 bytes per input per minimum signature to account for the signature that will be added later.
 
 WASM helper functions like `calculateTransactionMass()` specifically expect unsigned transactions as input and handle this padding automatically.
 
@@ -145,11 +145,7 @@ transient_mass = serialized_size_in_bytes * 4
 
 The transient byte-to-mass factor is **4**, meaning each byte of serialized transaction data contributes 4 mass units to the transient mass calculation. This factor limits the effective block body byte size to 125,000 bytes (given the 500,000 gram block mass limit).
 
-KIP-13 also addresses UTXOs that are ephemeral -- created and spent within a short time window. A UTXO that exists only briefly imposes a much lower storage burden than one that persists for months or years. When a transaction spends recently created UTXOs, the effective storage mass may be reduced. This benefits common patterns like:
-
-- **Payment forwarding**: Receiving a payment and immediately forwarding it
-- **Transaction chaining**: Building sequences of dependent transactions
-- **Atomic operations**: Multi-step operations that create and consume intermediate UTXOs
+The term "transient" in KIP-13 refers to the temporary block-level storage burden during propagation and validation, not to the longevity of UTXOs. By introducing a separate mass dimension for serialized size, KIP-13 prevents blocks from containing excessively large transaction data regardless of the UTXO-level storage mass calculations.
 
 ## Fee Rate and Quality of Service
 
@@ -280,13 +276,13 @@ This requires only 2 DAA intervals instead of 3, since A and B can be processed 
 
 ## Miner Transaction Selection
 
-When miners select transactions from the mempool for block inclusion, transactions are **ordered by fee rate**, with higher fee rate transactions prioritized first. This means that during congestion, users who set higher fee rates will have their transactions included sooner.
+When miners select transactions from the mempool for block inclusion, they use a **probability-weighted selection algorithm**. Each transaction's selection probability is proportional to its fee-rate-derived value raised to the power of 3 (the ALPHA exponent). Higher fee rate transactions have a significantly higher probability of being selected, but the selection is inherently stochastic rather than strictly ordered. This means that during congestion, users who set higher fee rates will have their transactions included sooner.
 
-### Randomized Selection
+### Stochastic Selection and Effective TPS
 
-A **noise function** is applied to the selection process to introduce slight randomness. This serves an important purpose: it increases the likelihood that different miners will include different transactions in their concurrently mined blocks, thereby boosting overall network throughput.
+The probabilistic selection serves an important purpose: it increases the likelihood that different miners will include different transactions in their concurrently mined blocks, thereby boosting overall network throughput.
 
-This randomization gives rise to the concept of **Effective TPS** (Effective Transactions Per Second) -- the number of unique transactions included across concurrently mined blocks. Without randomization, parallel miners might include the same set of high-fee transactions, wasting block capacity. The noise function ensures better utilization of the network's aggregate block space.
+This gives rise to the concept of **Effective TPS** (Effective Transactions Per Second) -- the number of unique transactions included across concurrently mined blocks. Without stochastic selection, parallel miners might include the same set of high-fee transactions, wasting block capacity. The weighted random selection ensures better utilization of the network's aggregate block space.
 
 ## Practical Guidance
 

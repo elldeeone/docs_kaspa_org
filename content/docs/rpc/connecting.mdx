@@ -13,7 +13,7 @@ Each Kaspa network uses a distinct set of ports for its various interfaces. The 
 |---------|-----|------|------------|-----------|
 | **Mainnet** | 16111 | 16110 | 17110 | 18110 |
 | **Testnet-10** | 16211 | 16210 | 17210 | 18210 |
-| **Testnet-11** | 16311 | 16310 | 17310 | 18310 |
+| **Testnet-11** | 16311 | 16210 | 17210 | 18210 |
 
 ### Development Network Ports
 
@@ -433,9 +433,9 @@ server {
         proxy_set_header Connection "upgrade";
     }
 
-    # Testnet-11 wRPC Borsh
+    # Testnet-11 wRPC Borsh (same RPC ports as testnet-10; only P2P port differs)
     location /testnet-11/wrpc/borsh {
-        proxy_pass http://127.0.0.1:17310;
+        proxy_pass http://127.0.0.1:17210;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -445,7 +445,7 @@ server {
 
     # Testnet-11 wRPC JSON
     location /testnet-11/wrpc/json {
-        proxy_pass http://127.0.0.1:18310;
+        proxy_pass http://127.0.0.1:18210;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

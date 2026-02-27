@@ -58,24 +58,21 @@ Kaspa uses BLAKE2b for script hashing, unlike Bitcoin which uses SHA-256 and RIP
 
 Script execution follows a stack-based model: the **signature script** is executed first, pushing data onto the stack. The **script public key** is then executed on the same stack. After both scripts complete, the top stack value is checked — if it is non-zero (truthy), the spend is valid. The execution environment is isolated; scripts cannot access external state beyond the transaction data they are validating.
 
-## KIP-10: Opcode Reactivation
+## KIP-10: Transaction Introspection
 
-**KIP-10** is a significant upgrade to Kaspa's scripting capabilities. It reactivated many opcodes that had been disabled since Kaspa's early releases (and which were historically disabled in Bitcoin as a precaution). These opcodes enable more expressive smart contract-like functionality.
+**KIP-10** is a significant upgrade to Kaspa's scripting capabilities. Rather than reactivating previously disabled opcodes, KIP-10 introduced **transaction introspection opcodes** and extended arithmetic support, enabling scripts to inspect properties of the transaction they are part of.
 
-Categories of reactivated opcodes include:
+Key additions in KIP-10:
 
 | Category | Opcodes | Description |
 |---|---|---|
-| Arithmetic | `OP_ADD`, `OP_SUB`, `OP_MUL`, `OP_DIV`, `OP_MOD`, `OP_NEGATE`, `OP_ABS`, `OP_MIN`, `OP_MAX` | Integer arithmetic and comparison |
-| Bitwise | `OP_AND`, `OP_OR`, `OP_XOR`, `OP_LSHIFT`, `OP_RSHIFT` | Bitwise logic and shifting |
-| String/Byte | `OP_CAT`, `OP_SUBSTR`, `OP_LEFT`, `OP_RIGHT`, `OP_SIZE` | Byte string manipulation |
-| Cryptographic | `OP_BLAKE2B`, `OP_SHA256`, `OP_CHECKSIG`, `OP_CHECKMULTISIG`, `OP_CHECKDATASIG` | Hashing and signature verification |
-| Flow Control | `OP_IF`, `OP_ELSE`, `OP_ENDIF`, `OP_NOTIF`, `OP_VERIFY` | Conditional execution |
+| Transaction introspection | `OP_TXINPUTCOUNT`, `OP_TXOUTPUTCOUNT`, `OP_TXINPUTINDEX`, `OP_TXINPUTAMOUNT`, `OP_TXINPUTSPK`, `OP_TXOUTPUTAMOUNT`, `OP_TXOUTPUTSPK` | Allow scripts to read input/output counts, amounts, and script public keys of the current transaction |
+| Extended arithmetic | `OP_ADD`, `OP_SUB`, `OP_MUL` (and others) | Extended to support 8-byte (i64) integers instead of the previous 4-byte limit |
 
-Notable additions include `OP_CHECKDATASIG` (verify a signature against arbitrary data, enabling oracle-based contracts) and `OP_CAT` (byte string concatenation, enabling covenants and other advanced constructions).
+Transaction introspection enables scripts to enforce constraints on how funds are spent -- for example, requiring that a specific output amount or destination exists in the transaction. This opens the door to covenants, vaults, and other advanced spending conditions.
 
 <Callout>
-KIP-10 significantly expands what can be built on Kaspa's scripting layer. With opcodes like `OP_CHECKDATASIG`, `OP_CAT`, and arithmetic operations, developers can construct covenants, hash-time-locked contracts (HTLCs), and other advanced spending conditions directly in Kaspa Script.
+Many opcodes that are disabled in Bitcoin (such as `OP_CAT`, `OP_LSHIFT`, `OP_RSHIFT`, and string manipulation opcodes) remain disabled in Kaspa. KIP-10's approach focused on adding new transaction introspection capabilities rather than reactivating legacy opcodes.
 </Callout>
 
 ## Signature Operations and Mass Cost
@@ -119,9 +116,9 @@ This script can be spent either by providing the hash preimage and A's signature
 | Signature scheme | Schnorr (secp256k1) | ECDSA + Schnorr (Taproot) |
 | Hash function | BLAKE2b | SHA-256, RIPEMD-160 |
 | Standard address type | P2PK (direct public key) | P2PKH, P2WPKH, P2TR |
-| Arithmetic opcodes | Active (KIP-10) | Mostly disabled |
-| String opcodes | Active (KIP-10) | Disabled |
-| `OP_CHECKDATASIG` | Available | Not available (natively) |
+| Arithmetic opcodes | `OP_ADD`, `OP_SUB` active; `OP_MUL`, `OP_DIV`, `OP_MOD` disabled | Mostly disabled |
+| String opcodes | Disabled | Disabled |
+| Transaction introspection | Available (KIP-10) | Not available (natively) |
 | Turing completeness | No | No |
 
 ## Script Validation Process

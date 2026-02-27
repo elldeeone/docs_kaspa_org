@@ -93,7 +93,7 @@ Continue inside `main()`:
   const recipient = "kaspatest:qr35ennsep3hxfe7lnz5ee7j5jgmkjswsn27efrq0";
   const { transactions } = await createTransactions({
     entries: context,
-    outputs: [{ address: recipient, amount: kaspaToSompi(1) }],
+    outputs: [{ address: recipient, amount: kaspaToSompi("1") }],
     changeAddress: address,
     priorityFee: 0n,
   });

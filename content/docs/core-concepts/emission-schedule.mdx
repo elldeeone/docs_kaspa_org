@@ -97,16 +97,16 @@ The coinbase transaction's output value must exactly match the allowed block rew
 
 ## Coinbase Maturity
 
-Coinbase outputs cannot be spent immediately. They require a **maturity period of 100 confirmations** (measured in blue score) before they become spendable. This means that the KAS created in a coinbase transaction is locked for approximately 10 seconds at 10 BPS.
+Coinbase outputs cannot be spent immediately. They require a **maturity period of 1,000 DAA score** (derived from 100 seconds of depth at 10 BPS) before they become spendable. This means that the KAS created in a coinbase transaction is locked for approximately 100 seconds.
 
 ```
-coinbase_maturity = 100 blue score
+coinbase_maturity = BPS * 100 seconds = 10 * 100 = 1,000 DAA score
 ```
 
 The maturity requirement exists to handle potential DAG reorganizations. If a block is reorganized out of the blue set, its coinbase reward would become invalid. By requiring maturity, the protocol ensures that coinbase outputs are only spent after the block is deeply enough embedded in the DAG that reorganization is extremely unlikely.
 
 <Callout>
-Coinbase maturity protects against spending rewards from blocks that might later be reorganized. At 10 BPS, the 100-block maturity period corresponds to roughly 10 seconds of wall-clock time.
+Coinbase maturity protects against spending rewards from blocks that might later be reorganized. At 10 BPS, the 1,000 DAA score maturity period corresponds to roughly 100 seconds of wall-clock time.
 </Callout>
 
 ## Rewards in the DAG Context

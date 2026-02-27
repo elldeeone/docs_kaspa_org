@@ -239,8 +239,8 @@ The Generator functions as an iterator, producing `PendingTransaction` objects o
 const generator = new Generator({
   entries: context,  // UtxoContext, IUtxoEntry[], or UtxoEntryReference[]
   outputs: [
-    { address: "kaspa:qr0...", amount: kaspaToSompi(10.0) },
-    { address: "kaspa:qr1...", amount: kaspaToSompi(20.0) }
+    { address: "kaspa:qr0...", amount: kaspaToSompi("10") },
+    { address: "kaspa:qr1...", amount: kaspaToSompi("20") }
   ],
   changeAddress: "kaspa:qchange...",
   priorityFee: 1000n  // Optional: priority fee in sompi
@@ -813,7 +813,7 @@ const generator = new Generator({
   entries: context,  // Use the UtxoContext as the UTXO source
   outputs: [{
     address: "kaspa:qrecipient...",
-    amount: kaspaToSompi(50.0)
+    amount: kaspaToSompi("50")
   }],
   changeAddress: "kaspa:qchange...",
   priorityFee: 1000n

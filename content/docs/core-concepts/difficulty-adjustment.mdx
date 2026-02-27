@@ -19,15 +19,14 @@ At 10 BPS, even modest delays in difficulty adjustment would be noticeable. If h
 
 ## DAA Window
 
-The DAA operates over a fixed **window of 2,641 blocks**. For each new block, the algorithm samples the timestamps and difficulty targets of blocks within this window to compute the new difficulty.
+The DAA operates over a fixed **window duration of 2,641 seconds** (~44 minutes). Within this window, **661 blocks** are sampled (one every 4 seconds) to compute the new difficulty. The algorithm examines the timestamps and difficulty targets of these sampled blocks.
 
-The window size is a carefully chosen parameter:
+The window parameters are carefully chosen:
 
-- **Large enough** to smooth out natural variance in block times caused by the probabilistic nature of mining.
+- **Large enough** (2,641 seconds) to smooth out natural variance in block times caused by the probabilistic nature of mining.
 - **Small enough** to respond to genuine hash rate changes in a timely manner.
-- **Odd-numbered** (2,641) to simplify the median calculation used for timestamp sampling.
-
-At 10 BPS, 2,641 blocks span approximately **4.4 minutes** of real time, meaning the DAA reflects hash rate conditions from roughly the last 4-5 minutes.
+- **Odd-numbered sample count** (661) to simplify the median calculation used for timestamp sampling.
+- **Sample rate of 40 blocks** (4 seconds at 10 BPS) balances granularity against computational cost.
 
 ## How the DAA Works
 
