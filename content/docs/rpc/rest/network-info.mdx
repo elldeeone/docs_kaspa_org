@@ -229,13 +229,21 @@ GET https://api.kaspa.org/info/health
       "serverVersion": "1.1.0",
       "isUtxoIndexed": true,
       "isSynced": true,
-      "p2pId": "a1b2c3d4e5f6..."
+      "p2pId": "a1b2c3d4e5f6...",
+      "blueScore": 365790020
     }
-  ]
+  ],
+  "database": {
+    "isSynced": true,
+    "blueScore": 365790002,
+    "blueScoreDiff": 17,
+    "acceptedTxBlockTime": 1772182403003,
+    "acceptedTxBlockTimeDiff": 3
+  }
 }
 ```
 
-Use this endpoint for health checks and monitoring. The response includes information about each connected kaspad server, including its sync status, version, and whether the UTXO index is enabled. A node that is not synced may return stale data.
+Use this endpoint for health checks and monitoring. The response includes information about each connected kaspad server (sync status, version, UTXO index, blue score) and a `database` object showing the indexer database sync state. A node that is not synced may return stale data.
 
 ## GET /info/virtual-chain-blue-score
 

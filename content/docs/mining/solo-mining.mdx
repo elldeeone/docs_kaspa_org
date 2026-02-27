@@ -80,23 +80,24 @@ Mining before the node is fully synced will result in rejected blocks.
 
 Once `kaspad` is running and synced, connect your mining software to the node's gRPC endpoint.
 
-### Using kaspa-miner (Rust GPU Miner)
+### Using a GPU Miner
 
-`kaspa-miner` is the reference GPU miner for Kaspa, written in Rust.
+Several GPU miners support kHeavyHash for Kaspa. Each miner has its own flags — consult the miner's documentation for exact usage. A typical invocation passes your mining address and the kaspad gRPC endpoint:
 
 ```bash
-kaspa-miner --mining-address kaspa:qr...your_address_here \
-  --kaspad-address 127.0.0.1:16110 \
-  --num-gpu-threads 1 \
-  --gpu-threads-per-device 2
+# Example (flags vary by miner — check your miner's docs)
+<miner-binary> --mining-address kaspa:qr...your_address_here \
+  --kaspad-address 127.0.0.1:16110
 ```
 
-| Flag | Purpose |
+| Flag (typical) | Purpose |
 |---|---|
-| `--mining-address` | Your Kaspa wallet address. |
+| `--mining-address` | Your Kaspa wallet address for receiving block rewards. |
 | `--kaspad-address` | The gRPC address of your running `kaspad` instance. |
-| `--num-gpu-threads` | Number of GPUs to use. |
-| `--gpu-threads-per-device` | Threads per GPU (tuning depends on your GPU model). |
+
+<Callout type="info">
+GPU miner flags vary by software. The flags shown above are illustrative. Always refer to your specific miner's documentation for the correct command-line arguments.
+</Callout>
 
 ### Using BzMiner
 

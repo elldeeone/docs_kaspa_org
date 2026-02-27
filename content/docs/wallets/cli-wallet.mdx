@@ -229,12 +229,12 @@ The wizard will prompt you for the required number of signatures (M), the total 
 Multi-sig transactions use the PSKB (Partially Signed Kaspa Block) workflow. To create, sign, and broadcast multi-sig transactions:
 
 ```
-wallet> pskb create
-wallet> pskb sign
-wallet> pskb send
+wallet> pskb create <address> <amount> <priority_fee>
+wallet> pskb sign <pskb_data>
+wallet> pskb send <pskb_data>
 ```
 
-Each co-signer signs the PSKB in turn until the required threshold of signatures is reached, at which point the transaction can be broadcast.
+The `create` command generates a PSKB (hex-encoded), which is shared with co-signers. Each co-signer runs `pskb sign` with the PSKB data. Once the required threshold of signatures is reached, any participant can broadcast with `pskb send`. Additional commands include `pskb debug` and `pskb parse` for inspecting PSKB data.
 
 ### Export and Import
 

@@ -27,17 +27,17 @@ The following table summarizes the key parameter changes introduced by Crescendo
 |---|---|---|---|
 | Block rate | 1 BPS | 10 BPS | Core throughput increase |
 | GHOSTDAG K | 18 | 124 | Higher K needed to tolerate more parallel blocks at the faster rate |
-| DAA window size | 2,641 seconds (~44 min), 2,641 sampled blocks | 2,641 seconds (~44 min), 661 sampled blocks | Window covers the same time duration; sampling adjusted for 10 BPS |
-| Finality depth | 86,400 blue score | 432,000 blue score | Maintains the same wall-clock finality duration (~12 hours) |
+| DAA window size | 2,641 seconds (~44 min), 661 sampled blocks (every 4th block) | 2,641 seconds (~44 min), 661 sampled blocks (every 40th block) | Same time duration and sample count; sample interval scales with BPS |
+| Finality depth | 43,200 blue score | 432,000 blue score | Maintains the same wall-clock finality duration (~12 hours) |
 | Pruning depth | Scaled to 1 BPS | Scaled to 10 BPS | Maintains the same wall-clock pruning window |
-| Timestamp deviation | 132 seconds | 132 seconds | Scaled for the new block rate |
+| Timestamp deviation | 132 seconds | 132 seconds | Unchanged; not BPS-dependent |
 | Max block parents | 10 | 16 | Increased to accommodate wider DAG at 10 BPS |
 | Maximum block mass | 500,000 | 500,000 | Per-block mass unchanged; aggregate throughput increases via more blocks |
 | Coinbase maturity | 100 DAA score | 1,000 DAA score | Scaled to maintain ~100 seconds maturity at 10 BPS |
-| Mergeset size limit | 180 | Scaled to K | Increased proportionally with GHOSTDAG K |
+| Mergeset size limit | 180 | 248 | K*2 = 248, clamped within [180, 512] |
 
 <Callout type="info">
-Some parameters were scaled to maintain equivalent wall-clock durations at the new block rate. For example, the finality depth was increased from 86,400 to 432,000 blue score so that it still represents approximately 12 hours of wall-clock time. Similarly, coinbase maturity was increased from 100 to 1,000 DAA score to preserve the ~100-second maturity period.
+Some parameters were scaled to maintain equivalent wall-clock durations at the new block rate. For example, the finality depth was increased from 43,200 to 432,000 blue score so that it still represents approximately 12 hours of wall-clock time. Similarly, coinbase maturity was increased from 100 to 1,000 DAA score to preserve the ~100-second maturity period. The DAA window uses 661 sampled blocks for both 1 BPS and 10 BPS — only the sampling interval changes (every 4th block at 1 BPS, every 40th block at 10 BPS).
 </Callout>
 
 ## GHOSTDAG K: The Critical Parameter
