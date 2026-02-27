@@ -16,7 +16,7 @@ Launch `kaspad` with the UTXO index enabled:
 The node will begin connecting to peers on the Kaspa mainnet (default port `16111`) and start synchronizing the BlockDAG. The wRPC server listens on `127.0.0.1:17110` by default (gRPC is on port `16110`).
 
 <Callout type="info">
-If you want the wRPC server to be accessible from other machines on your network, start with `--rpclisten 0.0.0.0:17110`. Be cautious exposing RPC to untrusted networks.
+If you want the wRPC server to be accessible from other machines on your network, start with `--rpclisten-borsh 0.0.0.0:17110`. Be cautious exposing RPC to untrusted networks.
 </Callout>
 
 ## Check Node Status with the Wallet CLI
@@ -71,7 +71,8 @@ Example response:
     "isSynced": true,
     "isUtxoIndexed": true,
     "mempoolSize": 12,
-    "networkName": "kaspa-mainnet"
+    "hasNotifyCommand": true,
+    "hasMessageId": true
   }
 }
 ```

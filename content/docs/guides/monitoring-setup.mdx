@@ -20,7 +20,7 @@ kaspad does not natively expose a `/metrics` endpoint, so we bridge the gap with
 import { RpcClient, Encoding } from "kaspa-wasm";
 import { createServer } from "node:http";
 
-const rpc = new RpcClient({ url: "ws://127.0.0.1:16110", encoding: Encoding.Borsh });
+const rpc = new RpcClient({ url: "ws://127.0.0.1:17110", encoding: Encoding.Borsh });
 
 async function collectMetrics(): Promise<string> {
   const info = await rpc.getInfo();

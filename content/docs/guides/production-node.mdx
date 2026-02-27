@@ -25,17 +25,17 @@ Expose only the ports you need:
 ```bash
 sudo ufw allow 16111/tcp comment "Kaspa P2P mainnet"
 # Only if serving external clients:
-sudo ufw allow 16110/tcp comment "Kaspa wRPC mainnet"
+sudo ufw allow 16110/tcp comment "Kaspa gRPC mainnet"
 sudo ufw enable
 ```
 
 | Port | Purpose | Exposure |
 |---|---|---|
 | 16111 | P2P gossip | Public (required) |
-| 16110 | wRPC | Restrict to trusted IPs |
+| 16110 | gRPC | Restrict to trusted IPs |
 
 <Callout type="info">
-If your node only serves local applications, bind wRPC to localhost: `--rpclisten=127.0.0.1:16110`. Never expose wRPC to the public internet without authentication.
+If your node only serves local applications, bind gRPC to localhost: `--rpclisten=127.0.0.1:16110`. For wRPC (WebSocket) access, use `--rpclisten-borsh=127.0.0.1:17110`. Never expose RPC to the public internet without authentication.
 </Callout>
 
 ## Systemd Service

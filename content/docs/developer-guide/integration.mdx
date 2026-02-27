@@ -13,7 +13,7 @@ Kaspa is a proof-of-work cryptocurrency built on a blockDAG (Directed Acyclic Gr
 
 | Property | Value |
 |----------|-------|
-| Block time | ~1 second (1 BPS) |
+| Block time | ~100 ms (10 BPS) |
 | Consensus | Proof of Work (kHeavyHash) |
 | Transaction model | UTXO-based |
 | Address format | Bech32 with `kaspa:` prefix |
@@ -48,8 +48,8 @@ The `--utxoindex` flag is required for exchange integration. Without it, UTXO qu
 
 The node exposes two interfaces:
 
-- **wRPC (WebSocket)** on port **16110** — Recommended for most integrations
-- **gRPC** on port **16111** — Alternative for high-performance backends
+- **wRPC (WebSocket)** on port **17110** — Recommended for most integrations
+- **gRPC** on port **16110** — Alternative for high-performance backends
 
 ### Node Requirements
 
@@ -166,7 +166,7 @@ Use `notifyUtxosChanged` to receive real-time notifications when deposits arrive
 import { RpcClient, Encoding } from 'kaspa-wasm';
 
 const rpc = new RpcClient({
-  url: "ws://your-node:16110",
+  url: "ws://your-node:17110",
   encoding: Encoding.Borsh,
 });
 await rpc.connect();
@@ -240,10 +240,10 @@ Kaspa uses the DAA (Difficulty Adjustment Algorithm) score and blue score as con
 
 | Transaction Type | Recommended Confirmations | Approximate Time |
 |-----------------|--------------------------|-------------------|
-| Small deposits (< 100 KAS) | 10 | ~10 seconds |
-| Standard deposits | 10-50 | 10-50 seconds |
-| Large deposits (> 10,000 KAS) | 100+ | ~100 seconds |
-| Very large deposits | 200+ | ~200 seconds |
+| Small deposits (< 100 KAS) | 10 | ~1 second |
+| Standard deposits | 10-50 | 1-5 seconds |
+| Large deposits (> 10,000 KAS) | 100+ | ~10 seconds |
+| Very large deposits | 200+ | ~20 seconds |
 
 ### How Confirmations Work in a DAG
 
@@ -306,7 +306,7 @@ class WithdrawalProcessor {
 
   async initialize() {
     this.rpc = new RpcClient({
-      url: "ws://your-node:16110",
+      url: "ws://your-node:17110",
       encoding: Encoding.Borsh,
     });
     await this.rpc.connect();
@@ -452,7 +452,7 @@ class UtxoLock {
 }
 ```
 
-**Transaction finality** — In Kaspa's DAG, transactions reach practical finality very quickly (10+ confirmations in ~10 seconds). There are no "pending" states like Ethereum's mempool — once a transaction is included in a DAG block, it is almost certainly going to be accepted.
+**Transaction finality** — In Kaspa's DAG, transactions reach practical finality very quickly (10+ confirmations in ~1 second). There are no "pending" states like Ethereum's mempool — once a transaction is included in a DAG block, it is almost certainly going to be accepted.
 
 **No nonce management** — Since Kaspa uses UTXOs, there is no nonce to manage. Each transaction references specific UTXOs, and the node validates that those UTXOs have not been spent.
 

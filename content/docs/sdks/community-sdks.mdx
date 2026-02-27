@@ -108,7 +108,7 @@ If you want to build a Kaspa SDK for a new language, here is the recommended app
 
 At minimum, a custom RPC client needs to handle:
 
-- **WebSocket connection** to the node's wRPC endpoint (default port 16110 for mainnet).
+- **WebSocket connection** to the node's wRPC endpoint (default port 17110 for mainnet).
 - **Borsh or JSON serialization** of request and response messages. Borsh is more compact and faster; JSON is easier to debug.
 - **Request/response correlation** — each RPC call has an ID that matches the response.
 - **Subscription management** — the node pushes notifications for subscribed events (block-added, utxos-changed, virtual-daa-score-changed, etc.) over the same WebSocket connection.

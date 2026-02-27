@@ -316,7 +316,7 @@ const rpc = new RpcClient({
 });
 await rpc.connect();
 const info = await rpc.getBlockDagInfo();
-console.log("Network:", info.networkName, "DAA score:", info.virtualDaaScore);
+console.log("Network:", info.network, "DAA score:", info.virtualDaaScore);
 ```
 
 Connecting directly to your own node:

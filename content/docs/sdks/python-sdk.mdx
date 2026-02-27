@@ -30,7 +30,7 @@ import asyncio
 from kaspa import RpcClient
 
 async def main():
-    rpc = RpcClient(url="ws://127.0.0.1:16110")
+    rpc = RpcClient(url="ws://127.0.0.1:17110")
     await rpc.connect()
 
     info = await rpc.get_block_dag_info()

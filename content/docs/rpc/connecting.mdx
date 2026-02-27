@@ -117,7 +117,7 @@ const rpc = new RpcClient({
 
 await rpc.connect();
 const info = await rpc.getBlockDagInfo();
-console.log("Network:", info.networkName);
+console.log("Network:", info.network);
 console.log("DAA score:", info.virtualDaaScore);
 ```
 
@@ -499,7 +499,7 @@ const rpc = new RpcClient({
 try {
   await rpc.connect();
   const info = await rpc.getBlockDagInfo();
-  console.log("Connected:", info.networkName);
+  console.log("Connected:", info.network);
 } catch (error) {
   console.error("Connection failed:", error.message);
 }
@@ -543,7 +543,7 @@ After connecting, verify the node is synced and operational:
 const info = await rpc.getInfo();
 console.log("Server version:", info.serverVersion);
 console.log("Is synced:", info.isSynced);
-console.log("Virtual DAA score:", info.virtualDaaScore);
+console.log("UTXO indexed:", info.isUtxoIndexed);
 
 if (!info.isSynced) {
   console.warn("Node is still syncing -- RPC responses may be incomplete");

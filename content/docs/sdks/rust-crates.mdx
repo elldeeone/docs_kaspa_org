@@ -76,7 +76,7 @@ use kaspa_wrpc_client::prelude::*;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = KaspaRpcClient::new(
         WrpcEncoding::Borsh,
-        Some("ws://127.0.0.1:16110"),
+        Some("ws://127.0.0.1:17110"),
         None,
         Some(NetworkId::new(NetworkType::Mainnet)),
         None,
