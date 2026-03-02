@@ -5,7 +5,7 @@ description: "Kaspa REST API — public HTTP endpoints for querying addresses, b
 
 ## Overview
 
-The Kaspa REST API provides simple HTTP endpoints for querying blockchain data without running a node or using an SDK. It is served by the [kaspa-rest-server](https://github.com/aspect-build/kaspa-rest-server), an open-source indexing server that connects to a Kaspa node via wRPC.
+The Kaspa REST API provides simple HTTP endpoints for querying blockchain data without running a node or using an SDK. It is served by the [kaspa-rest-server](https://github.com/kaspa-ng/kaspa-rest-server), an open-source indexing server that connects to a Kaspa node via wRPC.
 
 **Public instance:** [`https://api.kaspa.org`](https://api.kaspa.org)
 
@@ -53,7 +53,7 @@ The REST server exposes an OpenAPI (Swagger) specification. When running your ow
 For production use, deploy the REST server yourself:
 
 ```bash
-git clone https://github.com/aspect-build/kaspa-rest-server
+git clone https://github.com/kaspa-ng/kaspa-rest-server
 cd kaspa-rest-server
 # Follow the README for build and configuration
 ```
@@ -64,4 +64,4 @@ The server connects to a Kaspa node via wRPC and indexes data into a database fo
 
 - [Connecting](/docs/rpc/connecting) -- Connection setup for all RPC transports
 - [RPC Overview](/docs/rpc/overview) -- Architecture and protocol comparison
-- [DeepWiki: rusty-kaspa](https://deepwiki.com/kaspanet/rusty-kaspa) -- Auto-generated source code reference
+- [DeepWiki: RPC & External Interfaces](https://deepwiki.com/kaspanet/rusty-kaspa/6-rpc-and-external-interfaces) -- Auto-generated source code reference
