@@ -1,493 +1,74 @@
 ---
-title: "API Reference"
-description: "Reference for commonly used Kaspa RPC methods, including parameters, return types, and usage details."
+title: "Reference & API Hub"
+description: "Curated directory of Kaspa API references, SDK documentation, and source code resources."
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-# API Reference
+# Reference & API Hub
 
-Kaspa exposes its functionality through a set of RPC (Remote Procedure Call) methods. In current `rusty-kaspa` releases, both **gRPC** and **wRPC** are available; wRPC supports both Borsh and JSON encodings.
+This page collects links to Kaspa's API references, SDK documentation, and source code. Reference material that benefits from auto-generation (method signatures, type definitions, parameter tables) is maintained in dedicated tooling rather than hand-written docs.
+
+---
+
+## wRPC / gRPC API
+
+The primary interface for communicating with a Kaspa node. Both transports expose the same set of RPC methods.
+
+| Resource | Link |
+|---|---|
+| DeepWiki (auto-generated from source) | [deepwiki.com/kaspanet/rusty-kaspa](https://deepwiki.com/kaspanet/rusty-kaspa) |
+| Protobuf definitions (`.proto` files) | [github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto](https://github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto) |
+| gRPC guide (this site) | [gRPC Overview](/docs/rpc/grpc/overview) |
+| Subscriptions guide (this site) | [Subscriptions](/docs/rpc/subscriptions) |
+
+## REST API
+
+HTTP endpoints for querying addresses, blocks, transactions, and network info without running an SDK.
+
+| Resource | Link |
+|---|---|
+| Public instance | [api.kaspa.org](https://api.kaspa.org) |
+| REST overview (this site) | [REST API](/docs/rpc/rest-api) |
+| Source code | [github.com/aspect-build/kaspa-rest-server](https://github.com/aspect-build/kaspa-rest-server) |
+
+## WASM SDK (JavaScript / TypeScript)
+
+The Kaspa WASM SDK compiles the Rust wallet and RPC client to WebAssembly for browser and Node.js use.
+
+| Resource | Link |
+|---|---|
+| npm package | [npmjs.com/package/kaspa-wasm](https://www.npmjs.com/package/kaspa-wasm) |
+| TypeDoc API reference | [kaspa.aspectron.org](https://kaspa.aspectron.org) |
+| DeepWiki (auto-generated) | [deepwiki.com/aspect-build/rusty-kaspa](https://deepwiki.com/aspect-build/rusty-kaspa) |
+| WASM SDK guide (this site) | [WASM SDK](/docs/sdks/wasm-sdk) |
+
+## Rust Crates
+
+Native Rust libraries for building Kaspa applications and tooling.
+
+| Resource | Link |
+|---|---|
+| `kaspa-wasm` on docs.rs | [docs.rs/kaspa-wasm](https://docs.rs/kaspa-wasm) |
+| `kaspa-wrpc-client` on docs.rs | [docs.rs/kaspa-wrpc-client](https://docs.rs/kaspa-wrpc-client) |
+| `kaspa-consensus-core` on docs.rs | [docs.rs/kaspa-consensus-core](https://docs.rs/kaspa-consensus-core) |
+| All Kaspa crates on crates.io | [crates.io search: kaspa](https://crates.io/search?q=kaspa) |
+
+## Integration Guide
+
+Comprehensive integration guide maintained by the Aspectron team, covering wallet integration, transaction construction, and deployment patterns.
+
+| Resource | Link |
+|---|---|
+| Kaspa mdBook | [kaspa-mdbook.aspectron.com](https://kaspa-mdbook.aspectron.com) |
+
+## Source Code
+
+| Resource | Link |
+|---|---|
+| rusty-kaspa (node, consensus, wallet, RPC) | [github.com/kaspanet/rusty-kaspa](https://github.com/kaspanet/rusty-kaspa) |
+| DeepWiki code analysis | [deepwiki.com/kaspanet/rusty-kaspa](https://deepwiki.com/kaspanet/rusty-kaspa) |
 
 <Callout type="info">
-This page documents common RPC methods. It is not an exhaustive list of every method exposed by the node.
+DeepWiki auto-generates reference documentation from the rusty-kaspa source code on a weekly refresh cycle. It is the most up-to-date source for method signatures, parameter types, and internal architecture.
 </Callout>
-
-<Callout type="info">
-All RPC methods follow a request/response pattern. Subscription methods (prefixed with `notify`) establish persistent event streams and require a corresponding `stop` call to unsubscribe.
-</Callout>
-
----
-
-## Block and DAG Methods
-
-These methods provide access to block data and the state of the BlockDAG.
-
-| Method | Description |
-|--------|-------------|
-| `getBlockDagInfo` | Returns global information about the BlockDAG |
-| `getBlock` | Retrieves a specific block by its hash |
-| `getBlocks` | Retrieves multiple blocks in a specified range |
-| `getBlockTemplate` | Returns a block template for mining |
-| `submitBlock` | Submits a mined block to the network |
-
-### getBlockDagInfo
-
-Returns high-level information about the current state of the BlockDAG.
-
-**Parameters:** None
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `network` | `string` | Name of the network (e.g., `mainnet`) |
-| `blockCount` | `uint64` | Total number of blocks in the DAG |
-| `headerCount` | `uint64` | Total number of block headers |
-| `tipHashes` | `string[]` | Hashes of the current DAG tips |
-| `difficulty` | `float64` | Current mining difficulty |
-| `pastMedianTime` | `uint64` | Median time of the past blocks (milliseconds) |
-| `virtualParentHashes` | `string[]` | Parent hashes of the virtual block |
-| `pruningPointHash` | `string` | Hash of the current pruning point |
-| `virtualDaaScore` | `uint64` | Current DAA score of the virtual block |
-| `sink` | `string` | Hash of the current sink block (virtual selected parent) |
-
-### getBlock
-
-Retrieves a single block by its hash, optionally including full transaction data.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `hash` | `string` | Yes | The hash of the block to retrieve |
-| `includeTransactions` | `bool` | No | Whether to include full transaction data (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `block` | `RpcBlock` | The block object containing header and optionally transactions |
-
-The `RpcBlock` object contains a `header` with all block header fields (version, parents, hashMerkleRoot, etc.) and an optional `transactions` array.
-
-### getBlocks
-
-Retrieves a batch of blocks starting from a given low hash.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `lowHash` | `string` | No | Optional starting block hash (exclusive). If omitted, the node uses its default range behavior |
-| `includeBlocks` | `bool` | No | Whether to include block data (default: `false`) |
-| `includeTransactions` | `bool` | No | Whether to include transaction data within blocks (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `blockHashes` | `string[]` | Ordered array of block hashes |
-| `blocks` | `RpcBlock[]` | Array of block objects (if `includeBlocks` is `true`) |
-
-### getBlockTemplate
-
-Returns a block template that a miner can use to construct and mine a new block.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `payAddress` | `string` | Yes | The address to which the coinbase reward will be paid |
-| `extraData` | `string` | No | Arbitrary extra data to include in the coinbase transaction |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `block` | `RpcBlock` | A fully constructed block template ready for mining |
-| `isSynced` | `bool` | Whether the node is synced (mining on an unsynced node produces orphans) |
-
-<Callout type="warn">
-Only mine when `isSynced` is `true`. Mining on an unsynced node wastes resources and produces blocks that will not be accepted by the network.
-</Callout>
-
-### submitBlock
-
-Submits a mined block to the network for validation and inclusion in the BlockDAG.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `block` | `RpcBlock` | Yes | The fully constructed and mined block |
-| `allowNonDAABlocks` | `bool` | No | Whether to accept blocks that do not comply with DAA rules (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `report` | `object` | Submission result object |
-
-`report` uses:
-
-- `{"type":"success"}` when accepted
-- `{"type":"reject","reason":"..."}` when rejected
-
----
-
-## UTXO and Balance Methods
-
-These methods provide access to unspent transaction outputs and address balances.
-
-| Method | Description |
-|--------|-------------|
-| `getUtxosByAddresses` | Returns all UTXOs for the given addresses |
-| `getBalanceByAddress` | Returns the total balance for a given address |
-
-### getUtxosByAddresses
-
-Returns all unspent transaction outputs (UTXOs) associated with one or more addresses.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `addresses` | `string[]` | Yes | Array of Kaspa addresses to query |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `entries` | `UtxoEntry[]` | Array of UTXO entries |
-
-Each `UtxoEntry` contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `address` | `string \| null` | The address this UTXO belongs to (optional in the RPC model) |
-| `outpoint` | `Outpoint` | Transaction ID and output index |
-| `utxoEntry` | `UtxoEntryData` | Amount (in sompi), script public key, block DAA score, and coinbase flag |
-
-### getBalanceByAddress
-
-Returns the total confirmed balance for a single address.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `address` | `string` | Yes | The Kaspa address to query |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `balance` | `uint64` | Total balance in sompi (1 KAS = 100,000,000 sompi) |
-
----
-
-## Transaction Methods
-
-These methods handle transaction submission and mempool queries.
-
-| Method | Description |
-|--------|-------------|
-| `submitTransaction` | Submits a signed transaction to the network |
-| `getMempoolEntries` | Returns all transactions in the mempool |
-| `getMempoolEntry` | Returns a specific mempool transaction |
-
-### submitTransaction
-
-Submits a signed transaction to the node for validation and propagation to the network.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `transaction` | `RpcTransaction` | Yes | The fully signed transaction object |
-| `allowOrphan` | `bool` | No | Whether to accept transactions with missing inputs (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `transactionId` | `string` | The transaction ID (hash) of the submitted transaction |
-
-<Callout type="info">
-Transactions in Kaspa use Schnorr signatures over the secp256k1 curve. Each input must be signed individually, referencing the UTXO it spends.
-</Callout>
-
-### getMempoolEntries
-
-Returns all transactions currently in the memory pool (mempool), optionally with full transaction data.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `includeOrphanPool` | `bool` | No | Whether to include orphan transactions (default: `false`) |
-| `filterTransactionPool` | `bool` | No | Whether to exclude the main transaction pool (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `mempoolEntries` | `MempoolEntry[]` | Array of mempool entries, each containing the fee, transaction data, and whether it is an orphan |
-
-### getMempoolEntry
-
-Returns a single mempool entry by its transaction ID.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `transactionId` | `string` | Yes | The transaction ID to look up |
-| `includeOrphanPool` | `bool` | No | Whether to search the orphan pool (default: `false`) |
-| `filterTransactionPool` | `bool` | No | Whether to exclude the main transaction pool (default: `false`) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `mempoolEntry` | `MempoolEntry` | The mempool entry containing fee, transaction data, and orphan status |
-
----
-
-## Subscription Methods
-
-Subscription methods establish persistent notification streams. Each `notify*` method has a corresponding mechanism to stop the subscription.
-
-| Method | Description |
-|--------|-------------|
-| `notifyBlockAdded` | Subscribe to new block notifications |
-| `notifySinkBlueScoreChanged` | Subscribe to sink blue score changes |
-| `notifyUtxosChanged` | Subscribe to UTXO changes for specific addresses |
-
-### notifyBlockAdded
-
-Subscribes to notifications whenever a new block is added to the BlockDAG.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `command` | `NotifyCommand` | Yes | `Start` to subscribe, `Stop` to unsubscribe |
-
-**Notification payload:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `block` | `RpcBlock` | The newly added block with full header and transaction data |
-
-### notifySinkBlueScoreChanged
-
-Subscribes to notifications whenever the sink blue score changes. This is useful for tracking confirmation depth.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `command` | `NotifyCommand` | Yes | `Start` to subscribe, `Stop` to unsubscribe |
-
-**Notification payload:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `sinkBlueScore` | `uint64` | The new sink blue score value |
-
-### notifyUtxosChanged
-
-Subscribes to UTXO change notifications for a set of monitored addresses. Fires whenever UTXOs are added or removed for the specified addresses.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `addresses` | `string[]` | Yes | Array of addresses to monitor |
-| `command` | `NotifyCommand` | Yes | `Start` to subscribe, `Stop` to unsubscribe |
-
-**Notification payload:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `added` | `UtxosByAddressesEntry[]` | Newly created UTXOs |
-| `removed` | `UtxosByAddressesEntry[]` | Spent UTXOs |
-
-<Callout type="info">
-The `notifyUtxosChanged` subscription is the primary mechanism for wallets to track incoming and outgoing transactions in real time.
-</Callout>
-
----
-
-## Network and Node Methods
-
-These methods provide information about the node, its peers, and overall network state.
-
-| Method | Description |
-|--------|-------------|
-| `getInfo` | Returns general node information |
-| `getConnectedPeerInfo` | Returns information about connected peers |
-| `addPeer` | Manually connects to a peer |
-| `ban` | Bans a peer by IP address |
-| `unban` | Unbans a previously banned peer |
-| `estimateNetworkHashesPerSecond` | Estimates the network hash rate |
-| `getSubnetwork` | Returns information about a subnetwork |
-| `getCoinSupply` | Returns the current coin supply |
-| `getSinkBlueScore` | Returns the current sink blue score |
-
-### getInfo
-
-Returns general information about the running node.
-
-**Parameters:** None
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `p2pId` | `string` | The unique P2P identifier of the node |
-| `mempoolSize` | `uint64` | Number of transactions in the mempool |
-| `serverVersion` | `string` | Version string of the node software |
-| `isUtxoIndexed` | `bool` | Whether the UTXO index is enabled |
-| `isSynced` | `bool` | Whether the node is fully synced |
-| `hasNotifyCommand` | `bool` | Whether the node supports the notify command flow |
-| `hasMessageId` | `bool` | Whether the node supports message IDs |
-
-### getConnectedPeerInfo
-
-Returns detailed information about all currently connected peers.
-
-**Parameters:** None
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `peerInfo` | `PeerInfo[]` | Array of connected peer information |
-
-Each `PeerInfo` contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique peer identifier |
-| `address` | `string` | Peer IP address and port |
-| `lastPingDuration` | `int64` | Duration of last ping in milliseconds |
-| `isOutbound` | `bool` | Whether this is an outbound connection |
-| `timeOffset` | `int64` | Time offset relative to the local node |
-| `userAgent` | `string` | Peer's user agent string |
-| `advertisedProtocolVersion` | `uint32` | Protocol version advertised by the peer |
-| `timeConnected` | `int64` | Unix timestamp of when the connection was established |
-| `isIbdPeer` | `bool` | Whether this peer is being used for Initial Block Download |
-
-### addPeer
-
-Manually adds a peer connection to the node.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `address` | `string` | Yes | The IP address and port of the peer (e.g., `192.168.1.1:16111`) |
-| `isPermanent` | `bool` | No | Whether the connection should be persistent (default: `false`) |
-
-**Returns:** Empty response on success.
-
-### ban
-
-Bans a peer by IP address, disconnecting it and preventing future connections.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ip` | `string` | Yes | The IP address to ban |
-
-**Returns:** Empty response on success.
-
-### unban
-
-Removes a ban on a previously banned IP address.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ip` | `string` | Yes | The IP address to unban |
-
-**Returns:** Empty response on success.
-
-### estimateNetworkHashesPerSecond
-
-Estimates the total network hash rate based on recent difficulty adjustments.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `windowSize` | `uint32` | Yes | Number of blocks to use for estimation |
-| `startHash` | `string` | No | Block hash to start the estimation window from (defaults to the sink) |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `networkHashesPerSecond` | `uint64` | Estimated hash rate in hashes per second |
-
-### getSubnetwork
-
-Returns information about a specific subnetwork.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `subnetworkId` | `string` | Yes | The subnetwork ID to look up |
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `gasLimit` | `uint64` | The gas limit for the subnetwork |
-
-### getCoinSupply
-
-Returns information about the current circulating coin supply.
-
-**Parameters:** None
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `maxSompi` | `uint64` | Maximum possible supply in sompi |
-| `circulatingSompi` | `uint64` | Current circulating supply in sompi |
-
-<Callout type="info">
-To convert sompi to KAS, divide by 100,000,000. Total emitted supply under current consensus rules is approximately 28.38 billion KAS.
-</Callout>
-
-### getSinkBlueScore
-
-Returns the blue score of the current sink (virtual selected parent), representing the latest DAG state.
-
-**Parameters:** None
-
-**Returns:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `blueScore` | `uint64` | The blue score of the current sink |
-
----
-
-## Error Handling
-
-All RPC methods may return an error response containing:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `errorMessage` | `string` | Human-readable error message |
-
-Common error scenarios include requesting blocks that have been pruned, submitting invalid transactions, querying addresses on a node without UTXO indexing enabled, and attempting to mine on an unsynced node.

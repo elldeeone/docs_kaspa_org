@@ -1,6 +1,6 @@
 ---
-title: Subscriptions Overview
-description: "Real-time event subscriptions in Kaspa — subscribe to blocks, UTXO changes, and network events via wRPC."
+title: Subscriptions
+description: "Real-time event subscriptions in Kaspa — subscribe to blocks, UTXO changes, and network events via wRPC or gRPC."
 ---
 
 ## How Subscriptions Work
@@ -23,22 +23,20 @@ Subscriptions are connection-scoped. If your connection drops, all subscriptions
 
 ## Available Subscription Types
 
-| Subscription | WASM SDK methods | Use Case |
+| Event | SDK Methods | Description |
 |---|---|---|
-| [Block Added](/docs/rpc/subscriptions/block-added) | `subscribeBlockAdded()` / `unsubscribeBlockAdded()` | Track new blocks entering the DAG |
-| [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed) | `subscribeVirtualChainChanged()` / `unsubscribeVirtualChainChanged()` | Detect chain reorganizations and accepted transactions |
-| [Finality Conflict](/docs/rpc/subscriptions/finality-conflict) | `subscribeFinalityConflict()` / `unsubscribeFinalityConflict()` | Monitor for finality-violation events |
-| [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed) | `subscribeUtxosChanged()` / `unsubscribeUtxosChanged()` | Watch address balances and UTXO changes |
-| [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed) | `subscribeSinkBlueScoreChanged()` / `unsubscribeSinkBlueScoreChanged()` | Track the chain's blue score progression |
-| [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) | `subscribeVirtualDaaScoreChanged()` / `unsubscribeVirtualDaaScoreChanged()` | Monitor DAA score for timing and difficulty |
-| [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override) | `subscribePruningPointUtxoSetOverride()` / `unsubscribePruningPointUtxoSetOverride()` | Detect pruning-point UTXO override events (IBD/reset flows) |
-| [New Block Template](/docs/rpc/subscriptions/new-block-template) | `subscribeNewBlockTemplate()` / `unsubscribeNewBlockTemplate()` | Receive mining templates (for miners) |
+| **Block Added** | `subscribeBlockAdded()` / `unsubscribeBlockAdded()` | New blocks entering the DAG. At 10 BPS you will receive ~10 notifications/sec -- ensure your handler is non-blocking. |
+| **Virtual Chain Changed** | `subscribeVirtualChainChanged(includeAcceptedTxIds)` / `unsubscribeVirtualChainChanged(...)` | Chain reorganizations and accepted transactions. Primary subscription for confirmation tracking. |
+| **Finality Conflict** | `subscribeFinalityConflict()` / `unsubscribeFinalityConflict()` | Safety-critical: the GHOSTDAG chain has diverged from the finality point. See [handling guidance](#finality-conflicts) below. |
+| **UTXOs Changed** | `subscribeUtxosChanged(addresses)` / `unsubscribeUtxosChanged(addresses)` | UTXO set changes for watched addresses. Primary mechanism for real-time balance tracking. |
+| **Sink Blue Score Changed** | `subscribeSinkBlueScoreChanged()` / `unsubscribeSinkBlueScoreChanged()` | Blue score of the DAG sink (virtual selected parent) has changed. Useful for confirmation depth. |
+| **Virtual DAA Score Changed** | `subscribeVirtualDaaScoreChanged()` / `unsubscribeVirtualDaaScoreChanged()` | DAA score changed. Lightweight liveness/progression heartbeat. |
+| **Pruning Point UTXO Set Override** | `subscribePruningPointUtxoSetOverride()` / `unsubscribePruningPointUtxoSetOverride()` | The node's pruning-point UTXO set was replaced (IBD/reset). Triggers a full state refresh. |
+| **New Block Template** | `subscribeNewBlockTemplate()` / `unsubscribeNewBlockTemplate()` | A new mining template is available. Call `getBlockTemplate` to fetch it. |
 
 ## Subscribing and Unsubscribing
 
 ### Using the WASM SDK (JavaScript/TypeScript)
-
-The WASM SDK provides event-driven methods for managing subscriptions:
 
 ```typescript
 import { RpcClient, Resolver } from "kaspa-wasm";
@@ -60,15 +58,9 @@ await rpc.subscribeUtxosChanged([
 
 // Subscribe to DAA score changes
 await rpc.subscribeVirtualDaaScoreChanged();
-```
 
-### Unsubscribing
-
-```typescript
-// Unsubscribe from block notifications
+// Unsubscribe when done
 await rpc.unsubscribeBlockAdded();
-
-// Unsubscribe from UTXO changes
 await rpc.unsubscribeUtxosChanged([
   "kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73"
 ]);
@@ -84,19 +76,20 @@ rpc.addEventListener("block-added", (event) => {
   const block = event.data.block;
   console.log(`New block: ${block.verboseData.hash}`);
   console.log(`  DAA score: ${block.header.daaScore}`);
-  console.log(`  Blue score: ${block.header.blueScore}`);
   console.log(`  Transactions: ${block.transactions.length}`);
 });
 
 // Listen for UTXO changes
 rpc.addEventListener("utxos-changed", (event) => {
   const { added, removed } = event.data;
+  let balanceChange = BigInt(0);
   for (const utxo of added) {
-    console.log(`New UTXO: ${utxo.address} +${utxo.utxoEntry.amount} sompi`);
+    balanceChange += BigInt(utxo.utxoEntry.amount);
   }
   for (const utxo of removed) {
-    console.log(`Spent UTXO: ${utxo.address} -${utxo.utxoEntry.amount} sompi`);
+    balanceChange -= BigInt(utxo.utxoEntry.amount);
   }
+  console.log(`Net balance change: ${balanceChange} sompi`);
 });
 
 // Listen for virtual chain changes
@@ -114,19 +107,37 @@ rpc.addEventListener("virtual-daa-score-changed", (event) => {
 });
 ```
 
+<Callout type="info">
+UTXO amounts can be large numbers. Use `BigInt` in JavaScript/TypeScript to avoid precision loss when performing arithmetic on sompi values.
+</Callout>
+
+## Finality Conflicts
+
+A finality conflict occurs when the GHOSTDAG selected chain diverges from the finality point -- meaning a block previously considered final is no longer on the selected chain. These notifications are **safety-critical**.
+
+```typescript
+rpc.addEventListener("finality-conflict", (event) => {
+  console.error(`FINALITY CONFLICT: violating block ${event.data.violatingBlockHash}`);
+  // Alert operators, pause deposits/withdrawals, apply risk controls
+});
+
+rpc.addEventListener("finality-conflict-resolved", (event) => {
+  console.log(`Finality conflict resolved at block ${event.data.finalityBlockHash}`);
+  // Resume normal operation
+});
+```
+
+<Callout>
+If your application receives a finality conflict notification, treat it as a major network event. Log it, alert operators, and pause sensitive processing (deposits, withdrawals) until a finality-conflict-resolved event is observed. Think of it as a circuit breaker for your application's interaction with the network.
+</Callout>
+
 ## Reconnection and Resubscription
 
 Since subscriptions are tied to the connection, you must handle reconnection gracefully.
 
 ```typescript
-rpc.addEventListener("disconnect", async () => {
-  console.log("Disconnected from node, attempting reconnect...");
-});
-
 rpc.addEventListener("connect", async () => {
-  console.log("Reconnected, resubscribing...");
-
-  // Resubscribe to all event types
+  console.log("Connected, subscribing...");
   await rpc.subscribeBlockAdded();
   await rpc.subscribeVirtualDaaScoreChanged();
   await rpc.subscribeUtxosChanged(myWatchedAddresses);
@@ -143,22 +154,15 @@ After reconnecting, there may be a gap between the last notification you receive
 
 ## Best Practices
 
-- **Subscribe only to what you need.** Each subscription consumes resources on both the node and your client. Avoid high-frequency streams like block-added if you only need periodic state checks.
+- **Subscribe only to what you need.** Each subscription consumes resources on both the node and your client. If you only need periodic state checks, avoid high-frequency streams like block-added.
 - **Process notifications quickly.** If your handler blocks, notifications queue up and your client falls behind. Offload heavy processing to a background queue.
 - **Always handle reconnection.** Network disruptions, node restarts, and connection timeouts are inevitable. Build reconnection and resubscription into your application from the start.
 - **Use `subscribeUtxosChanged` for balance tracking** instead of polling `getBalanceByAddress`. The subscription is far more efficient and provides real-time updates.
-- **Combine subscriptions for richer context.** For example, use virtual-daa-score-changed alongside block-added to correlate blocks with DAA score progression.
 - **Track state for gap detection.** Store the last DAA score or blue score received, so you can detect and fill gaps after reconnection.
+- **Subscribe to finality conflicts** for any application handling real value. Implement the handler even if you never expect to receive a notification.
 
-## Next Steps
+## Further Reading
 
-Explore individual subscription types for detailed notification formats and usage patterns:
-
-- [Block Added](/docs/rpc/subscriptions/block-added)
-- [Virtual Chain Changed](/docs/rpc/subscriptions/virtual-chain-changed)
-- [Finality Conflict](/docs/rpc/subscriptions/finality-conflict)
-- [UTXOs Changed](/docs/rpc/subscriptions/utxos-changed)
-- [Sink Blue Score Changed](/docs/rpc/subscriptions/sink-blue-score-changed)
-- [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed)
-- [Pruning Point UTXO Set Override](/docs/rpc/subscriptions/pruning-point-utxo-set-override)
-- [New Block Template](/docs/rpc/subscriptions/new-block-template)
+- [RPC Overview](/docs/rpc/overview) -- Architecture, protocols, and public node infrastructure
+- [Connecting](/docs/rpc/connecting) -- Connection setup, ports, and error handling
+- [DeepWiki: rusty-kaspa RPC](https://deepwiki.com/kaspanet/rusty-kaspa) -- Auto-generated reference from source code

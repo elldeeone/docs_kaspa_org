@@ -88,11 +88,11 @@ them or build on an outdated view of the UTXO set, leading to double-spend confl
 
 For production systems, call `checkNodeStatus` on a timer (for example, every 30 seconds)
 and alert when the node falls out of sync or loses all peers. You can also subscribe to
-[Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) for a
+[Subscriptions](/docs/rpc/subscriptions) (the `virtual-daa-score-changed` event) for a
 real-time liveness signal without polling.
 
 ## Further Reading
 
 - [Connect via wRPC](/docs/cookbook/node/connect-wrpc) -- Establish the connection used by these status calls.
 - [Node Monitoring](/docs/node-operations/monitoring) -- Operational best practices for running a Kaspa node.
-- [Virtual DAA Score Changed](/docs/rpc/subscriptions/virtual-daa-score-changed) -- Real-time DAA score subscription as a liveness heartbeat.
+- [Subscriptions](/docs/rpc/subscriptions) -- Real-time event subscriptions including DAA score changes.

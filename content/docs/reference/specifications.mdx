@@ -151,9 +151,9 @@ Consensus does **not** assign protocol meaning to a single `max(...)` transactio
 
 At block-validation time, totals are accumulated separately and each must stay within the block bound (`500,000`):
 
-- total compute mass <= max block mass
-- total transient mass <= max block mass
-- total storage mass <= max block mass
+- total compute mass ≤ max block mass
+- total transient mass ≤ max block mass
+- total storage mass ≤ max block mass
 
 ([source](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/src/pipeline/body_processor/body_validation_in_isolation.rs#L63-L90))
 

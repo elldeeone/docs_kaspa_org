@@ -3,9 +3,8 @@
   "pages": [
     "overview",
     "connecting",
-    "wrpc",
     "grpc",
-    "rest",
-    "subscriptions"
+    "subscriptions",
+    "rest-api"
   ]
 }
