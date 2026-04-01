@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Getting started</title>
+  </head>
+  <body>
+    <h1>Getting started</h1>
+    <p>Edit the constants in this file before running it.</p>
+    <pre id="log"></pre>
+
+    <script type="module">
+      import init, {
+        RpcClient,
+        Resolver,
+        Encoding,
+      } from "../kaspa-wasm32-sdk/web/kaspa/kaspa.js";
+
+      const networkId = "mainnet";
+      const rpcUrl = undefined;
+
+      const pre = document.getElementById("log");
+      const format = (value) => {
+        if (typeof value === "string") return value;
+        if (value instanceof Uint8Array)
+          return JSON.stringify(Array.from(value));
+        try {
+          return JSON.stringify(
+            value,
+            (_, item) => (typeof item === "bigint" ? item.toString() : item),
+            2,
+          );
+        } catch {
+          return String(value);
+        }
+      };
+      const log = (...values) => {
+        pre.textContent += values.map(format).join(" ") + "\n";
+      };
+
+      await init("../kaspa-wasm32-sdk/web/kaspa/kaspa_bg.wasm");
+
+      const rpc = new RpcClient({
+        networkId,
+        encoding: Encoding.Borsh,
+        ...(rpcUrl ? { url: rpcUrl } : { resolver: new Resolver() }),
+      });
+
+      try {
+        await rpc.connect();
+
+        const dagInfo = await rpc.getBlockDagInfo();
+        log(dagInfo);
+        log("Pruning point:", dagInfo.pruningPointHash);
+      } finally {
+        await rpc.disconnect().catch(() => {});
+      }
+    </script>
+  </body>
+</html>

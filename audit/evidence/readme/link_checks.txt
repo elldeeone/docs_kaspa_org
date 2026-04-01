@@ -1,6 +1,0 @@
-200 https://github.com/fuma-nama/fumadocs -> https://github.com/fuma-nama/fumadocs
-200 https://fumadocs.dev/docs/headless/source-api -> https://www.fumadocs.dev/docs/headless/source-api
-200 https://fumadocs.dev/docs/mdx -> https://www.fumadocs.dev/docs/mdx
-200 https://nextjs.org/docs -> https://nextjs.org/docs
-200 https://nextjs.org/learn -> https://nextjs.org/learn
-200 https://fumadocs.dev -> https://www.fumadocs.dev/

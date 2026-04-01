@@ -1,5 +1,0 @@
-npm=/usr/local/bin/npm
-pnpm=/usr/local/bin/pnpm
-yarn=
-corepack=/usr/local/bin/corepack
-corepack_yarn_version=1.22.22

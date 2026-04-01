@@ -1,8 +1,0 @@
-content/docs/node-operations/configuration.mdx
-content/docs/node-operations/docker.mdx
-content/docs/node-operations/monitoring.mdx
-content/docs/node-operations/running-a-node.mdx
-content/docs/node-operations/simnet.mdx
-content/docs/node-operations/testnet.mdx
-content/docs/node-operations/troubleshooting.mdx
-content/docs/node-operations/upgrading.mdx

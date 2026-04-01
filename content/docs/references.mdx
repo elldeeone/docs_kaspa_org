@@ -1,0 +1,31 @@
+---
+title: References
+description: Canonical concepts, limits, and source links used by the integration guides.
+---
+
+## Node connectivity
+
+Kaspa node integrations revolve around two transports: gRPC and wRPC. For new application-facing integrations, wRPC is usually the most direct fit because the SDKs already speak it in a high-level way.
+
+There are two practical entry points:
+
+| Path             | Best for                       | Notes                                                                           |
+| ---------------- | ------------------------------ | ------------------------------------------------------------------------------- |
+| PNN / resolver   | Fast first success             | Lets the client discover public endpoints without running infrastructure first. |
+| Self-hosted node | Production and reproducibility | Needed when you want your own availability, indexing, and operational control.  |
+
+Public Node Network (PNN) is a contributor-operated pool of public Kaspa nodes for development, testing, and fast first-time connectivity. The network is balanced by [Kaspa Resolver](https://github.com/aspectron/kaspa-resolver), which monitors available public nodes and helps clients discover an endpoint with low active load.
+
+Use PNN when you want to get started quickly without operating infrastructure first. For production systems that need fixed availability, predictable performance, or their own indexing strategy, use self-hosted nodes instead.
+
+If you want to contribute a public node to PNN, reach out in the Kaspa Discord `#development` channel.
+
+## SDK references
+
+The integration pages intentionally stay at the workflow level. For SDK-specific detail, use the source-native references directly:
+
+| SDK    | Reference                                                                                     |
+| ------ | --------------------------------------------------------------------------------------------- |
+| WASM   | [rusty-kaspa/wasm README](https://github.com/kaspanet/rusty-kaspa/blob/master/wasm/README.md) |
+| Rust   | [rusty-kaspa repository](https://github.com/kaspanet/rusty-kaspa)                             |
+| Python | [kaspanet/kaspa-python-sdk](https://github.com/kaspanet/kaspa-python-sdk)                     |

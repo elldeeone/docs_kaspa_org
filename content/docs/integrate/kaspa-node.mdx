@@ -1,0 +1,39 @@
+---
+title: Kaspa node
+description: Run a Kaspa node for integration work, either from source or through Docker.
+---
+
+When you want your own backend, run `kaspad` with UTXO indexing and wRPC listeners enabled.
+
+## From source
+
+Build `kaspad` from [`rusty-kaspa`](https://github.com/kaspanet/rusty-kaspa), then run:
+
+```bash
+cargo run --release --bin kaspad -- \
+  --utxoindex \
+  --rpclisten=0.0.0.0 \
+  --rpclisten-borsh=0.0.0.0
+```
+
+## From Docker
+
+Use the Docker image: [`kaspanet/rusty-kaspad`](https://hub.docker.com/r/kaspanet/rusty-kaspad).
+
+```yaml
+services:
+  kaspad:
+    image: kaspanet/rusty-kaspad:latest
+    command:
+      - --utxoindex
+      - --rpclisten=0.0.0.0
+      - --rpclisten-borsh=0.0.0.0
+    ports:
+      - "16110:16110"
+      - "17110:17110"
+```
+
+## Resources
+
+- [`README.md`](https://github.com/kaspanet/rusty-kaspa/blob/master/README.md#running-the-node)
+- [`kaspad/src/args.rs`](https://github.com/kaspanet/rusty-kaspa/blob/master/kaspad/src/args.rs#L214-L444)

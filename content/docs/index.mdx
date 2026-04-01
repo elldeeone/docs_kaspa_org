@@ -1,21 +1,36 @@
 ---
 title: Kaspa Docs
-description: Technical documentation for the Kaspa network — node operation, development, mining, and protocol reference.
+description: Builder docs for integrating Kaspa, learn about programmability model, attaching payload data, and running node infrastructure.
 ---
 
-Welcome to the Kaspa documentation. These docs cover everything you need to understand, build on, and operate within the Kaspa network.
+Kaspa builder docs are split by the decisions you hit first: how to program app logic, how to connect over RPC, how to move funds, how to attach app data, and how to to run your own backend.
+
+If you are new to the stack, start with RPC connectivity and basic reads. From there, move into wallet flows, transaction payloads, or node operations depending on what your integration needs.
 
 <Cards>
-  <Card title="What is Kaspa?" href="/docs/getting-started/what-is-kaspa" description="Learn what makes Kaspa unique — a proof-of-work BlockDAG with fast first confirmations." />
-  <Card title="Core Concepts" href="/docs/core-concepts/blockdag" description="BlockDAG, GHOSTDAG, DAGKnight, UTXO model, fees, scripting, and emission." />
-  <Card title="Developer Guide" href="/docs/developer-guide/building-apps" description="Build applications on Kaspa — architecture, patterns, and best practices." />
-  <Card title="SDKs" href="/docs/sdks/overview" description="WASM SDK, Rust crates, Python bindings, and community libraries." />
-  <Card title="RPC Reference" href="/docs/rpc/overview" description="Complete RPC API reference — wRPC, gRPC, REST endpoints, and subscriptions." />
-  <Card title="Cookbook" href="/docs/cookbook/transactions/send-kas" description="Copy-paste code recipes for common Kaspa development tasks." />
-  <Card title="Node Operations" href="/docs/node-operations/running-a-node" description="Run, configure, monitor, and upgrade your Kaspa node." />
-  <Card title="Mining" href="/docs/mining/kheavyhash" description="kHeavyHash algorithm, solo and pool mining, hardware, and rewards." />
-  <Card title="Wallets" href="/docs/wallets/overview" description="Web, CLI, and hardware wallets — plus building your own." />
-  <Card title="Integrations" href="/docs/integrations/exchange-integration" description="Exchange integration, payment processing, and block explorers." />
-  <Card title="Protocol Evolution" href="/docs/protocol-evolution/crescendo" description="KIPs, Crescendo hardfork, DAGKnight, and the roadmap ahead." />
-  <Card title="Reference" href="/docs/reference/network-params" description="Network parameters, glossary, emission tables, and research papers." />
+  <Card
+    title="Getting Started"
+    href="/integrate/getting-started"
+    description="Install the SDK, connect to a node over RPC, and read live DAG data in JavaScript, Rust, or Python."
+  />
+  <Card
+    title="Programmability"
+    href="/programmability"
+    description="Choose between Covenants, Based Apps, and Inline ZK depending on whether your product needs direct L1 rules, shared app state, or specialized proving flows."
+  />
+  <Card
+    title="Transaction Payload"
+    href="/integrate/transaction-payload"
+    description="Attach application data to standard Kaspa transactions and understand the practical size limits enforced by mempool mass rules."
+  />
+  <Card
+    title="Listen Accepted Transactions"
+    href="/integrate/accepted-transactions"
+    description="Follow accepted transactions with checkpoint-based pulls or live subscriptions, depending on whether you need IDs only or full transaction data."
+  />
+  <Card
+    title="Run a Node"
+    href="/integrate/kaspa-node"
+    description="Operate your own kaspad backend with UTXO indexing and wRPC enabled."
+  />
 </Cards>

@@ -1,0 +1,8 @@
+{
+  "name": "kaspa-integrate-examples",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "websocket": "1.0.35"
+  }
+}

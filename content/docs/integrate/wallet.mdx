@@ -1,0 +1,167 @@
+---
+title: Wallet
+description: Create or open wallets, manage accounts, and send transactions with the Wallet API in JavaScript or Rust.
+---
+
+For JavaScript and Rust, the recommended entrypoint is the high-level Wallet API. Python currently stays on the lower-level RPC path.
+
+> [!NOTE]
+> Full runnable examples for this guide live in [`/examples`](https://github.com/elldeeone/docs_kaspa_org/tree/main/examples).
+
+## Runtime model
+
+- Native Rust and Node.js store wallet data on the local filesystem.
+- Browser builds store wallet data in `localStorage` and transaction records in `IndexedDB`.
+- `resident: true` creates a memory-only wallet that is not persisted.
+
+## API overview
+
+1. Initialize a new wallet object for a network and storage mode.
+2. Create, open or check for existance of a wallet.
+3. Ensure an account exists on the wallet.
+   Create the default account or import the account you will use.
+4. Connect and start processing.
+   `connect()` attaches to a node and `start()` begins wallet processing and event delivery.
+5. Enumerate and activate the account you want to use.
+   Read the account list, select one, and activate it before using it.
+6. Send or transfer funds.
+   Send to external addresses or move funds between accounts in the same wallet.
+7. Stop, disconnect, and close the wallet when done.
+
+## Secrets
+
+- `walletSecret` is used to derive an encryption key (via Argon2 + SHA-256) that protects wallet storage using ChaCha20-Poly1305.
+- `paymentSecret` is the optional BIP39 or mnemonic passphrase.
+
+## Events
+
+These are usually the first wallet events worth considering in an integration:
+
+- `balance`
+- `discovery`
+- `error`
+- `pending`
+- `maturity`
+
+## JavaScript
+
+```js
+// ...
+const wallet = new Wallet({
+  resident: false,
+  networkId: "mainnet",
+  resolver: new Resolver(),
+});
+
+try {
+  // optionally replace with upsert: check existance - create if not existing else open
+  await wallet.walletOpen({
+    walletSecret,
+    filename,
+    accountDescriptors: false,
+  });
+
+  await wallet.accountsEnsureDefault({
+    walletSecret,
+    type: new AccountKind("bip32"),
+  });
+
+  // optional: wallet.addEventListener(...)
+
+  await wallet.connect({ blockAsyncConnect: true });
+  await wallet.start();
+
+  const { accountDescriptors } = await wallet.accountsEnumerate({});
+  const account = accountDescriptors[0];
+
+  await wallet.accountsActivate({
+    accountIds: [account.accountId],
+  });
+
+  await wallet.accountsSend({
+    accountId: account.accountId,
+    walletSecret,
+    destination: [{ address: recipient, amount: kaspaToSompi("1") }],
+    priorityFeeSompi: 0n,
+    // payload: ...
+  });
+} finally {
+  await wallet.stop().catch(() => {});
+  await wallet.disconnect().catch(() => {});
+  await wallet.walletClose({}).catch(() => {});
+}
+```
+
+## Rust
+
+```rust
+// ...
+let wallet = Arc::new(Wallet::try_new(
+    Wallet::local_store()?,
+    Some(Resolver::default()),
+    Some(network_id.clone()),
+)?);
+
+let exists = wallet
+    .clone()
+    .wallet_enumerate()
+    .await?
+    .iter()
+    .any(|descriptor| descriptor.filename == filename);
+
+// optionally replace with upsert: check existance - create if not existing else open
+wallet
+    .clone()
+    .wallet_open(wallet_secret.clone(), Some(filename.clone()), false, false)
+    .await?;
+
+wallet
+    .clone()
+    .accounts_ensure_default(
+        wallet_secret.clone(),
+        None,
+        AccountKind::from("bip32"),
+        None,
+    )
+    .await?;
+
+// optional: subscribe to wallet events
+
+wallet.clone().connect(None, &network_id).await?;
+wallet.start().await?;
+
+let account = wallet
+    .clone()
+    .accounts_enumerate()
+    .await?
+    .into_iter()
+    .next()
+    .expect("wallet should contain a default account");
+
+wallet
+    .clone()
+    .accounts_activate(Some(vec![account.account_id]))
+    .await?;
+
+wallet
+    .clone()
+    .accounts_send(AccountsSendRequest {
+        account_id: account.account_id,
+        wallet_secret,
+        payment_secret: None,
+        destination: PaymentOutputs::from((recipient, kaspa_to_sompi(1.0))).into(),
+        fee_rate: None,
+        priority_fee_sompi: Fees::None,
+        payload: None,
+    })
+    .await?;
+
+wallet.stop().await?;
+wallet.clone().disconnect().await?;
+wallet.clone().wallet_close().await?;
+```
+
+## More Complete Examples
+
+- [JavaScript wallet examples](https://github.com/kaspanet/rusty-kaspa/tree/master/wasm/examples/nodejs/javascript/wallet)
+- [RK CLI Wallet](https://github.com/kaspanet/rusty-kaspa/tree/master/cli)

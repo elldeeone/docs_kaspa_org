@@ -1,9 +1,0 @@
-{
-  "title": "Integrations",
-  "pages": [
-    "exchange-integration",
-    "payment-processing",
-    "block-explorers",
-    "third-party-protocols"
-  ]
-}

@@ -1,27 +1,5 @@
 {
   "title": "Docs",
   "root": true,
-  "pages": [
-    "---Getting Started---",
-    "index",
-    "getting-started",
-    "---Learn---",
-    "core-concepts",
-    "---Build---",
-    "developer-guide",
-    "sdks",
-    "rpc",
-    "cookbook",
-    "guides",
-    "---Network---",
-    "node-operations",
-    "mining",
-    "wallets",
-    "---Ecosystem---",
-    "integrations",
-    "protocol-evolution",
-    "security",
-    "---Reference---",
-    "reference"
-  ]
+  "pages": ["programmability", "integrate", "resources", "references"]
 }

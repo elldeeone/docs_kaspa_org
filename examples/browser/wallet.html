@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wallet</title>
+  </head>
+  <body>
+    <h1>Wallet</h1>
+    <p>Edit the constants in this file before running it.</p>
+    <pre id="log"></pre>
+
+    <script type="module">
+      import init, {
+        Wallet,
+        Resolver,
+        AccountKind,
+        kaspaToSompi,
+      } from "../kaspa-wasm32-sdk/web/kaspa/kaspa.js";
+
+      const walletSecret = "replace-with-wallet-secret";
+      const filename = "wallet-example";
+      const networkId = "mainnet";
+      const recipient = "kaspatest:replace-with-recipient";
+      const payload = new TextEncoder().encode("order:1337");
+      const broadcast = false;
+
+      const pre = document.getElementById("log");
+      const format = (value) => {
+        if (typeof value === "string") return value;
+        if (value instanceof Uint8Array)
+          return JSON.stringify(Array.from(value));
+        try {
+          return JSON.stringify(
+            value,
+            (_, item) => (typeof item === "bigint" ? item.toString() : item),
+            2,
+          );
+        } catch {
+          return String(value);
+        }
+      };
+      const log = (...values) => {
+        pre.textContent += values.map(format).join(" ") + "\n";
+      };
+
+      await init("../kaspa-wasm32-sdk/web/kaspa/kaspa_bg.wasm");
+
+      const wallet = new Wallet({
+        resident: false,
+        networkId,
+        resolver: new Resolver(),
+      });
+
+      try {
+        if (!(await wallet.exists(filename))) {
+          await wallet.walletCreate({
+            walletSecret,
+            filename,
+            title: "Wallet example",
+          });
+        } else {
+          await wallet.walletOpen({
+            walletSecret,
+            filename,
+            accountDescriptors: false,
+          });
+        }
+
+        await wallet.accountsEnsureDefault({
+          walletSecret,
+          type: new AccountKind("bip32"),
+        });
+
+        wallet.addEventListener(({ type, data }) => {
+          if (
+            ["balance", "discovery", "error", "pending", "maturity"].includes(
+              type,
+            )
+          ) {
+            log("[wallet-event]", type, data);
+          }
+        });
+
+        await wallet.connect();
+        await wallet.start();
+
+        const { accountDescriptors } = await wallet.accountsEnumerate({});
+        const account = accountDescriptors[0];
+
+        await wallet.accountsActivate({
+          accountIds: [account.accountId],
+        });
+
+        log("Send from:", String(account.receiveAddress));
+
+        if (broadcast) {
+          const result = await wallet.accountsSend({
+            accountId: account.accountId,
+            walletSecret,
+            priorityFeeSompi: 0n,
+            destination: [
+              {
+                address: recipient,
+                amount: kaspaToSompi("1"),
+              },
+            ],
+            payload,
+          });
+
+          log(result);
+        } else {
+          const result = await wallet.accountsEstimate({
+            accountId: account.accountId,
+            priorityFeeSompi: 0n,
+            destination: [
+              {
+                address: recipient,
+                amount: kaspaToSompi("1"),
+              },
+            ],
+            payload,
+          });
+
+          log(result);
+          log("Set broadcast = true in this file to submit the transaction.");
+        }
+      } finally {
+        await wallet.stop().catch(() => {});
+        await wallet.disconnect().catch(() => {});
+        await wallet.walletClose({}).catch(() => {});
+      }
+    </script>
+  </body>
+</html>

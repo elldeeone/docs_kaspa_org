@@ -1,0 +1,153 @@
+---
+title: Getting started
+description: Install the SDK, connect to a Kaspa node over RPC, and log DAG data in JavaScript, Rust, or Python.
+---
+
+Once that works, move to [Wallet](/integrate/wallet) for wallet creation, account management, and sending transactions or move to [Accepted Transactions](/integrate/accepted-transactions) if you're only interested into reacting to network events.
+
+> [!NOTE]
+> Full runnable examples for this guide live in [`/examples`](https://github.com/elldeeone/docs_kaspa_org/tree/main/examples).
+
+## JavaScript
+
+1. Open the [latest Rusty Kaspa release](https://github.com/kaspanet/rusty-kaspa/releases/latest).
+2. Download the `kaspa-wasm32-sdk-<version>.zip` bundle, and unzip it in your project folder.
+3. run `npm install websocket`.
+4. Create `demo.js`:
+
+```js
+globalThis.WebSocket = require("websocket").w3cwebsocket;
+
+const kaspa = require("./kaspa-wasm32-sdk/nodejs/kaspa");
+const { RpcClient, Resolver, Encoding } = kaspa;
+
+(async () => {
+  const networkId = "mainnet";
+  const rpcUrl = undefined; // Set ws://host:17110 to target a specific node.
+
+  const rpc = new RpcClient({
+    networkId,
+    encoding: Encoding.Borsh,
+    ...(rpcUrl ? { url: rpcUrl } : { resolver: new Resolver() }),
+  });
+
+  try {
+    await rpc.connect();
+
+    const dagInfo = await rpc.getBlockDagInfo();
+    console.log(dagInfo);
+    console.log("Pruning point:", dagInfo.pruningPointHash);
+  } finally {
+    await rpc.disconnect().catch(() => {});
+  }
+})();
+```
+
+5. Run `node demo.js`.
+
+If you prefer to build WASM sdk from source, use [kaspanet/rusty-kaspa/wasm](https://github.com/kaspanet/rusty-kaspa/blob/master/wasm/README.md#building-from-source).
+
+## Rust
+
+Add this to `Cargo.toml`:
+
+```toml
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+kaspa-wallet-core = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+kaspa-wrpc-client = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+```
+
+Create `src/main.rs`:
+
+```rust
+use std::sync::Arc;
+use std::time::Duration;
+
+use kaspa_rpc_core::api::rpc::RpcApi;
+use kaspa_wrpc_client::{
+    client::{ConnectOptions, ConnectStrategy},
+    prelude::{NetworkId, NetworkType},
+    KaspaRpcClient, Resolver, WrpcEncoding,
+};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let network_id = NetworkId::new(NetworkType::Mainnet);
+    let rpc_url: Option<&str> = None;
+
+    let client = Arc::new(KaspaRpcClient::new_with_args(
+        WrpcEncoding::Borsh,
+        rpc_url,
+        if rpc_url.is_some() {
+            None
+        } else {
+            Some(Resolver::default())
+        },
+        Some(network_id),
+        None,
+    )?);
+
+    let options = ConnectOptions {
+        block_async_connect: true,
+        connect_timeout: Some(Duration::from_millis(5_000)),
+        strategy: ConnectStrategy::Fallback,
+        ..Default::default()
+    };
+
+    client.connect(Some(options)).await?;
+
+    let dag_info = client.get_block_dag_info().await?;
+    println!("{dag_info:#?}");
+    println!("Pruning point: {}", dag_info.pruning_point_hash);
+
+    client.disconnect().await?;
+
+    Ok(())
+}
+```
+
+Run `cargo run`.
+
+## Python
+
+Install the SDK:
+
+```bash
+pip install kaspa
+```
+
+Create `demo.py`:
+
+```py
+import asyncio
+
+from kaspa import Resolver, RpcClient
+
+
+async def main():
+    network_id = "mainnet"
+
+    client = RpcClient(resolver=Resolver(), network_id=network_id)
+    await client.connect()
+    print(await client.get_server_info())
+
+    dag_info = await client.get_block_dag_info()
+    print(dag_info)
+
+    await client.disconnect()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Run `python demo.py`.
+
+If you prefer to build Python from source, use [kaspanet/kaspa-python-sdk](https://github.com/kaspanet/kaspa-python-sdk).
+
+API reference: [Kaspa Python SDK reference](https://kaspanet.github.io/kaspa-python-sdk/dev/reference/)
+
+## Another Language?
+
+Use the Kaspa gRPC proto definitions in [rusty-kaspa `rpc/grpc/core/proto`](https://github.com/kaspanet/rusty-kaspa/tree/master/rpc/grpc/core/proto). Specifically [`messages.proto`](https://github.com/kaspanet/rusty-kaspa/blob/master/rpc/grpc/core/proto/messages.proto) and [`rpc.proto`](https://github.com/kaspanet/rusty-kaspa/blob/master/rpc/grpc/core/proto/rpc.proto), from which you can use to generate client bindings for your language.
