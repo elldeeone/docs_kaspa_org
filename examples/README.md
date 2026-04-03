@@ -48,6 +48,22 @@ Simple runnable examples for the docs pages under `content/docs/integrate`.
    cargo run --manifest-path ./rust/Cargo.toml --bin wallet
    ```
 
+6. Generate Java gRPC sources and run the Java example:
+
+   ```bash
+   gradle -p ./java syncKaspaProto
+   gradle -p ./java generateProto
+   gradle -p ./java runGettingStarted
+   ```
+
+   If `gradle` is not installed globally, use the wrapper:
+
+   ```bash
+   ./java/gradlew -p ./java syncKaspaProto
+   ./java/gradlew -p ./java generateProto
+   ./java/gradlew -p ./java runGettingStarted
+   ```
+
 ## Broadcast
 
 Send-capable wallet examples use a `broadcast` constant near the top of each file.
