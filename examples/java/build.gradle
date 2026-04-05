@@ -1,0 +1,123 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'idea'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+group = 'org.kaspa.examples'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+def grpcVersion = '1.79.0'
+def protobufVersion = '4.31.1'
+def localKaspaProtoDir = file('../../../rusty-kaspa/rpc/grpc/core/proto')
+
+sourceSets {
+    main {
+        java {
+            srcDir("$buildDir/generated/source/proto/main/java")
+            srcDir("$buildDir/generated/source/proto/main/grpc")
+        }
+    }
+}
+
+dependencies {
+    implementation platform("io.grpc:grpc-bom:${grpcVersion}")
+    implementation 'io.grpc:grpc-netty-shaded'
+    implementation 'io.grpc:grpc-protobuf'
+    implementation 'io.grpc:grpc-stub'
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
+}
+
+tasks.register('syncKaspaProto', Copy) {
+    group = 'build setup'
+    description = 'Copies Kaspa gRPC proto files from the sibling rusty-kaspa checkout.'
+    onlyIf { localKaspaProtoDir.exists() }
+    from(localKaspaProtoDir) {
+        include 'messages.proto', 'rpc.proto'
+    }
+    into(file('src/main/proto'))
+    doLast {
+        ['messages.proto', 'rpc.proto'].each { protoName ->
+            def protoFile = file("src/main/proto/${protoName}")
+            if (!protoFile.exists()) {
+                return
+            }
+
+            def source = protoFile.getText('UTF-8')
+            if (source.contains('option java_multiple_files = true;')) {
+                return
+            }
+
+            def updated = source.replaceFirst(
+                    /package protowire;\r?\n/,
+                    "package protowire;\noption java_multiple_files = true;\n"
+            )
+            protoFile.write(updated, 'UTF-8')
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.plugins {
+                grpc {}
+            }
+        }
+    }
+}
+
+application {
+    mainClass = 'org.kaspa.examples.GettingStartedExample'
+}
+
+def registerExample = { String taskName, String mainClassName ->
+    tasks.register(taskName, JavaExec) {
+        group = 'application'
+        description = "Runs the ${taskName - 'run'} Java example."
+        classpath = sourceSets.main.runtimeClasspath
+        mainClass = mainClassName
+        dependsOn(tasks.named('classes'))
+    }
+}
+
+registerExample('runGettingStarted', 'org.kaspa.examples.GettingStartedExample')
+
+tasks.named('processResources') {
+    dependsOn(tasks.named('syncKaspaProto'))
+}
+
+tasks.named('compileJava') {
+    dependsOn(tasks.named('generateProto'))
+}
+
+tasks.named('generateProto') {
+    dependsOn(tasks.named('syncKaspaProto'))
+}
+
+idea {
+    module {
+        generatedSourceDirs += file("$buildDir/generated/source/proto/main/java")
+        generatedSourceDirs += file("$buildDir/generated/source/proto/main/grpc")
+    }
+}

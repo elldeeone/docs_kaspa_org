@@ -1,0 +1,10 @@
+{
+  "title": "Integrate",
+  "pages": [
+    "getting-started",
+    "wallet",
+    "accepted-transactions",
+    "transaction-payload",
+    "kaspa-node"
+  ]
+}

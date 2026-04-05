@@ -1,4 +1,0 @@
-{
-  "title": "gRPC",
-  "pages": ["overview", "protobuf-schema", "streaming"]
-}

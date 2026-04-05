@@ -1,0 +1,8 @@
+node_modules/
+node/wallet-data/
+rust/target/
+rust/Cargo.lock
+java/.gradle/
+java/build/
+java/generated/
+kaspa-wasm32-sdk

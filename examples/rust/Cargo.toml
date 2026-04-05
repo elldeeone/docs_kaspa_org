@@ -1,0 +1,16 @@
+[package]
+name = "kaspa-integrate-examples"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+wasm32-sdk = []
+
+[dependencies]
+futures = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+kaspa-rpc-core = { path = "../../../rusty-kaspa/rpc/core" }
+kaspa-wallet-core = { path = "../../../rusty-kaspa/wallet/core" }
+kaspa-wrpc-client = { path = "../../../rusty-kaspa/rpc/wrpc/client" }

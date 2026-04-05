@@ -1,3 +1,0 @@
-content/docs/security/responsible-disclosure.mdx
-content/docs/security/security-model.mdx
-content/docs/security/staying-safe.mdx

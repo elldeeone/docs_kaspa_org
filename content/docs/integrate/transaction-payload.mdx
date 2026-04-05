@@ -1,0 +1,29 @@
+---
+title: Transaction payload
+description: Use the transaction payload field for application data within standard mempool limits.
+---
+
+With the high-level Wallet API, it is just another `accountsSend()` request field:
+
+```js
+await wallet.accountsSend({
+  accountId: account.accountId,
+  walletSecret,
+  priorityFeeSompi: 0n,
+  destination: [{ address: recipient, amount: kaspaToSompi("10") }],
+  // arbitrary data can be attached to a transaction
+  payload: new TextEncoder().encode("order:1337"),
+});
+```
+
+For standard mempool acceptance, the practical limit is about `25 KB` if the payload dominates the transaction.
+
+That comes from the transient-mass rule: standard transactions are capped at `100_000`, and transient mass is calculated as serialized transaction size times `4`.
+
+The exact ceiling is lower once the transaction also includes inputs, outputs, signatures, and other fields, because they all contribute to the same serialized size.
+
+## Sources
+
+- [Mempool standard transaction limit (`100_000`)](https://github.com/kaspanet/rusty-kaspa/blob/master/mining/src/mempool/check_transaction_standard.rs#L38)
+- [Transient byte-to-mass factor (`4`)](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/core/src/constants.rs#L21)
+- [Transient mass calculation](https://github.com/kaspanet/rusty-kaspa/blob/master/consensus/core/src/mass/mod.rs#L248-L268)

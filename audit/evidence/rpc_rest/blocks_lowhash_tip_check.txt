@@ -1,4 +1,0 @@
-tip=ea1aa7e48c5b698e4b66b540fac65b6ecad7c4db34e6a42044ce40b1a515c589
-containsLowHash=true
-first=ea1aa7e48c5b698e4b66b540fac65b6ecad7c4db34e6a42044ce40b1a515c589
-count=244
